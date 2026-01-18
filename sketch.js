@@ -31,7 +31,14 @@ let readTex, writeTex;
 let readFBO, writeFBO;
 let quadVao = null;
 let simCanvas, simGL;
-
+let renderProgram;
+let uRenderResLoc, uRenderTexSizeLoc;
+let simVertCode, simFragCode;
+let rendVertCode, rendFragCode, rendVertSrc, rendFragSrc;
+let gl;
+let reportFBO, reportTex;
+let reportProgram;
+let reportData;
 
 const screenDrawWidth = 800;
 const screenDrawHeight = 600;
@@ -52,7 +59,6 @@ const NEUTRON_STRIDE = 4;
 const controlRodsStartPos = screenDrawHeight * .1;
 const MAX_NEUTRONS = 256;
 const MAX_NEUTRONS_SQUARED = MAX_NEUTRONS * MAX_NEUTRONS;
-let simVertCode, simFragCode;
 
 window.simulation = {
   collisionProbability: collisionProbability,
@@ -64,13 +70,18 @@ function preload() {
   font = loadFont("HARRYP_.TTF");
   simVertSrc = loadStrings('shaders/sim.vert');
   simFragSrc = loadStrings('shaders/sim.frag');
+  rendVertSrc = loadStrings('shaders/render.vert');
+  rendFragSrc = loadStrings('shaders/render.frag');
 }
 
 function setup() {
   simVertCode = simVertSrc.join('\n');
   simFragCode = simFragSrc.join('\n');
+  rendVertCode = rendVertSrc.join('\n');
+  rendFragCode = rendFragSrc.join('\n');
 
   createCanvas(screenRenderWidth, screenRenderHeight, WEBGL);
+  gl = drawingContext;
   collisionReport = new CollisionReport();
   neutronSystem = new NeutronSystem(MAX_NEUTRONS_SQUARED);
 
@@ -100,6 +111,8 @@ function setup() {
 
   readFBO = createFBO(simGL, readTex);
   writeFBO = createFBO(simGL, writeTex);
+
+  initRenderShader(gl, rendVertCode, rendFragCode);
 
 
 

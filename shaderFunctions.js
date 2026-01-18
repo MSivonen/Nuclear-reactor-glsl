@@ -203,3 +203,102 @@ function updateNeutronInTexture(gl, index, x, y, vx, vy) {
     
     gl.bindTexture(gl.TEXTURE_2D, null);
 }
+
+// Kutsu tätä setupissa
+function initRenderShader(gl, vsSource, fsSource) {
+    renderProgram = createProgram(gl, vsSource, fsSource);
+    uRenderResLoc = gl.getUniformLocation(renderProgram, "u_resolution");
+    uRenderTexSizeLoc = gl.getUniformLocation(renderProgram, "u_textureSize");
+}
+
+function gpuDrawNeutrons(gl) {
+    gl.useProgram(renderProgram);
+    
+    // Asetetaan uniformit
+    gl.uniform2f(uRenderResLoc, screenDrawWidth, screenDrawHeight);
+    gl.uniform1i(uRenderTexSizeLoc, MAX_NEUTRONS);
+    
+    // Valitaan nykyinen neutronitekstuuri (readTex)
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, readTex);
+    gl.uniform1i(gl.getUniformLocation(renderProgram, "u_neutrons"), 0);
+
+    // Aktivoitetaan blending, jotta hehku näyttää hyvältä
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE); // Additive blending hehkulle
+
+    // Piirretään kaikki neutronit kerralla
+    gl.drawArrays(gl.POINTS, 0, MAX_NEUTRONS_SQUARED);
+
+    gl.disable(gl.BLEND);
+}
+
+function initReportSystem(gl) {
+    // Luodaan tekstuuri, joka on tarpeeksi suuri kaikille atomeille
+    // 41x30 grid -> esim. 64x64 tekstuuri on helppo
+    reportTex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, reportTex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 64, 64, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+
+    reportFBO = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, reportFBO);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, reportTex, 0);
+    
+    reportData = new Uint8Array(64 * 64 * 4);
+    
+    // Lataa reportProgram täällä vastaavasti kuin muut
+}
+
+function gpuGetCollisions(gl) {
+    gl.bindFramebuffer(gl.FRAMEBUFFER, reportFBO);
+    gl.viewport(0, 0, 64, 64);
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    gl.useProgram(reportProgram);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.ONE, gl.ONE); // Additive: 1 osuma + 1 osuma = 2
+
+    // Piirretään "pisteet" raporttitekstuuriin
+    gl.drawArrays(gl.POINTS, 0, MAX_NEUTRONS_SQUARED);
+
+    // Luetaan tulos
+    gl.readPixels(0, 0, 64, 64, gl.RGBA, gl.UNSIGNED_BYTE, reportData);
+
+    gl.disable(gl.BLEND);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+    // Käydään läpi vain raporttiData ja päivitetään atomit
+    for (let i = 0; i < reportData.length; i += 4) {
+        let hitCount = reportData[i];
+        if (hitCount > 0) {
+            let atomIndex = i / 4;
+            if (uraniumAtoms[atomIndex]) {
+                for(let h=0; h<hitCount; h++) {
+                   uraniumAtoms[atomIndex].fission(); // CPU hoitaa reaktion
+                }
+            }
+        }
+    }
+}
+
+function processCollisions(gl) {
+    gl.bindFramebuffer(gl.FRAMEBUFFER, readFBO);
+    gl.readPixels(0, 0, MAX_NEUTRONS, MAX_NEUTRONS, gl.RGBA, gl.FLOAT, reportData);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+    for (let i = 0; i < reportData.length; i += 4) {
+        const vx = reportData[i + 2];
+        const vyOrID = reportData[i + 3];
+
+        // Jos neutroni on juuri pysähtynyt (vx on 0) ja vyOrID sisältää ID:n (>0)
+        if (vx === 0.0 && vyOrID > 0.0) {
+            const atomIndex = Math.floor(vyOrID - 1.0);
+            if (uraniumAtoms[atomIndex]) {
+                uraniumAtoms[atomIndex].fission();
+            }
+        }
+    }
+}
