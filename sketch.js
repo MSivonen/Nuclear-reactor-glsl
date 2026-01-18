@@ -8,6 +8,7 @@ let neutronShader; // Declare shaders variable
 let boom = false;
 let meter;
 let neutronSystem;
+let collisionReport;
 
 let neutronSpeed = 5;
 let collisionProbability = 0.08;
@@ -24,6 +25,13 @@ let energyOutput = 0;
 let energyThisFrame = 0;
 let energyOutputCounter = 0;
 let controlSlider;
+let simProgram;
+let uNeutronsLoc;
+let readTex, writeTex;
+let readFBO, writeFBO;
+let quadVao = null;
+let simCanvas, simGL;
+
 
 const screenDrawWidth = 800;
 const screenDrawHeight = 600;
@@ -41,7 +49,10 @@ const controlRodHeight = 600;
 const heatingRate = 1500;
 const uraniumToWaterHeatTransfer = 0.1;
 const NEUTRON_STRIDE = 4;
-
+const controlRodsStartPos = screenDrawHeight * .1;
+const MAX_NEUTRONS = 256;
+const MAX_NEUTRONS_SQUARED = MAX_NEUTRONS * MAX_NEUTRONS;
+let simVertCode, simFragCode;
 
 window.simulation = {
   collisionProbability: collisionProbability,
@@ -49,15 +60,48 @@ window.simulation = {
 };
 
 function preload() {
-  neutronShader = loadShader('basic.vert', 'circle.frag');
-  console.log('Shaders loaded:', neutronShader);
+  //neutronShader = loadShader('basic.vert', 'circle.frag');
   font = loadFont("HARRYP_.TTF");
+  simVertSrc = loadStrings('shaders/sim.vert');
+  simFragSrc = loadStrings('shaders/sim.frag');
 }
 
 function setup() {
-  createCanvas(screenRenderWidth, screenRenderHeight, WEBGL);
+  simVertCode = simVertSrc.join('\n');
+  simFragCode = simFragSrc.join('\n');
 
-  neutronSystem = new NeutronSystem(65536);
+  createCanvas(screenRenderWidth, screenRenderHeight, WEBGL);
+  collisionReport = new CollisionReport();
+  neutronSystem = new NeutronSystem(MAX_NEUTRONS_SQUARED);
+
+  simCanvas = document.createElement("canvas");
+  simCanvas.width = MAX_NEUTRONS;
+  simCanvas.height = MAX_NEUTRONS;
+
+  simGL = simCanvas.getContext("webgl2", {
+    premultipliedAlpha: false,
+    preserveDrawingBuffer: false
+  });
+
+  const ext = simGL.getExtension("EXT_color_buffer_float");
+  if (!ext) {
+    throw new Error("EXT_color_buffer_float not supported");
+  }
+
+  if (!simGL) {
+    throw "WebGL2 not supported";
+  }
+
+  simProgram = createProgram(simGL, simVertCode, simFragCode);
+  uNeutronsLoc = simGL.getUniformLocation(simProgram, "u_neutrons");
+
+  readTex = createNeutronTexture(simGL, neutronSystem.buffer);
+  writeTex = createNeutronTexture(simGL, null);
+
+  readFBO = createFBO(simGL, readTex);
+  writeFBO = createFBO(simGL, writeTex);
+
+
 
   for (let y = 0; y < uraniumAtomsCountY; y++) {
     for (let x = 0; x < uraniumAtomsCountX; x++) {
@@ -69,7 +113,7 @@ function setup() {
 
   for (let x = 0; x < uraniumAtomsCountX; x++) {
     if ((x + 1) % 7 === 0) {
-      controlRods.push(new ControlRod(x * uraniumAtomsSpacingX + controlRodWidth / 2, 0));
+      controlRods.push(new ControlRod(x * uraniumAtomsSpacingX + controlRodWidth / 2, -screenDrawHeight / 2));
     } else {
       for (let y = 0; y < uraniumAtomsCountY; y++) {
         let waterCellIndex = x + y * uraniumAtomsCountX;
@@ -80,6 +124,8 @@ function setup() {
       }
     }
   }
+  uraniumAtoms.forEach((atom, i) => atom.index = i);
+
 
   grid = new Grid(uraniumAtomsSpacingX);
   for (let atom of uraniumAtoms) {
@@ -93,13 +139,18 @@ function setup() {
 }
 
 function draw() {
+  // --- GPU PASS (EI p5-kutsuja täällä!) ---
+  gpuUpdateNeutrons(simGL);
+  readFrameBuffer(simGL);
+
+  // --- p5 PIIRTO VASTA NYT ---
   translate(-screenDrawWidth / 2, -screenDrawHeight / 2);
   background(22, 88, 90);
 
   updateShit(uraniumAtoms);
   updateShit(controlRods);
-  neutronSystem.update();
 
+  //atomCollisions();
   updateWaterCells();
   interpolateWaterCellsUpwards();
   energyThisFrame /= 70;
@@ -109,29 +160,25 @@ function draw() {
   oncePerSecond();
   if (energyOutput > 1000) boom = true;
 
-
-
-
   push();
   translate(screenDrawWidth / 2, screenDrawHeight / 2);
-  scale((screenRenderHeight / screenDrawHeight));
-  //scale(0.9);
+  scale(screenRenderHeight / screenDrawHeight);
   translate(-screenDrawWidth / 2, -screenDrawHeight / 2);
+
   drawShit(uraniumAtoms);
   drawShit(controlRods);
-  neutronSystem.draw(drawingContext);
-  drawSteam();
-
   meter.show();
   controlSlider.slider();
   gameOver();
   drawFPS();
   drawBorders();
+  neutronSystem.draw();
 
   pop();
 
 
   energyThisFrame = 0;
+
 }
 
 class Grid {
@@ -164,5 +211,22 @@ class Grid {
     }
 
     return atoms;
+  }
+}
+
+
+class CollisionReport {
+  constructor() {
+    this.count = 0;
+    this.atomIndices = new Uint32Array(MAX_NEUTRONS_SQUARED);
+  }
+
+  reset() {
+    this.count = 0;
+  }
+
+  add(atomIndex) {
+    if (this.count >= MAX_NEUTRONS_SQUARED) return;
+    this.atomIndices[this.count++] = atomIndex;
   }
 }

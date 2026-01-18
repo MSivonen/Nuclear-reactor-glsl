@@ -73,3 +73,21 @@ function scaleMouse(xx, yy) {
         y: finalY
     };
 }
+
+function atomCollisions() {
+    for (let i = 0; i < collisionReport.count; i++) {
+        const atomIndex = collisionReport.atomIndices[i];
+        const atom = uraniumAtoms[atomIndex];
+
+        atom.heat += heatingRate;
+        atom.flash = 10;
+
+        for (let n = 0; n < 2; n++) {
+            neutronSystem.addNeutron(
+                atom.position.x,
+                atom.position.y,
+                atom.radius
+            );
+        }
+    }
+}

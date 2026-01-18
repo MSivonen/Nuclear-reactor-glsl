@@ -8,6 +8,7 @@ class UraniumAtom {
     this.flash = 0;
     this.heat = 25;
     this.waterCell = waterCell;
+    this.index = null;
   }
 
   draw() {

@@ -40,3 +40,12 @@ function drawFPS() {
     fill(0, 255, 0);
     text(fpstext, 10, 26); // Draw fps text at position (10, 20)
 }
+
+function drawDebug(debugText) {
+    textSize(20); // Set text size to 16 pixels
+    textStyle(BOLD); // Set text style to bold
+    fill(0, 0, 0);
+    text(debugText, 111, 27); // Draw fps text at position (10, 20)
+    fill(0, 255, 0);
+    text(debugText, 110, 26); // Draw fps text at position (10, 20)
+}

@@ -1,15 +1,14 @@
 class NeutronSystem {
     constructor(maxNeutrons) {
         this.maxNeutrons = maxNeutrons;
-        this.count = 0;
         this.index = 0;
         this.buffer = new Float32Array(maxNeutrons * NEUTRON_STRIDE);
+        this.report = collisionReport;
     }
 
     addNeutron(x, y, atomRadius) {
-        //if (this.count >= this.maxNeutrons) return;
         this.index++;
-        this.index %= 256 * 256;
+        this.index %= MAX_NEUTRONS_SQUARED;
         // satunnainen suunta
         const angle = Math.random() * Math.PI * 2;
         const vx = Math.cos(angle) * neutronSpeed;
@@ -28,11 +27,11 @@ class NeutronSystem {
         this.buffer[i + 2] = vx;
         this.buffer[i + 3] = vy;
 
-        this.count++;
+        updateNeutronInTexture(simGL, this.index, x, y, vx, vy);
     }
 
     update() {
-        for (let i = 0; i < 256 * 256; i++) {
+        for (let i = 0; i < MAX_NEUTRONS_SQUARED; i++) {
 
             const base = i * NEUTRON_STRIDE;
 
@@ -41,23 +40,25 @@ class NeutronSystem {
             let vx = this.buffer[base + 2];
             let vy = this.buffer[base + 3];
 
-            // kuollut
+            // nopeus nolla = kuollut neutroni
             if (Math.abs(vx) + Math.abs(vy) < 0.0001) continue;
 
             const speed = Math.abs(vx) + Math.abs(vy); //suunnilleen...
 
+            if (Math.abs(vx) + Math.abs(vy) < 0.0001) [x, y] = [0, 0];
+
+            x += vx;
+            y += vy;
 
             if (this.collisionToWalls(x, y)) {
                 vx = 0;
                 vy = 0;
-                this.count--;
             }
 
 
             if (this.collisionToAtoms(speed, x, y)) {
                 vx = 0;
                 vy = 0;
-                this.count--;
             }
 
             const colRod = this.collisionToRods(speed, x, y);
@@ -65,18 +66,11 @@ class NeutronSystem {
                 if (colRod < .49) {
                     vx = 0;
                     vy = 0;
-                    this.count--;
                 } else {
                     vx *= colRod;
                     vy *= colRod;
                 }
             }
-
-
-            if (Math.abs(vx) + Math.abs(vy) < 0.0001) [x, y] = [0, 0];
-
-            x += vx;
-            y += vy;
 
             this.buffer[base + 0] = x;
             this.buffer[base + 1] = y;
@@ -86,10 +80,10 @@ class NeutronSystem {
     }
 
     collisionToWalls(_x, _y) {
-        if (
+        return (
             _x < 0 || _x > screenDrawWidth ||
             _y < 0 || _y > screenDrawHeight
-        ) return true;
+        );
     }
 
     collisionToRods(_speed, _x, _y) {
@@ -121,18 +115,18 @@ class NeutronSystem {
             const adaptedRadius = atom.radius * (collisionProbability * 40 / _speed); //pienennetään törmäystodennäköisyyttä
 
             if (dx * dx + dy * dy < adaptedRadius * adaptedRadius) {
-                atom.hitByNeutron();
-                return 1;
+                this.report.add(atom.index);
+                return true;
             }
         }
-        return 0;
+        return false;
     }
 
 
     draw() {
         fill(255, 255, 0.8);
 
-        for (let i = 0; i < 256 * 256; i++) {
+        for (let i = 0; i < MAX_NEUTRONS_SQUARED; i++) {
             const base = i * NEUTRON_STRIDE;
 
             const vx = this.buffer[base + 2];
@@ -142,7 +136,10 @@ class NeutronSystem {
             const x = this.buffer[base + 0];
             const y = this.buffer[base + 1];
 
+            push();
+            rectMode(CENTER);
             rect(x, y, 2, 2);
+            pop();
         }
     }
 }

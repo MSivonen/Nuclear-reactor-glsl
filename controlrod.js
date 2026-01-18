@@ -5,7 +5,7 @@ class ControlRod {
         this.width = controlRodWidth;
         this.height = controlRodHeight;
         this.color = color(44, 22, 4);
-        this.targetY = -100;
+        this.targetY = controlRodsStartPos-screenDrawHeight;
         this.movementSpeed = 1;
     }
 
@@ -29,7 +29,7 @@ class ControlRodsSlider {
     //make a draggable control slider
     constructor() {
         this.x = 15;
-        this.y = screenDrawHeight - 100;
+        this.y = controlRodsStartPos;
         this.width = width;
         this.height = height;
     }
