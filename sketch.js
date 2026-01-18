@@ -9,6 +9,7 @@ let boom = false;
 let meter;
 let neutronSystem;
 let collisionReport;
+let currentNeutronIndex = 0;
 
 let neutronSpeed = 5;
 let collisionProbability = 0.08;
@@ -35,10 +36,10 @@ let renderProgram;
 let uRenderResLoc, uRenderTexSizeLoc;
 let simVertCode, simFragCode;
 let rendVertCode, rendFragCode, rendVertSrc, rendFragSrc;
+let reportVertCode, reportFragCode, reportVertSrc, reportFragSrc;
 let gl;
 let reportFBO, reportTex;
 let reportProgram;
-let reportData;
 
 const screenDrawWidth = 800;
 const screenDrawHeight = 600;
@@ -60,6 +61,8 @@ const controlRodsStartPos = screenDrawHeight * .1;
 const MAX_NEUTRONS = 256;
 const MAX_NEUTRONS_SQUARED = MAX_NEUTRONS * MAX_NEUTRONS;
 
+let reportData;// = new Float32Array(MAX_NEUTRONS_SQUARED * 4);
+
 window.simulation = {
   collisionProbability: collisionProbability,
   neutronSpeed: neutronSpeed,
@@ -72,6 +75,8 @@ function preload() {
   simFragSrc = loadStrings('shaders/sim.frag');
   rendVertSrc = loadStrings('shaders/render.vert');
   rendFragSrc = loadStrings('shaders/render.frag');
+  reportVertSrc = loadStrings('shaders/report.vert');
+  reportFragSrc = loadStrings('shaders/report.frag');
 }
 
 function setup() {
@@ -79,19 +84,23 @@ function setup() {
   simFragCode = simFragSrc.join('\n');
   rendVertCode = rendVertSrc.join('\n');
   rendFragCode = rendFragSrc.join('\n');
+  reportVertCode = reportVertSrc.join('\n');
+  reportFragCode = reportFragSrc.join('\n');
 
   createCanvas(screenRenderWidth, screenRenderHeight, WEBGL);
   gl = drawingContext;
   collisionReport = new CollisionReport();
   neutronSystem = new NeutronSystem(MAX_NEUTRONS_SQUARED);
 
-  simCanvas = document.createElement("canvas");
-  simCanvas.width = MAX_NEUTRONS;
-  simCanvas.height = MAX_NEUTRONS;
+  simCanvas = document.getElementById("simCanvas");
+  simCanvas.width = screenRenderWidth; // 1324
+  simCanvas.height = screenRenderHeight; // 768
 
   simGL = simCanvas.getContext("webgl2", {
-    premultipliedAlpha: false,
-    preserveDrawingBuffer: false
+    alpha: true,
+    depth: false,
+    antialias: false,
+    preserveDrawingBuffer: true
   });
 
   const ext = simGL.getExtension("EXT_color_buffer_float");
@@ -104,6 +113,7 @@ function setup() {
   }
 
   simProgram = createProgram(simGL, simVertCode, simFragCode);
+  reportProgram = createProgram(simGL, reportVertCode, reportFragCode);
   uNeutronsLoc = simGL.getUniformLocation(simProgram, "u_neutrons");
 
   readTex = createNeutronTexture(simGL, neutronSystem.buffer);
@@ -112,7 +122,8 @@ function setup() {
   readFBO = createFBO(simGL, readTex);
   writeFBO = createFBO(simGL, writeTex);
 
-  initRenderShader(gl, rendVertCode, rendFragCode);
+  initRenderShader(simGL, rendVertCode, rendFragCode);
+  initReportSystem(simGL);
 
 
 
@@ -152,20 +163,21 @@ function setup() {
 }
 
 function draw() {
-  // --- GPU PASS (EI p5-kutsuja täällä!) ---
+  // 1. GPU LASKENTA
   gpuUpdateNeutrons(simGL);
-  readFrameBuffer(simGL);
 
-  // --- p5 PIIRTO VASTA NYT ---
+  // 2. TÖRMÄYSTEN KÄSITTELY (Lue GPU:lta -> Päivitä atomit)
+  processCollisions(simGL);
+
+  // 3. p5.js PIIRTO (Tausta ja kiinteät elementit)
   translate(-screenDrawWidth / 2, -screenDrawHeight / 2);
   background(22, 88, 90);
 
   updateShit(uraniumAtoms);
   updateShit(controlRods);
-
-  //atomCollisions();
   updateWaterCells();
   interpolateWaterCellsUpwards();
+
   energyThisFrame /= 70;
   energyOutputCounter += energyThisFrame;
   meter.update();
@@ -185,13 +197,12 @@ function draw() {
   gameOver();
   drawFPS();
   drawBorders();
-  neutronSystem.draw();
+
+  // 4. GPU RENDERÖINTI (Piirretään neutronit kerralla)
+  gpuDrawNeutrons(simGL);
 
   pop();
-
-
   energyThisFrame = 0;
-
 }
 
 class Grid {

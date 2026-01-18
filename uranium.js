@@ -56,9 +56,6 @@ class UraniumAtom {
     this.isHit = true;
     this.heat += heatingRate;
     this.flash = 10; // Flash for 10 frames
-    for (let i = 0; i < 2; i++) {
-      this.createNeutron();
-    }
   }
 
   createNeutron() {

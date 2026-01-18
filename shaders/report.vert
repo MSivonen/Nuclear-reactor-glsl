@@ -6,7 +6,6 @@ uniform int u_textureSize;
 uniform int u_uraniumCountX;
 uniform int u_uraniumCountY;
 
-out float v_hit;
 
 void main() {
     int id = gl_VertexID;
