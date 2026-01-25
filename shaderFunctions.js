@@ -137,13 +137,17 @@ function gpuUpdateNeutrons(gl) {
 
     // Huom: käytä rod.position.y jos ControlRod on p5-tyylinen olio, 
     // tai rod.y jos se on simppeli objekti.
-    let rodYPos = controlRods.map(r => r.position ? r.position.y + screenDrawHeight / 2 : 0);
+    let rodYPos = controlRods[0].y+screenDrawHeight;
     let uRodsLoc = gl.getUniformLocation(simProgram, "u_controlRods");
-    gl.uniform1fv(uRodsLoc, rodYPos);
+    gl.uniform1f(uRodsLoc, rodYPos);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, readTex);
     gl.uniform1i(uNeutronsLoc, 0);
+    gl.uniform1i(gl.getUniformLocation(simProgram, "u_uraniumCountX"), uraniumAtomsCountX);
+    gl.uniform1f(gl.getUniformLocation(simProgram, "collision_prob"), collisionProbability);
+    gl.uniform1f(gl.getUniformLocation(simProgram, "controlRodHitProbability"), controlRodHitProbability);
+    gl.uniform1f(gl.getUniformLocation(simProgram, "controlRodAbsorptionProbability"), controlRodAbsorptionProbability);
 
     drawFullscreenQuad(gl);
 
@@ -233,7 +237,9 @@ function gpuDrawNeutrons(gl) {
     gl.clearColor(0, 0, 0, 0); // Läpinäkyvä tausta
     gl.clear(simGL.COLOR_BUFFER_BIT);
 
-    // Asetetaan uniformit
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
     let uTexSizeLoc = gl.getUniformLocation(renderProgram, "u_textureSize");
     let uResLoc = gl.getUniformLocation(renderProgram, "u_resolution");
     let uSimLoc = gl.getUniformLocation(renderProgram, "u_simSize");
@@ -247,7 +253,7 @@ function gpuDrawNeutrons(gl) {
 
     // Piirretään pisteet
     gl.drawArrays(gl.POINTS, 0, MAX_NEUTRONS_SQUARED);
-
+    gl.disable(gl.BLEND);
     gl.useProgram(null);
 }
 
@@ -263,6 +269,10 @@ function initReportSystem(gl) {
     reportFBO = gl.createFramebuffer();
     gl.bindFramebuffer(gl.FRAMEBUFFER, reportFBO);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, reportTex, 0);
+
+    reportVao = gl.createVertexArray();
+    gl.bindVertexArray(reportVao);
+    gl.bindVertexArray(null);
 
     gl.useProgram(reportProgram);
 
@@ -285,7 +295,9 @@ function initReportSystem(gl) {
 function processCollisions(gl) {
     // 1. Piirretään osumat raporttitekstuuriin (GPU sisäinen)
     gl.bindFramebuffer(gl.FRAMEBUFFER, reportFBO);
-    gl.viewport(0, 0, 64, 64); // Pieni koko riittää atomeille
+    gl.viewport(0, 0, uraniumAtomsCountX, uraniumAtomsCountY); // Pieni koko riittää atomeille
+    gl.disable(gl.BLEND);
+
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT);
 
@@ -293,36 +305,46 @@ function processCollisions(gl) {
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, readTex); // Luetaan neutronien tila
     gl.uniform1i(gl.getUniformLocation(reportProgram, "u_neutrons"), 0);
-
+    gl.uniform1i(gl.getUniformLocation(reportProgram, "u_textureSize"), MAX_NEUTRONS);
     // Käytetään Additive Blendingiä: jos useampi neutroni osuu samaan atomiin, 
     // väriarvo kasvaa (1.0, 2.0, jne.)
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.ONE, gl.ONE);
 
+    gl.bindVertexArray(reportVao);
     gl.drawArrays(gl.POINTS, 0, MAX_NEUTRONS_SQUARED);
+    gl.bindVertexArray(null);
 
     gl.disable(gl.BLEND);
 
     // 2. Luetaan vain raporttitekstuuri (paljon nopeampi kuin neutronitekstuuri)
     gl.readPixels(0, 0, uraniumAtomsCountX, uraniumAtomsCountY, gl.RGBA, gl.UNSIGNED_BYTE, reportData);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, simCanvas.width, simCanvas.height);
-    if (frameCount % 60 === 0) { // Kerran sekunnissa
-        console.log("Osumadataa raportissa:", reportData.find(x => x > 0));
-    }
+    /*     if (frameCount % 60 === 0) { // Kerran sekunnissa
+    console.log("Osumadataa raportissa:", reportData.find(x => x > 0));
+    } */
     // 3. Reagoidaan osumiin CPU:lla
-    for (let i = 0; i < uraniumAtoms.length; i++) {
-        // Punainen kanava sisältää osumien määrän (Additive blendingin ansiosta)
-        let hitCount = reportData[i * 4];
-        if (hitCount > 0) {
-            for (let j = 0; j < hitCount; j++) {
-                uraniumAtoms[i].hitByNeutron();
-                // Syntyy kaksi uutta neutronia
-                spawnNeutron(uraniumAtoms[i].position.x, uraniumAtoms[i].position.y, uraniumAtoms[i].radius);
-                spawnNeutron(uraniumAtoms[i].position.x, uraniumAtoms[i].position.y, uraniumAtoms[i].radius);
+        for (let i = 0; i < uraniumAtoms.length; i++) {
+            const gridIndex = uraniumAtoms[i].index;
+            const x = gridIndex % uraniumAtomsCountX;
+            const y = Math.floor(gridIndex / uraniumAtomsCountX);
+
+            // report.vert maps atom row y -> same row in the report texture
+            // and readPixels fills the buffer bottom-to-top, so the buffer row
+            // corresponding to the atom is simply y. No additional flip needed.
+            const idx = (y * uraniumAtomsCountX + x) * 4;
+
+            let hitCount = reportData[idx];
+            if (hitCount > 0) {
+                for (let j = 0; j < hitCount; j++) {
+                    uraniumAtoms[i].hitByNeutron();
+                    // Syntyy kaksi uutta neutronia
+                    spawnNeutron(uraniumAtoms[i].position.x, uraniumAtoms[i].position.y, uraniumAtoms[i].radius);
+                    spawnNeutron(uraniumAtoms[i].position.x, uraniumAtoms[i].position.y, uraniumAtoms[i].radius);
+                }
             }
         }
-    }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 }
 
 

@@ -14,7 +14,8 @@ let currentNeutronIndex = 0;
 let neutronSpeed = 5;
 let collisionProbability = 0.08;
 let decayProbability = 0.0001;
-let controlRodAbsorptionProbability = 0.05;
+let controlRodAbsorptionProbability = 0.55;
+let controlRodHitProbability = 0.225;
 let heatTransferCoefficient = 0.04;
 let waterFlowSpeed = 0.3; // Speed of water flow (interpolation factor)
 let fpstext = 0;
@@ -40,6 +41,7 @@ let reportVertCode, reportFragCode, reportVertSrc, reportFragSrc;
 let gl;
 let reportFBO, reportTex;
 let reportProgram;
+let reportVao;
 
 const screenDrawWidth = 800;
 const screenDrawHeight = 600;
@@ -57,7 +59,7 @@ const controlRodHeight = 600;
 const heatingRate = 1500;
 const uraniumToWaterHeatTransfer = 0.1;
 const NEUTRON_STRIDE = 4;
-const controlRodsStartPos = screenDrawHeight * .1;
+const controlRodsStartPos = screenDrawHeight * .9;
 const MAX_NEUTRONS = 256;
 const MAX_NEUTRONS_SQUARED = MAX_NEUTRONS * MAX_NEUTRONS;
 
@@ -100,17 +102,10 @@ function setup() {
     alpha: true,
     depth: false,
     antialias: false,
-    preserveDrawingBuffer: true
+    preserveDrawingBuffer: true,
   });
 
   const ext = simGL.getExtension("EXT_color_buffer_float");
-  if (!ext) {
-    throw new Error("EXT_color_buffer_float not supported");
-  }
-
-  if (!simGL) {
-    throw "WebGL2 not supported";
-  }
 
   simProgram = createProgram(simGL, simVertCode, simFragCode);
   reportProgram = createProgram(simGL, reportVertCode, reportFragCode);
@@ -135,6 +130,9 @@ function setup() {
     }
   }
 
+
+
+
   for (let x = 0; x < uraniumAtomsCountX; x++) {
     if ((x + 1) % 7 === 0) {
       controlRods.push(new ControlRod(x * uraniumAtomsSpacingX + controlRodWidth / 2, -screenDrawHeight / 2));
@@ -144,11 +142,12 @@ function setup() {
         let waterCell = waterCells[waterCellIndex];
         let uraniumX = x * uraniumAtomsSpacingX + uraniumAtomsSpacingX / 2;
         let uraniumY = y * uraniumAtomsSpacingY + uraniumAtomsSpacingY / 2;
-        uraniumAtoms.push(new UraniumAtom(uraniumX, uraniumY, waterCell));
+        let atom = new UraniumAtom(uraniumX, uraniumY, waterCell);
+        atom.index = x + y * uraniumAtomsCountX;
+        uraniumAtoms.push(atom);
       }
     }
   }
-  uraniumAtoms.forEach((atom, i) => atom.index = i);
 
 
   grid = new Grid(uraniumAtomsSpacingX);
@@ -171,6 +170,7 @@ function draw() {
 
   // 3. p5.js PIIRTO (Tausta ja kiinteät elementit)
   translate(-screenDrawWidth / 2, -screenDrawHeight / 2);
+  //background(22, 88, 90);
   background(22, 88, 90);
 
   updateShit(uraniumAtoms);
