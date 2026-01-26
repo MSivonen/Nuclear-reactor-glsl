@@ -1,12 +1,12 @@
 function oncePerSecond() {
-    if (millis() - prevTime >= 1000) {
-        energyOutput = energyOutputCounter / framesCounted;
+    if (millis() - ui.prevTime >= 1000) {
+        energyOutput = energyOutputCounter / ui.framesCounted;
         energyOutputCounter = 0;
-        avgfps = framesCounted;
-        framesCounted = 0;
-        prevTime = millis();
+        ui.avgFps = ui.framesCounted;
+        ui.framesCounted = 0;
+        ui.prevTime = millis();
     } else {
-        framesCounted++;
+        ui.framesCounted++;
     }
 }
 
@@ -14,13 +14,8 @@ function resetSimulation() {
     for (let atom of uraniumAtoms) {
         atom.temperature = 25;
     }
-
     controlRods.forEach(rod => rod.targetY = -100);
-
-    collisionProbability = 0.08;
     initializeControls();
-
-    neutrons = [];
     boom = false;
 }
 
@@ -30,7 +25,7 @@ function gameOver() {
         resetSimulation();
     }
 
-    collisionProbability = 0;
+    settings.collisionProbability = 0;
     const boomText = 'Boom mathafuka';
 
     fill(0, 0, 0);
@@ -48,10 +43,6 @@ function gameOver() {
     filter(BLUR, 5);
     fill(255, 255, 255);
     text(boomText, screenDrawWidth / (2 + random(0, 0.02)), screenDrawHeight / (2 + random(0, 0.02)));
-}
-
-function updateShit(shit) {
-    shit.forEach(s => s.update());
 }
 
 function scaleMouse(xx, yy) {
@@ -79,11 +70,11 @@ function atomCollisions() {
         const atomIndex = collisionReport.atomIndices[i];
         const atom = uraniumAtoms[atomIndex];
 
-        atom.heat += heatingRate;
+        atom.heat += settings.heatingRate;
         atom.flash = 10;
 
         for (let n = 0; n < 2; n++) {
-            neutronSystem.addNeutron(
+            addNeutron(
                 atom.position.x,
                 atom.position.y,
                 atom.radius

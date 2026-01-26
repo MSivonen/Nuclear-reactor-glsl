@@ -26,19 +26,16 @@ class ControlRod {
 
 
 class ControlRodsSlider {
-    //make a draggable control slider
     constructor() {
         this.x = 15;
         this.y = controlRodsStartPos;
-        this.width = width;
-        this.height = height;
     }
 
     slider() {
         fill(255);
         rectMode(CORNER);
 
-        rect(this.x, 0, 10, 600);
+        rect(this.x, 0, 10, controlRodHeight);
         fill(255, 0, 0);
         const sx = this.x - 10;
         const sy = this.y - 5;

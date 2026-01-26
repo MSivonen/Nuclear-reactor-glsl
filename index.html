@@ -18,24 +18,23 @@
   <label for="controlRodAbsorption">Control Rod Absorption</label><br>
   <input type="range" id="control-rod-target" min="-600" max="0" step="1" value="0">
   <label for="control-rod-target">Control Rod Target Position</label><br>
-  <p id="total-neutrons">Total Neutrons: 0</p>
-  <p id="decay-neutrons">Decay Neutrons: 0</p>
-  <p id="collision-neutrons">Collision Neutrons: 0</p>
   <p id="collisions-per-second">Collisions per Second: 0</p>
   <p id="energy-output">Energy output: 0 kW</p>
   <p id="energy-this-frame">Energy this frame: 0 kW</p>
   <p id="neutron-speed-display">Neutron Speed: 5</p>
   <script src="sketch.js"></script>
+  <script src="neutronBuffer.js"></script>
+  <script src="grid.js"></script>
+  <script src="collisionReport.js"></script>
   <script src="ui.js"></script>
-  <script src="neutron.js"></script>
   <script src="uranium.js"></script>
   <script src="controlrod.js"></script>
   <script src="water.js"></script>
   <script src="meter.js"></script>
   <script src="drawFunctions.js"></script>
   <script src="miscFunctions.js"></script>
-  <script src="neutronSystem.js"></script>
   <script src="shaderFunctions.js"></script>
+  <script src="sceneHelpers.js"></script>
 
   <div id="canvas-container" style="position: relative;">
     <canvas id="simCanvas" width="1324" height="768" 

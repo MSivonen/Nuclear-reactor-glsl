@@ -4,7 +4,7 @@ class Water {
         this.temperature = 25;
         this.specificHeatCapacity = 4186;
         this.mass = 0.1;
-        this.heatDissipationRate = 0.5;
+        this.heatDissipationRate = 0.05;
     }
 
     update() {
@@ -15,7 +15,7 @@ class Water {
         img.noStroke();
         let coolColor = color(22, 88, 90, 0);
         let hotColor = color(224, 255, 255, 200);
-        let t = map(this.temperature, 25, 700, 0, 1);
+        let t = map(this.temperature, 25, 1700, 0, 1);
         this.color = lerpColor(coolColor, hotColor, t);
         img.fill(this.color);
         img.rectMode(CENTER);
@@ -37,7 +37,7 @@ function updateWaterCells() {
                     let neighborIndex = nx + ny * uraniumAtomsCountX;
                     const neighbor = waterCells[neighborIndex];
                     if (neighbor.temperature > cell.temperature) {
-                        const dT = (heatTransferCoefficient) * (neighbor.temperature - cell.temperature);
+                        const dT = settings.heatTransferCoefficient * (neighbor.temperature - cell.temperature);
                         // Store the temperature change for both cells in the temperatureChanges object
                         const key = `${x}-${y}`;
                         if (!(key in temperatureChanges)) {
@@ -78,7 +78,7 @@ function interpolateWaterCellsUpwards() {
             // If it's the bottom row, interpolate with the imaginary row value of 25
             if (y == uraniumAtomsCountY - 1) {
                 const imaginaryRowValue = 25;
-                cell.temperature = cell.temperature * (1 - waterFlowSpeed) + imaginaryRowValue * waterFlowSpeed;
+                cell.temperature = cell.temperature * (1 - settings.waterFlowSpeed) + imaginaryRowValue * settings.waterFlowSpeed;
             } else if (y == 0) {
                 // For the top row, just move the temperature upwards without interpolation
                 cell.temperature = waterCells[index + uraniumAtomsCountX].temperature;
@@ -87,7 +87,7 @@ function interpolateWaterCellsUpwards() {
                 let belowIndex = x + (y + 1) * uraniumAtomsCountX; // Calculate the position of the cell below in the array
                 const belowCell = waterCells[belowIndex]; // Get the cell object below
 
-                const newTemperature = cell.temperature * (1 - waterFlowSpeed) + belowCell.temperature * waterFlowSpeed;
+                const newTemperature = cell.temperature * (1 - settings.waterFlowSpeed) + belowCell.temperature * settings.waterFlowSpeed;
                 //belowCell.temperature = cell.temperature * waterFlowSpeed + belowCell.temperature * (1 - waterFlowSpeed);
                 cell.temperature = newTemperature;
             }

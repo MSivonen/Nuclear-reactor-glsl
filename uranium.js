@@ -2,7 +2,7 @@
 class UraniumAtom {
   constructor(x, y, waterCell) {
     this.position = createVector(x, y);
-    this.radius = uraniumSize;
+    this.radius = settings.uraniumSize;
     this.color = color(50);
     this.isHit = false;
     this.flash = 0;
@@ -19,7 +19,7 @@ class UraniumAtom {
   }
 
   update() {
-    if (random() < decayProbability) {
+    if (random() < settings.decayProbability) {
       this.createNeutron();
     }
     this.flash--;
@@ -46,7 +46,7 @@ class UraniumAtom {
   }
 
   heatTransferToWater() {
-    const deltaT = (this.heat - this.waterCell.temperature) * uraniumToWaterHeatTransfer;
+    const deltaT = (this.heat - this.waterCell.temperature) * settings.uraniumToWaterHeatTransfer;
     this.heat -= deltaT;
     this.waterCell.temperature += deltaT;
     energyThisFrame += deltaT;
@@ -54,11 +54,11 @@ class UraniumAtom {
 
   hitByNeutron() {
     this.isHit = true;
-    this.heat += heatingRate;
+    this.heat += settings.heatingRate;
     this.flash = 10; // Flash for 10 frames
   }
 
   createNeutron() {
-    neutronSystem.addNeutron(this.position.x, this.position.y, this.radius);
+    addNeutron(this.position.x, this.position.y, this.radius);
   }
 }

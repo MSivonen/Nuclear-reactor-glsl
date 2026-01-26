@@ -92,9 +92,9 @@ function createProgram(gl, vertSrc, fragSrc) {
 // Fullscreen quad
 // ----------------------------------------------------------
 function drawFullscreenQuad(gl) {
-    if (!quadVao) {
-        quadVao = gl.createVertexArray();
-        gl.bindVertexArray(quadVao);
+    if (!glShit.quadVao) {
+        glShit.quadVao = gl.createVertexArray();
+        gl.bindVertexArray(glShit.quadVao);
 
         const vbo = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
@@ -118,7 +118,7 @@ function drawFullscreenQuad(gl) {
         gl.bindBuffer(gl.ARRAY_BUFFER, null);
     }
 
-    gl.bindVertexArray(quadVao);
+    gl.bindVertexArray(glShit.quadVao);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
     gl.bindVertexArray(null);
 }
@@ -127,45 +127,42 @@ function drawFullscreenQuad(gl) {
 // GPU simulation step
 // ----------------------------------------------------------
 function gpuUpdateNeutrons(gl) {
-    gl.bindFramebuffer(gl.FRAMEBUFFER, writeFBO);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, glShit.writeFBO);
     gl.viewport(0, 0, MAX_NEUTRONS, MAX_NEUTRONS);
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT);
 
-    gl.useProgram(simProgram);
+    gl.useProgram(glShit.simProgram);
 
-
-    // Huom: käytä rod.position.y jos ControlRod on p5-tyylinen olio, 
-    // tai rod.y jos se on simppeli objekti.
     let rodYPos = controlRods[0].y+screenDrawHeight;
-    let uRodsLoc = gl.getUniformLocation(simProgram, "u_controlRods");
+    let uRodsLoc = gl.getUniformLocation(glShit.simProgram, "u_controlRods");
     gl.uniform1f(uRodsLoc, rodYPos);
 
     gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, readTex);
-    gl.uniform1i(uNeutronsLoc, 0);
-    gl.uniform1i(gl.getUniformLocation(simProgram, "u_uraniumCountX"), uraniumAtomsCountX);
-    gl.uniform1f(gl.getUniformLocation(simProgram, "collision_prob"), collisionProbability);
-    gl.uniform1f(gl.getUniformLocation(simProgram, "controlRodHitProbability"), controlRodHitProbability);
-    gl.uniform1f(gl.getUniformLocation(simProgram, "controlRodAbsorptionProbability"), controlRodAbsorptionProbability);
+    gl.bindTexture(gl.TEXTURE_2D, glShit.readTex);
+    gl.uniform1i(glShit.uNeutronsLoc, 0);
+    gl.uniform1i(gl.getUniformLocation(glShit.simProgram, "u_uraniumCountX"), uraniumAtomsCountX);
+    gl.uniform1f(gl.getUniformLocation(glShit.simProgram, "collision_prob"), settings.collisionProbability);
+    gl.uniform1f(gl.getUniformLocation(glShit.simProgram, "controlRodHitProbability"), settings.controlRodHitProbability);
+    gl.uniform1f(gl.getUniformLocation(glShit.simProgram, "controlRodAbsorptionProbability"), settings.controlRodAbsorptionProbability);
 
     drawFullscreenQuad(gl);
 
     // Ping-pong
-    const tmpTex = readTex;
-    readTex = writeTex;
-    writeTex = tmpTex;
+    const tmpTex = glShit.readTex;
+    glShit.readTex = glShit.writeTex;
+    glShit.writeTex = tmpTex;
 
-    const tmpFbo = readFBO;
-    readFBO = writeFBO;
-    writeFBO = tmpFbo;
+    const tmpFbo = glShit.readFBO;
+    glShit.readFBO = glShit.writeFBO;
+    glShit.writeFBO = tmpFbo;
 }
 
 // ----------------------------------------------------------
 // Readback (DEBUG / transitional only)
 // ----------------------------------------------------------
 function readFrameBuffer(gl) {
-    gl.bindFramebuffer(gl.FRAMEBUFFER, readFBO);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, glShit.readFBO);
 
     gl.readPixels(
         0,
@@ -174,7 +171,7 @@ function readFrameBuffer(gl) {
         MAX_NEUTRONS,
         gl.RGBA,
         gl.FLOAT,
-        neutronSystem.buffer
+        neutronBuffer
     );
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -186,7 +183,7 @@ function readFrameBuffer(gl) {
 // ----------------------------------------------------------
 function updateNeutronInTexture(gl, index, x, y, vx, vy) {
     // Varmistetaan että kirjoitamme nykyiseen input-tekstuuriin
-    gl.bindTexture(gl.TEXTURE_2D, readTex);
+    gl.bindTexture(gl.TEXTURE_2D, glShit.readTex);
 
     const data = new Float32Array([x, y, vx, vy]);
 
@@ -194,7 +191,7 @@ function updateNeutronInTexture(gl, index, x, y, vx, vy) {
     const texX = index % MAX_NEUTRONS;
     const texY = Math.floor(index / MAX_NEUTRONS);
 
-    gl.bindTexture(gl.TEXTURE_2D, readTex);
+    gl.bindTexture(gl.TEXTURE_2D, glShit.readTex);
     gl.texSubImage2D(
         gl.TEXTURE_2D,
         0,          // level
@@ -207,7 +204,7 @@ function updateNeutronInTexture(gl, index, x, y, vx, vy) {
         data
     );
 
-    gl.bindTexture(gl.TEXTURE_2D, writeTex);
+    gl.bindTexture(gl.TEXTURE_2D, glShit.writeTex);
     gl.texSubImage2D(
         gl.TEXTURE_2D,
         0,          // level
@@ -223,33 +220,34 @@ function updateNeutronInTexture(gl, index, x, y, vx, vy) {
     gl.bindTexture(gl.TEXTURE_2D, null);
 }
 
-// Kutsu tätä setupissa
 function initRenderShader(gl, vsSource, fsSource) {
-    renderProgram = createProgram(gl, vsSource, fsSource);
-    uRenderResLoc = gl.getUniformLocation(renderProgram, "u_resolution");
-    uRenderTexSizeLoc = gl.getUniformLocation(renderProgram, "u_textureSize");
+    glShit.renderProgram = createProgram(gl, vsSource, fsSource);
+    glShit.uRenderResLoc = gl.getUniformLocation(glShit.renderProgram, "u_resolution");
+    glShit.uRenderTexSizeLoc = gl.getUniformLocation(glShit.renderProgram, "u_textureSize");
 }
 
 function gpuDrawNeutrons(gl) {
-    gl.useProgram(renderProgram);
+    gl.useProgram(glShit.renderProgram);
 
-    gl.viewport(0, 0, simCanvas.width, simCanvas.height);
-    gl.clearColor(0, 0, 0, 0); // Läpinäkyvä tausta
-    gl.clear(simGL.COLOR_BUFFER_BIT);
+    gl.viewport(0, 0, glShit.simCanvas.width, glShit.simCanvas.height);
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(glShit.simGL.COLOR_BUFFER_BIT);
 
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
-    let uTexSizeLoc = gl.getUniformLocation(renderProgram, "u_textureSize");
-    let uResLoc = gl.getUniformLocation(renderProgram, "u_resolution");
-    let uSimLoc = gl.getUniformLocation(renderProgram, "u_simSize");
+    let uTexSizeLoc = gl.getUniformLocation(glShit.renderProgram, "u_textureSize");
+    let uResLoc = gl.getUniformLocation(glShit.renderProgram, "u_resolution");
+    let uSimLoc = gl.getUniformLocation(glShit.renderProgram, "u_simSize");
+    let uNeutronSize = gl.getUniformLocation(glShit.renderProgram, "u_neutronSize");
 
     gl.uniform1i(uTexSizeLoc, MAX_NEUTRONS); // 256
-    gl.uniform2f(uResLoc, simCanvas.width, simCanvas.height); // 1324, 768
+    gl.uniform2f(uResLoc, glShit.simCanvas.width, glShit.simCanvas.height);
     gl.uniform2f(uSimLoc, 800.0, 600.0); // Simulaation sisäinen koko
+    gl.uniform1f(uNeutronSize, settings.neutronSize); 
 
     gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, readTex);
+    gl.bindTexture(gl.TEXTURE_2D, glShit.readTex);
 
     // Piirretään pisteet
     gl.drawArrays(gl.POINTS, 0, MAX_NEUTRONS_SQUARED);
@@ -258,70 +256,111 @@ function gpuDrawNeutrons(gl) {
 }
 
 function initReportSystem(gl) {
-    // Luodaan tekstuuri, joka on tarpeeksi suuri kaikille atomeille
-    // 41x30 grid -> esim. 64x64 tekstuuri on helppo
-    reportTex = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, reportTex);
+    glShit.reportTex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, glShit.reportTex);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, uraniumAtomsCountX, uraniumAtomsCountY, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
 
-    reportFBO = gl.createFramebuffer();
-    gl.bindFramebuffer(gl.FRAMEBUFFER, reportFBO);
-    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, reportTex, 0);
+        glShit.reportFBO = gl.createFramebuffer();
+        gl.bindFramebuffer(gl.FRAMEBUFFER, glShit.reportFBO);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, glShit.reportTex, 0);
 
-    reportVao = gl.createVertexArray();
-    gl.bindVertexArray(reportVao);
-    gl.bindVertexArray(null);
+        glShit.reportVao = gl.createVertexArray();
+        gl.bindVertexArray(glShit.reportVao);
+        gl.bindVertexArray(null);
 
-    gl.useProgram(reportProgram);
+        gl.useProgram(glShit.reportProgram);
 
-    // 1. Hae muuttujien sijainnit (tämä kannattaa tehdä vain kerran initissä, mutta toimii tässäkin)
-    let uCountXLoc = gl.getUniformLocation(reportProgram, "u_uraniumCountX");
-    let uCountYLoc = gl.getUniformLocation(reportProgram, "u_uraniumCountY");
-    let uTexSizeLoc = gl.getUniformLocation(reportProgram, "u_textureSize");
+        let uCountXLoc = gl.getUniformLocation(glShit.reportProgram, "u_uraniumCountX");
+        let uCountYLoc = gl.getUniformLocation(glShit.reportProgram, "u_uraniumCountY");
+        let uTexSizeLoc = gl.getUniformLocation(glShit.reportProgram, "u_textureSize");
 
-    // 2. Aseta arvot: gl.uniform1i(location, value)
-    gl.uniform1i(uCountXLoc, uraniumAtomsCountX); // uraniumAtomsCountX
-    gl.uniform1i(uCountYLoc, uraniumAtomsCountY); // uraniumAtomsCountY
+    gl.uniform1i(uCountXLoc, uraniumAtomsCountX); 
+    gl.uniform1i(uCountYLoc, uraniumAtomsCountY); 
     gl.uniform1i(uTexSizeLoc, MAX_NEUTRONS); // Esim. 256
 
-    reportData = new Uint8Array(uraniumAtomsCountX * uraniumAtomsCountY * 4);
+    glShit.reportData = new Uint8Array(uraniumAtomsCountX * uraniumAtomsCountY * 4);
+    // Try to create two PIXEL_PACK_BUFFERs (PBOs) for asynchronous readback
+    if (typeof WebGL2RenderingContext !== 'undefined' && gl instanceof WebGL2RenderingContext && typeof gl.getBufferSubData === 'function') {
+        const pboSize = glShit.reportData.length; // bytes for Uint8Array
+        glShit.reportPBOs = [gl.createBuffer(), gl.createBuffer()];
+        for (let b of glShit.reportPBOs) {
+            gl.bindBuffer(gl.PIXEL_PACK_BUFFER, b);
+            // Allocate buffer storage (orphan previous to avoid stalls)
+            gl.bufferData(gl.PIXEL_PACK_BUFFER, pboSize, gl.STREAM_READ);
+        }
+        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+        glShit.reportPBOIndex = 0;
+        glShit.reportPBOSize = pboSize;
+    }
+
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    // Lataa reportProgram täällä vastaavasti kuin muut
 }
 
 
 function processCollisions(gl) {
     // 1. Piirretään osumat raporttitekstuuriin (GPU sisäinen)
-    gl.bindFramebuffer(gl.FRAMEBUFFER, reportFBO);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, glShit.reportFBO);
     gl.viewport(0, 0, uraniumAtomsCountX, uraniumAtomsCountY); // Pieni koko riittää atomeille
     gl.disable(gl.BLEND);
 
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT);
 
-    gl.useProgram(reportProgram);
+    gl.useProgram(glShit.reportProgram);
     gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, readTex); // Luetaan neutronien tila
-    gl.uniform1i(gl.getUniformLocation(reportProgram, "u_neutrons"), 0);
-    gl.uniform1i(gl.getUniformLocation(reportProgram, "u_textureSize"), MAX_NEUTRONS);
+    gl.bindTexture(gl.TEXTURE_2D, glShit.readTex); // Luetaan neutronien tila
+    gl.uniform1i(gl.getUniformLocation(glShit.reportProgram, "u_neutrons"), 0);
+    gl.uniform1i(gl.getUniformLocation(glShit.reportProgram, "u_textureSize"), MAX_NEUTRONS);
     // Käytetään Additive Blendingiä: jos useampi neutroni osuu samaan atomiin, 
     // väriarvo kasvaa (1.0, 2.0, jne.)
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.ONE, gl.ONE);
 
-    gl.bindVertexArray(reportVao);
+    gl.bindVertexArray(glShit.reportVao);
     gl.drawArrays(gl.POINTS, 0, MAX_NEUTRONS_SQUARED);
     gl.bindVertexArray(null);
 
     gl.disable(gl.BLEND);
 
-    // 2. Luetaan vain raporttitekstuuri (paljon nopeampi kuin neutronitekstuuri)
-    gl.readPixels(0, 0, uraniumAtomsCountX, uraniumAtomsCountY, gl.RGBA, gl.UNSIGNED_BYTE, reportData);
-    gl.viewport(0, 0, simCanvas.width, simCanvas.height);
+    // 2. Read back the report texture into CPU memory.
+    // If WebGL2 PBOs are available we use double-buffered PIXEL_PACK_BUFFERs
+    // to reduce GPU/CPU sync stalls. Otherwise fall back to readPixels.
+    if (glShit.reportPBOs && typeof gl.getBufferSubData === 'function') {
+        const w = uraniumAtomsCountX;
+        const h = uraniumAtomsCountY;
+
+        // Write into the 'current' PBO (orphan first to avoid stalls)
+        const writePBO = glShit.reportPBOs[glShit.reportPBOIndex];
+        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, writePBO);
+        gl.bufferData(gl.PIXEL_PACK_BUFFER, glShit.reportPBOSize, gl.STREAM_READ);
+        // readPixels with offset 0 writes into bound PIXEL_PACK_BUFFER
+        gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, 0);
+
+        // Read back data from the previous PBO (if any) into reportData.
+        const readPBO = glShit.reportPBOs[(glShit.reportPBOIndex + 1) % 2];
+        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, readPBO);
+        try {
+            // getBufferSubData will copy PBO contents into the JS array.
+            gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, glShit.reportData);
+        } catch (e) {
+            // If anything goes wrong, fall back to synchronous readPixels
+            gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+            gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, glShit.reportData);
+        }
+
+        // Unbind and advance PBO index so next frame we swap roles
+        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+        glShit.reportPBOIndex = (glShit.reportPBOIndex + 1) % 2;
+        gl.viewport(0, 0, glShit.simCanvas.width, glShit.simCanvas.height);
+    } else {
+        // Fallback: blocking readPixels
+        gl.readPixels(0, 0, uraniumAtomsCountX, uraniumAtomsCountY, gl.RGBA, gl.UNSIGNED_BYTE, glShit.reportData);
+        gl.viewport(0, 0, glShit.simCanvas.width, glShit.simCanvas.height);
+    }
     /*     if (frameCount % 60 === 0) { // Kerran sekunnissa
-    console.log("Osumadataa raportissa:", reportData.find(x => x > 0));
+    console.log("Osumadataa raportissa:", glState.reportData.find(x => x > 0));
     } */
     // 3. Reagoidaan osumiin CPU:lla
         for (let i = 0; i < uraniumAtoms.length; i++) {
@@ -334,7 +373,7 @@ function processCollisions(gl) {
             // corresponding to the atom is simply y. No additional flip needed.
             const idx = (y * uraniumAtomsCountX + x) * 4;
 
-            let hitCount = reportData[idx];
+            let hitCount = glShit.reportData[idx];
             if (hitCount > 0) {
                 for (let j = 0; j < hitCount; j++) {
                     uraniumAtoms[i].hitByNeutron();
@@ -353,8 +392,8 @@ function spawnNeutron(x, y, atomRadius) {
     currentNeutronIndex = (currentNeutronIndex + 1) % MAX_NEUTRONS_SQUARED;
 
     const angle = Math.random() * Math.PI * 2;
-    const vx = Math.cos(angle) * neutronSpeed;
-    const vy = Math.sin(angle) * neutronSpeed;
+    const vx = Math.cos(angle) * settings.neutronSpeed;
+    const vy = Math.sin(angle) * settings.neutronSpeed;
 
     // Siirto atomin ulkopuolelle
     const spawnOffset = atomRadius * 2;
@@ -362,5 +401,5 @@ function spawnNeutron(x, y, atomRadius) {
     const finalY = y + Math.sin(angle) * spawnOffset;
 
     // Päivitetään vain tekstuurin tiettyä kohtaa (yksi pikseli)
-    updateNeutronInTexture(simGL, currentNeutronIndex, finalX, finalY, vx, vy);
+    updateNeutronInTexture(glShit.simGL, currentNeutronIndex, finalX, finalY, vx, vy);
 }
