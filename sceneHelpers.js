@@ -29,6 +29,16 @@ function initShadersAndGL() {
 
     initRenderShader(glShit.simGL, glShit.shaderCodes.rendVertCode, glShit.shaderCodes.rendFragCode);
     initReportSystem(glShit.simGL);
+    // Initialize GPU instanced atom renderer (fallback to CPU if fails)
+    try {
+        if (typeof atomsRenderer !== 'undefined') {
+            atomsRenderer.init(glShit.simGL, uraniumAtomsCountX * uraniumAtomsCountY);
+            glShit.useInstancedAtoms = true;
+        }
+    } catch (e) {
+        console.warn('atomsRenderer init failed, falling back to CPU draw', e);
+        glShit.useInstancedAtoms = false;
+    }
 }
 
 function initSceneObjects() {
@@ -98,15 +108,25 @@ function renderScene() {
     scale(screenRenderHeight / screenDrawHeight);
     translate(-screenDrawWidth / 2, -screenDrawHeight / 2);
 
-    uraniumAtoms.forEach(s => s.draw());
+    // Atoms: prefer GPU instanced renderer if available
+    if (glShit.useInstancedAtoms && typeof atomsRenderer !== 'undefined') {
+        // Update instance buffer and draw to the simCanvas (WebGL2)
+        atomsRenderer.updateInstances(uraniumAtoms);
+        atomsRenderer.draw(uraniumAtoms.length);
+    } else {
+        uraniumAtoms.forEach(s => s.draw());
+    }
     controlRods.forEach(s => s.draw());
 
+    
+    
     drawSteam();
+    atomsRenderer.renderImage();
     ui.meter.show();
     ui.controlSlider.slider();
     gameOver();
     drawFPS();
     drawBorders();
-
+    
     pop();
 }

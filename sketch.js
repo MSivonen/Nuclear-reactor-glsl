@@ -1,3 +1,11 @@
+// === Screen constants ===
+const screenDrawWidth = 800;
+const screenDrawHeight = 600;
+const controlRodsStartPos = screenDrawHeight * .9;
+const screenRenderWidth = 1384;
+const screenRenderHeight = 768;
+const waterColor = [22, 88, 90];
+
 const settings = {
   neutronSpeed: 5,
   collisionProbability: 0.08,
@@ -9,16 +17,8 @@ const settings = {
   uraniumToWaterHeatTransfer: 0.1,
   heatTransferCoefficient: 0.04,
   uraniumSize: 2,
-  neutronSize: 10.5
+  neutronSize: 10 //for simulation too, not only for show...
 };
-
-// === Screen constants ===
-const screenDrawWidth = 800;
-const screenDrawHeight = 600;
-const controlRodsStartPos = screenDrawHeight * .9;
-const screenRenderHeight = 768;
-const screenRenderWidth = Math.round(screenRenderHeight * screenDrawWidth / screenDrawHeight);
-const waterColor = [22, 88, 90];
 
 // === Misc shit ===
 let uraniumAtoms = [];
@@ -33,6 +33,8 @@ let font;
 let energyOutput = 0;
 let energyThisFrame = 0;
 let energyOutputCounter = 0;
+let tex;
+
 
 
 const glShit = {
@@ -118,6 +120,7 @@ function setup() {
   initShadersAndGL();
   collisionReport = new CollisionReport();
   initSceneObjects();
+
 }
 
 function draw() {

@@ -8,6 +8,7 @@ uniform vec2 u_resolution; // 1324, 768
 uniform vec2 u_simSize;    // 800, 600
 
 void main() {
+    float correctNeutronSize= u_neutronSize * (u_resolution.y / u_simSize.y)/3.;
     int id = gl_VertexID;
     vec2 uv = (vec2(id % u_textureSize, id / u_textureSize) + 0.5) / float(u_textureSize);
     
@@ -32,5 +33,5 @@ void main() {
     float y = (screenY / u_resolution.y) * -2.0 + 1.0; // Invert Y
 
     gl_Position = vec4(x, y, 0.0, 1.0);
-    gl_PointSize = (length(data.zw) > 0.0) ? u_neutronSize : 0.0;
+    gl_PointSize = (length(data.zw) > 0.0) ? correctNeutronSize : 0.0;
 }

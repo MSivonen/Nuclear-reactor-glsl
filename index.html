@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,6 +8,7 @@
   <link rel="stylesheet" type="text/css" href="style.css">
   <script src="libraries/p5.min.js"></script>
 </head>
+
 <body>
   <input type="number" id="decay-probability" min="0" max="1" step="0.00001" value="0">
   <label for="decay-probability">Decay Probability</label><br>
@@ -34,13 +36,15 @@
   <script src="drawFunctions.js"></script>
   <script src="miscFunctions.js"></script>
   <script src="shaderFunctions.js"></script>
+  <script src="atomsRenderer.js"></script>
   <script src="sceneHelpers.js"></script>
 
   <div id="canvas-container" style="position: relative;">
-    <canvas id="simCanvas" width="1324" height="768" 
-            style="position: absolute; left: 0; top: 0; pointer-events: none; z-index: 10;">
+    <canvas id="simCanvas" width="1324" height="768"
+      style="position: absolute; left: 0; top: 0; pointer-events: none; z-index: 10;">
     </canvas>
   </div>
 
 </body>
+
 </html>
