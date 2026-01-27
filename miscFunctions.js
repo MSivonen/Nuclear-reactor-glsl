@@ -15,6 +15,7 @@ function resetSimulation() {
         atom.temperature = 25;
     }
     controlRods.forEach(rod => rod.targetY = -100);
+    Object.assign(settings, defaultSettings);
     initializeControls();
     boom = false;
 }

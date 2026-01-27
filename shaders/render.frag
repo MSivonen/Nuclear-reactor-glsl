@@ -4,8 +4,8 @@ precision highp float;
 out vec4 outColor;
 
 void main(){
-    float coreSize=.08;
-    float glowAmount=-2.;
+    float coreSize=.003;
+    float glowAmount=-4.;
     
     // Keskitetty koordinaatti
     vec2 p=gl_PointCoord*2.-1.;
@@ -15,6 +15,10 @@ void main(){
     // Core ja glow
     float core=1.-smoothstep(0.,coreSize,d2);
     float glow=exp(glowAmount*d2);
+    
+    float fast=exp(-d2*200.);
+    float tail=exp(-d2*12.)*.25;
+    glow=fast+tail;
     
     vec3 col=vec3(core);
     col+=vec3(.2941,1.,.2)*glow;

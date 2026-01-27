@@ -224,33 +224,36 @@ function initRenderShader(gl, vsSource, fsSource) {
     glShit.renderProgram = createProgram(gl, vsSource, fsSource);
     glShit.uRenderResLoc = gl.getUniformLocation(glShit.renderProgram, "u_resolution");
     glShit.uRenderTexSizeLoc = gl.getUniformLocation(glShit.renderProgram, "u_textureSize");
+    glShit.uRenderSimSizeLoc = gl.getUniformLocation(glShit.renderProgram, "u_simSize");
+    glShit.uRenderNeutronSizeLoc = gl.getUniformLocation(glShit.renderProgram, "u_neutronSize");
+    glShit.uRenderNeutronsLoc = gl.getUniformLocation(glShit.renderProgram, "u_neutrons");
+
+    gl.useProgram(glShit.renderProgram);
+    gl.uniform1i(glShit.uRenderNeutronsLoc, 0);
+    gl.useProgram(null);
 }
 
 function gpuDrawNeutrons(gl) {
-    gl.useProgram(glShit.renderProgram);
-
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, glShit.simCanvas.width, glShit.simCanvas.height);
     gl.clearColor(0, 0, 0, 0);
-    gl.clear(glShit.simGL.COLOR_BUFFER_BIT);
+    gl.clear(gl.COLOR_BUFFER_BIT);
 
+    gl.useProgram(glShit.renderProgram);
     gl.enable(gl.BLEND);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    // Screen-like blending: 1 - (1 - S) * (1 - D)
+    gl.blendFuncSeparate(gl.ONE, gl.ONE_MINUS_SRC_COLOR, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 
-    let uTexSizeLoc = gl.getUniformLocation(glShit.renderProgram, "u_textureSize");
-    let uResLoc = gl.getUniformLocation(glShit.renderProgram, "u_resolution");
-    let uSimLoc = gl.getUniformLocation(glShit.renderProgram, "u_simSize");
-    let uNeutronSize = gl.getUniformLocation(glShit.renderProgram, "u_neutronSize");
-
-    gl.uniform1i(uTexSizeLoc, MAX_NEUTRONS); // 256
-    gl.uniform2f(uResLoc, glShit.simCanvas.width, glShit.simCanvas.height);
-    gl.uniform2f(uSimLoc, 800.0, 600.0); // Simulaation sisäinen koko
-    gl.uniform1f(uNeutronSize, settings.neutronSize); 
+    gl.uniform1i(glShit.uRenderTexSizeLoc, MAX_NEUTRONS);
+    gl.uniform2f(glShit.uRenderResLoc, glShit.simCanvas.width, glShit.simCanvas.height);
+    gl.uniform2f(glShit.uRenderSimSizeLoc, screenDrawWidth, screenDrawHeight);
+    gl.uniform1f(glShit.uRenderNeutronSizeLoc, settings.neutronSize);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, glShit.readTex);
 
-    // Piirretään pisteet
     gl.drawArrays(gl.POINTS, 0, MAX_NEUTRONS_SQUARED);
+
     gl.disable(gl.BLEND);
     gl.useProgram(null);
 }
