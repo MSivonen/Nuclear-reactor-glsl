@@ -17,7 +17,7 @@ const settings = {
   uraniumToWaterHeatTransfer: 0.1,
   heatTransferCoefficient: 0.04,
   uraniumSize: 2,
-  neutronSize: 10 //for simulation too, not only for show...
+  neutronSize: 10
 };
 
 // === Misc shit ===

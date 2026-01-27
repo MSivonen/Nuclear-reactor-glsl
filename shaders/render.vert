@@ -8,7 +8,7 @@ uniform vec2 u_resolution; // 1324, 768
 uniform vec2 u_simSize;    // 800, 600
 
 void main() {
-    float correctNeutronSize= u_neutronSize * (u_resolution.y / u_simSize.y)/3.;
+    float correctNeutronSize= u_neutronSize * (u_resolution.y / u_simSize.y);
     int id = gl_VertexID;
     vec2 uv = (vec2(id % u_textureSize, id / u_textureSize) + 0.5) / float(u_textureSize);
     
