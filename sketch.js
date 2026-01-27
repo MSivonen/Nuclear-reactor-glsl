@@ -59,6 +59,7 @@ const glShit = {
   reportFBO: null,
   reportVao: null,
   reportData: null,
+  useGpuSteam: false,
 
   shaderCodes: {
     simVertSrc: null,
@@ -69,6 +70,8 @@ const glShit = {
     reportFragSrc: null,
     atomsVertSrc: null,
     atomsFragSrc: null,
+    steamVertSrc: null,
+    steamFragSrc: null,
     simVertCode: null,
     simFragCode: null,
     rendVertCode: null,
@@ -77,6 +80,8 @@ const glShit = {
     reportFragCode: null,
     atomsVertCode: null,
     atomsFragCode: null,
+    steamVertCode: null,
+    steamFragCode: null,
   }
 };
 
@@ -117,6 +122,8 @@ function preload() {
   glShit.shaderCodes.reportFragSrc = loadStrings('shaders/report.frag');
   glShit.shaderCodes.atomsVertSrc = loadStrings('shaders/atoms.vert');
   glShit.shaderCodes.atomsFragSrc = loadStrings('shaders/atoms.frag');
+  glShit.shaderCodes.steamVertSrc = loadStrings('shaders/steam.vert');
+  glShit.shaderCodes.steamFragSrc = loadStrings('shaders/steam.frag');
 }
 
 function setup() {
@@ -129,6 +136,8 @@ function setup() {
   glShit.shaderCodes.reportFragCode = glShit.shaderCodes.reportFragSrc.join('\n');
   glShit.shaderCodes.atomsVertCode = glShit.shaderCodes.atomsVertSrc.join('\n');
   glShit.shaderCodes.atomsFragCode = glShit.shaderCodes.atomsFragSrc.join('\n');
+  glShit.shaderCodes.steamVertCode = glShit.shaderCodes.steamVertSrc.join('\n');
+  glShit.shaderCodes.steamFragCode = glShit.shaderCodes.steamFragSrc.join('\n');
   // Delegate initialization to helpers
   initShadersAndGL();
   collisionReport = new CollisionReport();

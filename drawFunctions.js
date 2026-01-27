@@ -1,8 +1,13 @@
 function drawSteam() {
+    if (glShit.useGpuSteam && typeof steamRenderer !== 'undefined') {
+        const count = steamRenderer.updateInstances(waterCells);
+        steamRenderer.renderImage(count);
+        return;
+    }
+
     steamImage.clear();
     steamImage.push();
     waterCells.forEach(s => s.draw(steamImage));
-    steamImage.filter(BLUR, 13);
     steamImage.pop();
     image(steamImage, 0, 0, screenDrawWidth, screenDrawHeight);
 }

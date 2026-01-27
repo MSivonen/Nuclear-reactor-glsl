@@ -44,6 +44,22 @@ function initShadersAndGL() {
         console.warn('atomsRenderer init failed, falling back to CPU draw', e);
         glShit.useInstancedAtoms = false;
     }
+
+    // Initialize GPU steam renderer
+    try {
+        if (typeof steamRenderer !== 'undefined') {
+            steamRenderer.init(
+                glShit.simGL,
+                uraniumAtomsCountX * uraniumAtomsCountY,
+                glShit.shaderCodes.steamVertCode,
+                glShit.shaderCodes.steamFragCode
+            );
+            glShit.useGpuSteam = true;
+        }
+    } catch (e) {
+        console.warn('steamRenderer init failed, falling back to CPU draw', e);
+        glShit.useGpuSteam = false;
+    }
 }
 
 function initSceneObjects() {

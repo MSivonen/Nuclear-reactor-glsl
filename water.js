@@ -24,47 +24,41 @@ class Water {
 }
 
 function updateWaterCells() {
-    const temperatureChanges = {};
+    const count = uraniumAtomsCountX * uraniumAtomsCountY;
+    let temperatureChanges = updateWaterCells.temperatureChanges;
+    if (!temperatureChanges || temperatureChanges.length !== count) {
+        temperatureChanges = new Float32Array(count);
+        updateWaterCells.temperatureChanges = temperatureChanges;
+    }
+    temperatureChanges.fill(0);
+
     for (let y = 0; y < uraniumAtomsCountY; y++) {
+        const row = y * uraniumAtomsCountX;
         for (let x = 0; x < uraniumAtomsCountX; x++) {
-            let index = x + y * uraniumAtomsCountX;
-            const cell = waterCells[index];
-            const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
-            for (let dir of directions) {
-                let nx = x + dir[0];
-                let ny = y + dir[1];
-                if (nx >= 0 && nx < uraniumAtomsCountX && ny >= 0 && ny < uraniumAtomsCountY) {
-                    let neighborIndex = nx + ny * uraniumAtomsCountX;
-                    const neighbor = waterCells[neighborIndex];
-                    if (neighbor.temperature > cell.temperature) {
-                        const dT = settings.heatTransferCoefficient * (neighbor.temperature - cell.temperature);
-                        // Store the temperature change for both cells in the temperatureChanges object
-                        const key = `${x}-${y}`;
-                        if (!(key in temperatureChanges)) {
-                            temperatureChanges[key] = 0;
-                        }
-                        temperatureChanges[key] += dT;
-                        const neighborKey = `${nx}-${ny}`;
-                        if (!(neighborKey in temperatureChanges)) {
-                            temperatureChanges[neighborKey] = 0;
-                        }
-                        temperatureChanges[neighborKey] -= dT;
-                    }
-                }
+            const index = row + x;
+            const cellTemp = waterCells[index].temperature;
+
+            // Right neighbor
+            if (x + 1 < uraniumAtomsCountX) {
+                const neighborIndex = index + 1;
+                const dT = settings.heatTransferCoefficient * (waterCells[neighborIndex].temperature - cellTemp);
+                temperatureChanges[index] += dT;
+                temperatureChanges[neighborIndex] -= dT;
+            }
+
+            // Down neighbor
+            if (y + 1 < uraniumAtomsCountY) {
+                const neighborIndex = index + uraniumAtomsCountX;
+                const dT = settings.heatTransferCoefficient * (waterCells[neighborIndex].temperature - cellTemp);
+                temperatureChanges[index] += dT;
+                temperatureChanges[neighborIndex] -= dT;
             }
         }
     }
 
-    // Loop over all cells in the grid again and update their temperatures based on the calculated changes
-    for (let y = 0; y < uraniumAtomsCountY; y++) {
-        for (let x = 0; x < uraniumAtomsCountX; x++) {
-            let index = x + y * uraniumAtomsCountX;
-            const cell = waterCells[index];
-            const key = `${x}-${y}`;
-            if (key in temperatureChanges) {
-                cell.temperature += temperatureChanges[key];
-            }
-        }
+    // Apply changes
+    for (let i = 0; i < count; i++) {
+        waterCells[i].temperature += temperatureChanges[i];
     }
 }
 

@@ -24,24 +24,7 @@ class UraniumAtom {
     }
     this.flash--;
     this.flash = Math.max(0, this.flash);
-    if (this.flash === 0) {
-      let c;
-      if (this.heat <= 250) {
-        c = lerpColor(color(0, 40, 0), color(255, 0, 0), this.heat / 250);
-      } else if (this.heat <= 1000) {
-        const heatRelativeTo250 = (this.heat - 250) / 250;
-        c = lerpColor(color(255, 0, 0), color(255, 255, 0), heatRelativeTo250);
-      } else if (this.heat <= 1500) {
-        const heatRelativeTo500 = (this.heat - 500) / 500;
-        c = lerpColor(color(255, 255, 0), color('white'), heatRelativeTo500);
-      } else {
-        // if temperature is greater than 1000, set color to white
-        c = color('white');
-      }
-      this.color = c;
-    } else {
-      this.color = color('white');
-    }
+    this.color = computeUraniumColor(this.heat, this.flash);
     this.heatTransferToWater();
   }
 
@@ -61,4 +44,35 @@ class UraniumAtom {
   createNeutron() {
     addNeutron(this.position.x, this.position.y, this.radius);
   }
+}
+
+function computeUraniumColor(heat, flash) {
+  if (flash > 0) {
+    return color(255, 255, 255);
+  }
+
+  if (heat <= 250) {
+    const t = heat / 250;
+    const r = lerp(0, 255, t);
+    const g = lerp(40, 0, t);
+    return color(clamp255(r), clamp255(g), 0);
+  }
+
+  if (heat <= 1000) {
+    const t = (heat - 250) / 250;
+    const g = lerp(0, 255, t);
+    return color(255, clamp255(g), 0);
+  }
+
+  if (heat <= 1500) {
+    const t = (heat - 500) / 500;
+    const b = lerp(0, 255, t);
+    return color(255, 255, clamp255(b));
+  }
+
+  return color(255, 255, 255);
+}
+
+function clamp255(value) {
+  return Math.max(0, Math.min(255, value));
 }
