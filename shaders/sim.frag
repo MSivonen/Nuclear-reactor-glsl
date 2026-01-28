@@ -16,6 +16,7 @@ const float ATOM_RADIUS=5.;
 
 out vec4 outColor;
 
+
 void main(){
   ivec2 coord=ivec2(gl_FragCoord.xy);
   vec4 data=texelFetch(u_neutrons,coord,0);
@@ -79,7 +80,7 @@ void main(){
       pos=vec2(-100.,-100.);// Siirretään se pois pelikentältä
     }
   }
-  
+
   if(hitID>0.){
     outColor=vec4(-200.,-200.,0.,hitID);// Alpha kantaa ID:n vielä kerran CPU:lle
   }else{

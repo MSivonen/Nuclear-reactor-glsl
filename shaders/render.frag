@@ -18,6 +18,13 @@ void main(){
     
     float fast=exp(-d2*200.);
     float tail=exp(-d2*12.)*.25;
+    
+    //   int loops=100000;
+    //   for(int i=0;i<loops;i++){
+    //       tail+=sin(float(i)*d2*12.3456)*.0000001;
+    //   }
+    // DEBUG TO SLOW DOWN THE GPU
+
     glow=fast+tail;
     
     vec3 col=vec3(core);

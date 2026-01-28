@@ -363,47 +363,43 @@ function processCollisions(gl) {
         }
 
         // Try to read back data from the previous PBO (if any) into reportData,
-        // but only if its fence has signaled to avoid blocking.
+        // but only if its fence has signaled. Do NOT fall back to blocking
+        // readPixels here; blocking reads cause pipeline stalls on slow GPUs.
         const readPBOIndex = (writePBOIndex + 1) % 2;
         const readPBO = glShit.reportPBOs[readPBOIndex];
         const sync = glShit.reportPBOSyncs ? glShit.reportPBOSyncs[readPBOIndex] : null;
 
         let didRead = false;
         if (sync && gl.clientWaitSync) {
-            const status = gl.clientWaitSync(sync, 0, 0);
-            if (status === gl.ALREADY_SIGNALED || status === gl.CONDITION_SATISFIED) {
-                // Ready: copy from PBO to JS array
-                gl.bindBuffer(gl.PIXEL_PACK_BUFFER, readPBO);
-                try {
-                    gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, glShit.reportData);
-                    didRead = true;
-                } catch (e) {
-                    console.warn('getBufferSubData failed, falling back', e);
+            // Poll without waiting (zero-time) to avoid stalls. Only copy if signaled.
+            try {
+                const status = gl.clientWaitSync(sync, 0, 0);
+                if (status === gl.ALREADY_SIGNALED || status === gl.CONDITION_SATISFIED) {
+                    gl.bindBuffer(gl.PIXEL_PACK_BUFFER, readPBO);
+                    try {
+                        gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, glShit.reportData);
+                        didRead = true;
+                    } catch (e) {
+                        console.warn('getBufferSubData failed', e);
+                    }
+                    try { gl.deleteSync(sync); } catch (e) {}
+                    glShit.reportPBOSyncs[readPBOIndex] = null;
+                } else {
+                    // Not ready yet: skip copying this frame to avoid stall
+                    didRead = false;
                 }
-                // cleanup
-                try { gl.deleteSync(sync); } catch (e) {}
-                glShit.reportPBOSyncs[readPBOIndex] = null;
-            } else {
-                // Not ready yet: skip copying this frame to avoid stall
+            } catch (e) {
+                // clientWaitSync threw; avoid blocking behavior
                 didRead = false;
             }
         } else {
-            // No sync available (first frame or fences unsupported) - try a non-blocking getBufferSubData guarded by try/catch
-            try {
-                gl.bindBuffer(gl.PIXEL_PACK_BUFFER, readPBO);
-                gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, glShit.reportData);
-                didRead = true;
-            } catch (e) {
-                // Fallback to blocking readPixels
-                gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
-                gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, glShit.reportData);
-                didRead = true;
-            }
+            // No sync object available for this slot: skip reading this frame.
+            didRead = false;
         }
 
-        // Unbind and advance PBO index so next frame we swap roles
+        // Unbind and advance PBO index so next frame we write into the next buffer
         gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
-        glShit.reportPBOIndex = (glShit.reportPBOIndex + 1) % 2;
+        glShit.reportPBOIndex = (writePBOIndex + 1) % 2;
         gl.viewport(0, 0, glShit.simCanvas.width, glShit.simCanvas.height);
     } else {
         // Fallback: blocking readPixels
