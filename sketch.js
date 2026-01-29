@@ -1,7 +1,7 @@
 // === Screen constants ===
-const screenDrawWidth = 800;
-const screenDrawHeight = 600;
-const controlRodsStartPos = screenDrawHeight * .9;
+const screenSimWidth = 800;
+const screenSimHeight = 600;
+const controlRodsStartPos = screenSimHeight * .9;
 const screenRenderWidth = 1384;
 const screenRenderHeight = 768;
 const waterColor = [22, 88, 90];
@@ -16,7 +16,7 @@ const settings = {
   heatingRate: 1500,
   uraniumToWaterHeatTransfer: 0.1,
   heatTransferCoefficient: 0.04,
-  uraniumSize: 2,
+  uraniumSize: 5,
   neutronSize: 150
 };
 
@@ -27,7 +27,6 @@ let uraniumAtoms = [];
 let controlRods = [];
 let waterCells = [];
 let grid;
-let steamImage;
 let boom = false;
 let collisionReport;
 let currentNeutronIndex = 0;
@@ -82,6 +81,8 @@ const glShit = {
     atomsFragCode: null,
     steamVertCode: null,
     steamFragCode: null,
+    atomsCoreFragCode: null,
+    atomsCoreFragSrc: null
   }
 };
 
@@ -102,8 +103,8 @@ const ui = {
 //scene variables
 const uraniumAtomsCountX = 41;
 const uraniumAtomsCountY = 30;
-const uraniumAtomsSpacingX = screenDrawWidth / uraniumAtomsCountX;
-const uraniumAtomsSpacingY = screenDrawHeight / uraniumAtomsCountY;
+const uraniumAtomsSpacingX = screenSimWidth / uraniumAtomsCountX;
+const uraniumAtomsSpacingY = screenSimHeight / uraniumAtomsCountY;
 const controlRodCount = 5;
 const controlRodWidth = 10;
 const controlRodHeight = 600;
@@ -122,12 +123,16 @@ function preload() {
   glShit.shaderCodes.reportFragSrc = loadStrings('shaders/report.frag');
   glShit.shaderCodes.atomsVertSrc = loadStrings('shaders/atoms.vert');
   glShit.shaderCodes.atomsFragSrc = loadStrings('shaders/atoms.frag');
+  glShit.shaderCodes.atomsCoreFragSrc = loadStrings('shaders/atoms_core.frag');
   glShit.shaderCodes.steamVertSrc = loadStrings('shaders/steam.vert');
   glShit.shaderCodes.steamFragSrc = loadStrings('shaders/steam.frag');
 }
 
 function setup() {
-  createCanvas(screenRenderWidth, screenRenderHeight, WEBGL);
+  const cnv = createCanvas(screenRenderWidth, screenRenderHeight, WEBGL);
+  // Ensure the p5 canvas and simCanvas share the same positioned parent so
+  // the WebGL overlay lines up (no unexpected offset from other DOM elements).
+  cnv.parent('canvas-container');
   glShit.shaderCodes.simVertCode = glShit.shaderCodes.simVertSrc.join('\n');
   glShit.shaderCodes.simFragCode = glShit.shaderCodes.simFragSrc.join('\n');
   glShit.shaderCodes.rendVertCode = glShit.shaderCodes.rendVertSrc.join('\n');
@@ -136,6 +141,7 @@ function setup() {
   glShit.shaderCodes.reportFragCode = glShit.shaderCodes.reportFragSrc.join('\n');
   glShit.shaderCodes.atomsVertCode = glShit.shaderCodes.atomsVertSrc.join('\n');
   glShit.shaderCodes.atomsFragCode = glShit.shaderCodes.atomsFragSrc.join('\n');
+  glShit.shaderCodes.atomsCoreFragCode = glShit.shaderCodes.atomsCoreFragSrc.join('\n');
   glShit.shaderCodes.steamVertCode = glShit.shaderCodes.steamVertSrc.join('\n');
   glShit.shaderCodes.steamFragCode = glShit.shaderCodes.steamFragSrc.join('\n');
   // Delegate initialization to helpers
@@ -156,8 +162,11 @@ function draw() {
   // Render p5 portion
   renderScene();
 
-  // GPU render for neutrons
-  gpuDrawNeutrons(glShit.simGL);
+  // Core layer (steam + atom cores) on coreCanvas
+  renderCoreLayer();
+
+  // GPU overlays (steam/atoms/neutrons) on simCanvas
+  renderSimOverlay();
 
   energyThisFrame = 0;
 }

@@ -32,18 +32,18 @@ function gameOver() {
     fill(0, 0, 0);
     textSize(142);
     textAlign(CENTER, CENTER);
-    text(boomText, screenDrawWidth / (2 + random(0, 0.03)), screenDrawHeight / (2 + random(0, 0.03)));
+    text(boomText, screenSimWidth / (2 + random(0, 0.03)), screenSimHeight / (2 + random(0, 0.03)));
     filter(BLUR, 25);
     fill(144, 238, 144);
     textSize(134);
-    text(boomText, screenDrawWidth / (2 + random(0, 0.04)), screenDrawHeight / (2 + random(0, 0.04)));
+    text(boomText, screenSimWidth / (2 + random(0, 0.04)), screenSimHeight / (2 + random(0, 0.04)));
     filter(BLUR, 15);
     textSize(132);
     fill(255, 77, 11);
-    text(boomText, screenDrawWidth / (2 + random(0, 0.02)), screenDrawHeight / (2 + random(0, 0.02)));
+    text(boomText, screenSimWidth / (2 + random(0, 0.02)), screenSimHeight / (2 + random(0, 0.02)));
     filter(BLUR, 5);
     fill(255, 255, 255);
-    text(boomText, screenDrawWidth / (2 + random(0, 0.02)), screenDrawHeight / (2 + random(0, 0.02)));
+    text(boomText, screenSimWidth / (2 + random(0, 0.02)), screenSimHeight / (2 + random(0, 0.02)));
 }
 
 function scaleMouse(xx, yy) {
@@ -52,13 +52,13 @@ function scaleMouse(xx, yy) {
     let translatedY = yy - screenRenderHeight / 2;
 
     // Scale by the inverse of the scaling factor
-    let scaleFactor = (screenRenderHeight / screenDrawHeight);// * 0.9;
+    let scaleFactor = (screenRenderHeight / screenSimHeight);// * 0.9;
     let scaledX = translatedX / scaleFactor;
     let scaledY = translatedY / scaleFactor;
 
     // Translate back to the original position
-    let finalX = scaledX + screenDrawWidth / 2;
-    let finalY = scaledY + screenDrawHeight / 2;
+    let finalX = scaledX + screenSimWidth / 2;
+    let finalY = scaledY + screenSimHeight / 2;
 
     return {
         x: finalX,

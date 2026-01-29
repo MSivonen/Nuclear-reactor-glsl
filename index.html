@@ -24,6 +24,16 @@
   <p id="energy-output">Energy output: 0 kW</p>
   <p id="energy-this-frame">Energy this frame: 0 kW</p>
   <p id="neutron-speed-display">Neutron Speed: 5</p>
+
+  <div id="canvas-container" style="position: relative; width: 1384px; height: 768px;">
+    <canvas id="coreCanvas" width="1384" height="768"
+      style="position: absolute; left: 0; top: 0; pointer-events: none; z-index: 5;">
+    </canvas>
+    <canvas id="simCanvas" width="1384" height="768"
+      style="position: absolute; left: 0; top: 0; pointer-events: none; z-index: 10; mix-blend-mode: screen;">
+    </canvas>
+  </div>
+
   <script src="sketch.js"></script>
   <script src="neutronBuffer.js"></script>
   <script src="grid.js"></script>
@@ -39,12 +49,6 @@
   <script src="atomsRenderer.js"></script>
   <script src="steamRenderer.js"></script>
   <script src="sceneHelpers.js"></script>
-
-  <div id="canvas-container" style="position: relative;">
-    <canvas id="simCanvas" width="1324" height="768"
-      style="position: absolute; left: 0; top: 0; pointer-events: none; z-index: 10;">
-    </canvas>
-  </div>
 
 </body>
 

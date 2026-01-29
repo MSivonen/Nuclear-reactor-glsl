@@ -15,6 +15,7 @@ out vec2 vLocal;
 
 void main(){
     vec2 pos = a_instPos + a_quadPos * a_instSize;
+    // Keep aspect ratio by scaling from height (letterbox horizontally).
     float scale = u_resolution.y / render_height;
     float drawWidth = render_width * scale;
     float offsetX = (u_resolution.x - drawWidth) / 2.0;

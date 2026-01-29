@@ -13,6 +13,7 @@ uniform float render_width;
 
 out vec4 vColor;
 out float vFlash;
+out vec2 vQuadPos;
 
 void main(){
     vec2 pos = a_instPos + a_quadPos * a_instSize;
@@ -26,4 +27,5 @@ void main(){
     gl_Position = vec4(x, y, 0.0, 1.0);
     vColor = a_instColor;
     vFlash = a_instFlash;
+    vQuadPos = a_quadPos;
 }

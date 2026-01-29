@@ -5,7 +5,7 @@ class ControlRod {
         this.width = controlRodWidth;
         this.height = controlRodHeight;
         this.color = color(44, 22, 4);
-        this.targetY = controlRodsStartPos-screenDrawHeight;
+        this.targetY = controlRodsStartPos-screenSimHeight;
         this.movementSpeed = 1;
     }
 
@@ -44,9 +44,9 @@ class ControlRodsSlider {
         rect(sx, sy, sw, sh);
         if (scaleMouse(mouseX, 0).x > sx && scaleMouse(mouseX, 0).x < sx + sw) {
             if (mouseIsPressed) {
-                this.y = constrain(scaleMouse(0, mouseY).y, 0 + sh / 2, screenDrawHeight - sh / 2); // Clamp the position to screenDrawSize
+                this.y = constrain(scaleMouse(0, mouseY).y, 0 + sh / 2, screenSimHeight - sh / 2); // Clamp the position to screenDrawSize
                 controlRods.forEach(controlRod => {
-                    controlRod.targetY = this.y - screenDrawHeight + sh / 2;
+                    controlRod.targetY = this.y - screenSimHeight + sh / 2;
                 });
             }
         }

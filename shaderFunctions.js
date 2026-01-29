@@ -134,7 +134,7 @@ function gpuUpdateNeutrons(gl) {
 
     gl.useProgram(glShit.simProgram);
 
-    let rodYPos = controlRods[0].y+screenDrawHeight;
+    let rodYPos = controlRods[0].y+screenSimHeight;
     let uRodsLoc = gl.getUniformLocation(glShit.simProgram, "u_controlRods");
     gl.uniform1f(uRodsLoc, rodYPos);
 
@@ -233,11 +233,13 @@ function initRenderShader(gl, vsSource, fsSource) {
     gl.useProgram(null);
 }
 
-function gpuDrawNeutrons(gl) {
+function gpuDrawNeutrons(gl, { clear = true } = {}) {
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, glShit.simCanvas.width, glShit.simCanvas.height);
-    gl.clearColor(0, 0, 0, 0);
-    gl.clear(gl.COLOR_BUFFER_BIT);
+    if (clear) {
+        gl.clearColor(0, 0, 0, 1);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+    }
 
     gl.useProgram(glShit.renderProgram);
     gl.enable(gl.BLEND);
@@ -246,7 +248,7 @@ function gpuDrawNeutrons(gl) {
 
     gl.uniform1i(glShit.uRenderTexSizeLoc, MAX_NEUTRONS);
     gl.uniform2f(glShit.uRenderResLoc, glShit.simCanvas.width, glShit.simCanvas.height);
-    gl.uniform2f(glShit.uRenderSimSizeLoc, screenDrawWidth, screenDrawHeight);
+    gl.uniform2f(glShit.uRenderSimSizeLoc, screenSimWidth, screenSimHeight);
     gl.uniform1f(glShit.uRenderNeutronSizeLoc, settings.neutronSize);
 
     gl.activeTexture(gl.TEXTURE0);

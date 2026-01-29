@@ -1,23 +1,12 @@
-function drawSteam() {
-    if (glShit.useGpuSteam && typeof steamRenderer !== 'undefined') {
-        const count = steamRenderer.updateInstances(waterCells);
-        steamRenderer.renderImage(count);
-        return;
-    }
-
-    steamImage.clear();
-    steamImage.push();
-    waterCells.forEach(s => s.draw(steamImage));
-    steamImage.pop();
-    image(steamImage, 0, 0, screenDrawWidth, screenDrawHeight);
-}
+// Steam is rendered on the dedicated WebGL core layer (coreCanvas).
+// This file retains no CPU/p5 steam fallback.
 
 function drawBorders() {
     fill(0);
     noStroke();
     rectMode(CORNERS);
-    rect(0, 0, -200, screenDrawHeight);
-    rect(screenDrawWidth, 0, screenDrawWidth + 200, screenDrawHeight);
+    rect(0, 0, -200, screenSimHeight);
+    rect(screenSimWidth, 0, screenSimWidth + 200, screenSimHeight);
 }
 
 function drawFPS() {

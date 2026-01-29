@@ -112,41 +112,15 @@ class SteamRenderer {
         const uResLoc = this.gl.getUniformLocation(this.program, 'u_resolution');
         this.gl.uniform2f(uResLoc, this.gl.canvas.width, this.gl.canvas.height);
         const rendHeightLoc = this.gl.getUniformLocation(this.program, "render_height");
-        this.gl.uniform1f(rendHeightLoc, screenRenderHeight);
+        // Instance positions are in simulation/draw coordinates (screenDrawWidth/Height)
+        // so the shader can scale+letterbox into the render canvas.
+        this.gl.uniform1f(rendHeightLoc, screenSimHeight);
         const rendWidthLoc = this.gl.getUniformLocation(this.program, "render_width");
-        this.gl.uniform1f(rendWidthLoc, screenRenderWidth);
+        this.gl.uniform1f(rendWidthLoc, screenSimWidth);
         this.gl.drawArraysInstanced(this.gl.TRIANGLES, 0, 6, instanceCount);
         this.gl.bindVertexArray(null);
         this.gl.disable(this.gl.BLEND);
         this.gl.useProgram(null);
-    }
-
-    renderImage(count) {
-        const gl2 = glShit.simGL;
-
-        gl2.bindFramebuffer(gl2.FRAMEBUFFER, null);
-        gl2.viewport(0, 0, glShit.simCanvas.width, glShit.simCanvas.height);
-        gl2.clearColor(0, 0, 0, 0);
-        gl2.clear(gl2.COLOR_BUFFER_BIT);
-
-        this.draw(count ?? this.lastCount);
-
-        if (!glShit.p5Copy) {
-            glShit.p5Copy = createGraphics(
-                screenDrawWidth,
-                screenDrawHeight
-            );
-        }
-
-        glShit.p5Copy.clear();
-
-        glShit.p5Copy.drawingContext.drawImage(
-            glShit.simCanvas,
-            0,
-            0
-        );
-
-        image(glShit.p5Copy, 0, 0);
     }
 }
 

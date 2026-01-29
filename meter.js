@@ -34,21 +34,6 @@ class Meter {
         push();
         translate(this.pos.x, this.pos.y);
         noStroke();
-        /*         fill(150);
-                circle(0, 0, 110);
-                fill(222);
-                circle(0, 0, 100);
-                fill(50);
-                //add ten lines at angles 0.5...TWO_PI-0.5 at equal intervals
-                for (let i = 0; i < 11; i++) {
-                    let angle = map(i, 0, 10, 0.5, TWO_PI - 0.5);
-                    push();
-                    rotate(angle);
-                    if (i == 9) fill("orange");
-                    if (i == 10) fill("red");
-                    rect(0, 47, 3, -8);
-                    pop();
-                } */
         image(this.meterImage, -this.meterImage.width / 4, -this.meterImage.height / 4, 110, 110);
         push();
         rotate(this.needleAngle);

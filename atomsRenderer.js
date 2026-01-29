@@ -111,17 +111,46 @@ class AtomsRenderer {
         return count;
     }
 
-    draw(count) {
+    draw(count, { blendMode = 'additive' } = {}) {
         if (!this.gl || !this.program) return;
         this.gl.useProgram(this.program);
         this.gl.bindVertexArray(this.vao);
         const uResLoc = this.gl.getUniformLocation(this.program, 'u_resolution');
         this.gl.uniform2f(uResLoc, this.gl.canvas.width, this.gl.canvas.height);
         const rendHeightLoc = this.gl.getUniformLocation(this.program, "render_height");
-        this.gl.uniform1f(rendHeightLoc, screenRenderHeight);
+        // Instance positions are in simulation/draw coordinates (screenDrawWidth/Height)
+        // so the shader can scale+letterbox into the render canvas.
+        this.gl.uniform1f(rendHeightLoc, screenSimHeight);
         const rendWidthLoc = this.gl.getUniformLocation(this.program, "render_width");
-        this.gl.uniform1f(rendWidthLoc, screenRenderWidth);
+        this.gl.uniform1f(rendWidthLoc, screenSimWidth);
+
+        if (blendMode && blendMode !== 'none') {
+            this.gl.enable(this.gl.BLEND);
+            if (blendMode === 'alpha') {
+                if (this.gl.blendFuncSeparate) {
+                    this.gl.blendFuncSeparate(
+                        this.gl.SRC_ALPHA,
+                        this.gl.ONE_MINUS_SRC_ALPHA,
+                        this.gl.ONE,
+                        this.gl.ONE_MINUS_SRC_ALPHA
+                    );
+                } else {
+                    this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
+                }
+            } else {
+                // Default: alpha-weighted additive blending for glow accumulation
+                if (this.gl.blendFuncSeparate) {
+                    this.gl.blendFuncSeparate(this.gl.SRC_ALPHA, this.gl.ONE, this.gl.ONE, this.gl.ONE_MINUS_SRC_ALPHA);
+                } else {
+                    this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE);
+                }
+            }
+        }
+
         this.gl.drawArraysInstanced(this.gl.TRIANGLES, 0, 6, count);
+        if (blendMode && blendMode !== 'none') {
+            this.gl.disable(this.gl.BLEND);
+        }
         this.gl.bindVertexArray(null);
         this.gl.useProgram(null);
     }
@@ -138,8 +167,8 @@ class AtomsRenderer {
 
         if (!glShit.p5Copy) {
             glShit.p5Copy = createGraphics(
-                screenDrawWidth,
-                screenDrawHeight
+                screenSimWidth,
+                screenSimHeight
             );
         }
 
