@@ -11,25 +11,6 @@ class Water {
 
     }
 
-    draw(ctx, offsetX = 0) {
-        // Interpolate between cool and hot colors
-        const t = Math.min(1, Math.max(0, (this.temperature - 25) / (1700 - 25)));
-        const cool = { r: 22, g: 88, b: 90, a: 0 };
-        const hot = { r: 224, g: 255, b: 255, a: 200 };
-        const r = Math.round(cool.r + (hot.r - cool.r) * t);
-        const g = Math.round(cool.g + (hot.g - cool.g) * t);
-        const b = Math.round(cool.b + (hot.b - cool.b) * t);
-        const a = (cool.a + (hot.a - cool.a) * t) / 255;
-
-        this.color = { r, g, b, a };
-
-        const x = offsetX + this.position.x - (uraniumAtomsSpacingX * 1.02) / 2;
-        const y = this.position.y - (uraniumAtomsSpacingY * 1.02) / 2;
-        ctx.save();
-        ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${a})`;
-        ctx.fillRect(x, y, uraniumAtomsSpacingX * 1.02, uraniumAtomsSpacingY * 1.02);
-        ctx.restore();
-    }
 }
 
 function updateWaterCells() {

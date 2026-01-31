@@ -33,6 +33,15 @@ function initShadersAndGL() {
     // Ensure required extension present (no-op if not)
     glShit.simGL.getExtension("EXT_color_buffer_float");
 
+    // Initialize water background layer (fullscreen shader)
+    if (typeof waterLayer !== 'undefined') {
+        try {
+            waterLayer.init(glShit.simGL, glShit.shaderCodes.waterVertCode, glShit.shaderCodes.waterFragCode);
+        } catch (e) {
+            console.warn('waterLayer init failed', e);
+        }
+    }
+
     glShit.simProgram = createProgram(glShit.simGL, glShit.shaderCodes.simVertCode, glShit.shaderCodes.simFragCode);
     glShit.reportProgram = createProgram(glShit.simGL, glShit.shaderCodes.reportVertCode, glShit.shaderCodes.reportFragCode);
     glShit.uNeutronsLoc = glShit.simGL.getUniformLocation(glShit.simProgram, "u_neutrons");
@@ -78,25 +87,25 @@ function initShadersAndGL() {
         glShit.useCoreAtoms = false;
     }
 
-        // Steam renderer on coreCanvas (no CPU fallback)
-        if (typeof steamRenderer !== 'undefined') {
-            steamRenderer.init(
-                glShit.coreGL,
-                uraniumAtomsCountX * uraniumAtomsCountY,
-                glShit.shaderCodes.steamVertCode,
-                glShit.shaderCodes.steamFragCode
-            );
-            glShit.useGpuSteam = true;
-        }
+    // Steam renderer on coreCanvas (no CPU fallback)
+    if (typeof steamRenderer !== 'undefined') {
+        steamRenderer.init(
+            glShit.coreGL,
+            uraniumAtomsCountX * uraniumAtomsCountY,
+            glShit.shaderCodes.steamVertCode,
+            glShit.shaderCodes.steamFragCode
+        );
+        glShit.useGpuSteam = true;
+    }
 
-        if (typeof bubblesRenderer !== 'undefined') {
-            bubblesRenderer.init(
-                glShit.simGL,
-                5000, // Max bubbles
-                glShit.shaderCodes.bubblesVertCode,
-                glShit.shaderCodes.bubblesFragCode
-            );
-        }
+    if (typeof bubblesRenderer !== 'undefined') {
+        bubblesRenderer.init(
+            glShit.simGL,
+            5000, // Max bubbles
+            glShit.shaderCodes.bubblesVertCode,
+            glShit.shaderCodes.bubblesFragCode
+        );
+    }
 }
 
 function initSceneObjects() {
@@ -112,7 +121,7 @@ function initSceneObjects() {
     // Uranium atoms and control rods
     for (let x = 0; x < uraniumAtomsCountX; x++) {
         if ((x + 1) % 7 === 0) {
-            controlRods.push(new ControlRod(x * uraniumAtomsSpacingX + controlRodWidth / 2, -screenHeight / 2));
+            controlRods.push(new ControlRod(x * uraniumAtomsSpacingX + controlRodWidth / 2, controlRodsStartPos));
         } else {
             for (let y = 0; y < uraniumAtomsCountY; y++) {
                 let waterCellIndex = x + y * uraniumAtomsCountX;
@@ -195,9 +204,14 @@ function renderSimOverlay() {
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, glShit.simCanvas.width, glShit.simCanvas.height);
-    // Opaque black. With CSS screen blending, black contributes nothing.
+    // Opaque black clear to start; waterLayer will draw a fullscreen background next.
     gl.clearColor(0, 0, 0, 1);
     gl.clear(gl.COLOR_BUFFER_BIT);
+
+    // Draw water background first (if available)
+    if (typeof waterLayer !== 'undefined' && waterLayer.render) {
+        waterLayer.render(millis() / 1000.0);
+    }
 
     // Atoms (GPU instanced) - glow only (core is drawn in p5)
     if (glShit.useInstancedAtoms && typeof atomsRenderer !== 'undefined') {

@@ -14,13 +14,30 @@ function resetSimulation() {
     for (let atom of uraniumAtoms) {
         atom.temperature = 25;
     }
-    controlRods.forEach(rod => rod.targetY = -100);
+    // Reset control rods to their initial positions and reset slider handles
+    controlRods.forEach((rod, i) => {
+        if (typeof rod.initialY !== 'undefined') {
+            rod.y = rod.initialY;
+            rod.targetY = rod.initialY;
+        } else {
+            rod.targetY = -100;
+        }
+    });
+    if (ui && ui.controlSlider) {
+        ui.controlSlider.draggingIndex = -1;
+        if (ui.controlSlider.handleY && ui.controlSlider.handleY.length === controlRods.length) {
+            for (let i = 0; i < controlRods.length; i++) {
+                ui.controlSlider.handleY[i] = controlRods[i].y + controlRods[i].height;
+            }
+        }
+    }
     Object.assign(settings, defaultSettings);
     initializeControls();
     boom = false;
 }
 
-function eventListeners(){
+function eventListeners() {
+    //-----pause-----
     document.addEventListener("visibilitychange", () => {
         paused = document.hidden;
         if (!paused) last = performance.now();
@@ -30,6 +47,10 @@ function eventListeners(){
         paused = false;
         last = performance.now();
     });
+    //-----pause-----
+
+
+
 }
 
 function gameOver(ctx, offsetX = 0) {

@@ -1,11 +1,11 @@
 // === Screen constants ===
 const screenSimWidth = 800;
 const screenHeight = 600;
-const controlRodsStartPos = screenHeight * .1;
+const controlRodsStartPos = -screenHeight * .9;
 
 // Render resolution matching 1.7777 aspect ratio with 600px height.
 const screenRenderWidth = 1067; // Math.ceil(600 * (16/9))
-const waterColor = [52, 95, 214];
+const waterColor = [52, 95, 120];
 
 const settings = {
   neutronSpeed: 5,
@@ -73,6 +73,8 @@ const glShit = {
     atomsFragSrc: null,
     steamVertSrc: null,
     steamFragSrc: null,
+    waterVertSrc: null,
+    waterFragSrc: null,
     simVertCode: null,
     simFragCode: null,
     rendVertCode: null,
@@ -83,6 +85,8 @@ const glShit = {
     atomsFragCode: null,
     steamVertCode: null,
     steamFragCode: null,
+    waterVertCode: null,
+    waterFragCode: null,
     atomsCoreFragCode: null,
     atomsCoreFragSrc: null
   }
@@ -130,9 +134,12 @@ function preload() {
   glShit.shaderCodes.steamFragSrc = loadStrings('shaders/steam.frag');
   glShit.shaderCodes.bubblesVertSrc = loadStrings('shaders/bubbles.vert');
   glShit.shaderCodes.bubblesFragSrc = loadStrings('shaders/bubbles.frag');
+  glShit.shaderCodes.waterVertSrc = loadStrings('shaders/water.vert');
+  glShit.shaderCodes.waterFragSrc = loadStrings('shaders/water.frag');
 }
 
 function setup() {
+  //debug(); //DO NOT REMOVE THIS LINE
   const cnv = createCanvas(screenRenderWidth, screenHeight, WEBGL);
   // Ensure the p5 canvas and simCanvas share the same positioned parent so
   // the WebGL overlay lines up (no unexpected offset from other DOM elements).
@@ -150,6 +157,8 @@ function setup() {
   glShit.shaderCodes.steamFragCode = glShit.shaderCodes.steamFragSrc.join('\n');
   glShit.shaderCodes.bubblesVertCode = glShit.shaderCodes.bubblesVertSrc.join('\n');
   glShit.shaderCodes.bubblesFragCode = glShit.shaderCodes.bubblesFragSrc.join('\n');
+  glShit.shaderCodes.waterVertCode = glShit.shaderCodes.waterVertSrc.join('\n');
+  glShit.shaderCodes.waterFragCode = glShit.shaderCodes.waterFragSrc.join('\n');
   // Delegate initialization to helpers
   initShadersAndGL();
   collisionReport = new CollisionReport();
@@ -161,6 +170,9 @@ function setup() {
 function draw() {
   //Menu and other similar goes here, before paused check
 
+
+
+  //
 
   if (paused) {
     //requestAnimationFrame(frame); //this will be used when we move away from p5
@@ -174,14 +186,15 @@ function draw() {
   // Update CPU-side state
   updateScene();
 
-  // Render p5 portion
-  renderScene();
-
+  
   // Core layer (steam + atom cores) on coreCanvas
   renderCoreLayer();
-
+  
   // GPU overlays (steam/atoms/neutrons) on simCanvas
   renderSimOverlay();
+
+  // Render js canvas portion
+  renderScene();
 
   energyThisFrame = 0;
 }

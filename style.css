@@ -15,8 +15,8 @@ html, body {
 
 /* Background for the simulation area (matches `waterColor` in sketch.js) */
 #canvas-container {
-  background: rgb(52, 95, 214);
-}
+/*   background: rgb(52, 95, 214);
+ */}
 
 canvas {
   display: block;

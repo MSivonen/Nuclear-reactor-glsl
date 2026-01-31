@@ -5,7 +5,8 @@ class ControlRod {
         this.width = controlRodWidth;
         this.height = controlRodHeight;
         this.color = { r: 44, g: 22, b: 4, a: 255 };
-        this.targetY = controlRodsStartPos-screenHeight;
+        this.initialY = y;
+        this.targetY = y;
         this.movementSpeed = 1;
     }
 
@@ -13,7 +14,7 @@ class ControlRod {
         const x = offsetX + this.x;
         const y = this.y;
         ctx.save();
-        ctx.fillStyle = `rgba(${this.color.r}, ${this.color.g}, ${this.color.b}, ${this.color.a/255})`;
+        ctx.fillStyle = `rgba(${this.color.r}, ${this.color.g}, ${this.color.b}, ${this.color.a / 255})`;
         ctx.fillRect(x, y, this.width, this.height);
         ctx.restore();
     }
@@ -32,81 +33,79 @@ class ControlRodsSlider {
     constructor() {
         this.x = 15;
         this.y = controlRodsStartPos;
+        this.handleY = []; // per-rod handle (bottom Y) in simulation coords
+        this.draggingIndex = -1; // -1 = none
+        // Initialize handles to match current rods if available
+        if (typeof controlRods !== 'undefined' && controlRods.length > 0) {
+            this.handleY = [];
+            for (let i = 0; i < controlRods.length; i++) {
+                const r = controlRods[i];
+                this.handleY.push(r.y + r.height);
+            }
+        }
     }
 
     draw(ctx, offsetX) {
-        // Position relative to sim area
-        const drawX = offsetX + this.x;
-        
-        ctx.fillStyle = 'white';
-        // controlRodHeight is 600
-        ctx.fillRect(drawX, 0, 10, controlRodHeight);
-        
-        ctx.fillStyle = 'rgb(255, 0, 0)';
-        const sx = drawX - 10;
-        const sy = this.y - 5;
-        const sw = 30;
-        const sh = 10;
-        ctx.fillRect(sx, sy, sw, sh);
-
-        // Input logic
-        // p5.mouseX are relative to screen top-left (check setup())
-        // scaleMouse(mouseX, mouseY) returns Sim coords.
-        // this.x is 15 (Sim coords).
-        
-        // Wait, scaleMouse returns coords centered at 0,0? No.
-        // Let's check scaleMouse again.
-        // screenSimWidth = 800.
-        // `finalX = scaledX + screenSimWidth / 2;`
-        // 0..800. Correct.
-        
-        const mousePos = scaleMouse(mouseX, mouseY);
-        // mousePos is in Sim coords.
-        // Sim Slider Rect is at `this.x - 10`.
-        // `sx` variable above is screen coords.
-        // `this.x` is sim coords (15).
-        
-        // Original logic:
-        // if (scaleMouse(mouseX, 0).x > sx && scaleMouse(mouseX, 0).x < sx + sw) {
-        // Wait, original logic compared `scaleMouse(...).x` (sim coord) with `sx`.
-        // `sx = this.x - 10` (if `rect` was p5 translated)
-        // OR `sx` was screen coord?
-        
-        // In original p5 `renderScene`:
-        // translate(screenSimWidth / 2, screenHeight / 2); scale(1); translate(-screenSimWidth / 2, -screenHeight / 2);
-        // It resets origin to top-left of SIM area (conceptually, if centered).
-        // If simulation area is 800x600, positioned at center of 1067x600.
-        // Origin (0,0) of p5 translate stack corresponds to top-left of Sim area.
-        
-        // So `rect(sx, ...)` draws at Sim coords. 
-        // `sx = this.x - 10`. `this.x = 15`. `sx = 5`.
-        // So it draws at x=5 in Sim coords.
-        
-        // `scaleMouse().x` returns Sim coords (0..800).
-        // So comparing scaleMouse().x (Sim) with `sx` (Sim) is CORRECT.
-        
-        // In my new `draw(ctx, offsetX)`:
-        // `this.x` is Sim (15).
-        // `sx` (variable in `ControlRodsSlider`) was derived from `this.x`.
-        // `drawX` uses `offsetX` to map to Screen.
-        
-        // Logic for mouse interaction should use Sim coords.
-        const simSX = this.x - 10;
-        const simSW = 30;
-        const simSH = 10;
-        
         const simMousePos = scaleMouse(mouseX, mouseY);
-        
-        // We really want to check if mouse is over the handle.
-        if (simMousePos.x > simSX && simMousePos.x < simSX + simSW) {
-            if (mouseIsPressed) {
-                // Clamp to screenHeight (0..600)
-                this.y = Math.min(Math.max(simMousePos.y, 0 + simSH / 2), screenHeight - simSH / 2);
-                controlRods.forEach(controlRod => {
-                    // controlRod logic
-                    controlRod.targetY = this.y - screenHeight + simSH / 2;
-                });
+
+        // Ensure handle array length matches rods
+        if (!this.handleY || this.handleY.length !== controlRods.length) {
+            this.handleY = [];
+            for (let i = 0; i < controlRods.length; i++) {
+                const r = controlRods[i];
+                this.handleY.push(r.y + r.height);
             }
         }
+
+        const HANDLE_RADIUS = 10;
+
+        ctx.save();
+
+        // Input handling: start drag if pressed and not already dragging
+        if (mouseIsPressed && this.draggingIndex === -1) {
+            for (let i = 0; i < controlRods.length; i++) {
+                const rod = controlRods[i];
+                const handleX = rod.x + rod.width / 2;
+                const handleY = this.handleY[i];
+                const dx = simMousePos.x - handleX;
+                const dy = simMousePos.y - handleY;
+                //if (Math.sqrt(dx * dx + dy * dy) <= HANDLE_RADIUS + 4) { //grab the balls
+                if (-dx <= HANDLE_RADIUS && dx <= HANDLE_RADIUS) {//grab anywhere in y direction
+                    this.draggingIndex = i;
+                    break;
+                }
+            }
+        }
+
+        // While dragging, move handle instantly with mouse and set rod target accordingly
+        if (this.draggingIndex !== -1 && mouseIsPressed) {
+            const i = this.draggingIndex;
+            // Clamp handle to simulation vertical bounds
+            const newY = Math.min(Math.max(simMousePos.y, 0), screenHeight);
+            this.handleY[i] = newY;
+            // Set rod's target to follow (top = bottom - height)
+            if (controlRods[i]) controlRods[i].targetY = this.handleY[i] - controlRods[i].height;
+        }
+
+        // Release
+        if (!mouseIsPressed && this.draggingIndex !== -1) {
+            this.draggingIndex = -1;
+        }
+
+        // Draw handles (below rods)
+        for (let i = 0; i < controlRods.length; i++) {
+            const rod = controlRods[i];
+            const drawX = offsetX + rod.x + rod.width / 2;
+            const drawY = this.handleY[i];
+
+            ctx.globalAlpha = 0.5;
+            ctx.fillStyle = 'red';
+            ctx.beginPath();
+            ctx.arc(drawX, drawY, HANDLE_RADIUS, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 1.0;
+        }
+
+        ctx.restore();
     }
 }

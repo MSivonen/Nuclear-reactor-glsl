@@ -134,9 +134,22 @@ function gpuUpdateNeutrons(gl) {
 
     gl.useProgram(glShit.simProgram);
 
-    let rodYPos = controlRods[0].y+screenHeight;
-    let uRodsLoc = gl.getUniformLocation(glShit.simProgram, "u_controlRods");
-    gl.uniform1f(uRodsLoc, rodYPos);
+    // Pass per-rod Y positions (bottom threshold) to the shader.
+    // Prefer handle positions from the UI slider if available (handles hold bottom Y).
+    const rodCount = controlRods.length;
+    const rodYs = new Float32Array(rodCount || 1);
+    for (let i = 0; i < rodCount; i++) {
+        if (typeof ui !== 'undefined' && ui.controlSlider && ui.controlSlider.handleY && ui.controlSlider.handleY.length > i) {
+            rodYs[i] = ui.controlSlider.handleY[i];
+        } else {
+            // Fallback: use rod bottom (top y + height)
+            rodYs[i] = controlRods[i].y + controlRods[i].height;
+        }
+    }
+    const uRodsLoc = gl.getUniformLocation(glShit.simProgram, "u_controlRods");
+    if (uRodsLoc) gl.uniform1fv(uRodsLoc, rodYs);
+    const uRodCountLoc = gl.getUniformLocation(glShit.simProgram, "u_controlRodCount");
+    if (uRodCountLoc) gl.uniform1i(uRodCountLoc, rodCount);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, glShit.readTex);

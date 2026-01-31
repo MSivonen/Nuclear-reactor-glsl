@@ -1,17 +1,3 @@
-function setupInputEventListener(inputId, updateFunction) {
-    const inputElement = document.getElementById(inputId);
-    inputElement.addEventListener('input', () => {
-        const newValue = parseFloat(inputElement.value);
-        updateFunction(newValue);
-    });
-}
-
-// Usage
-setupInputEventListener('decay-probability', value => settings.decayProbability = value);
-setupInputEventListener('collision-probability', value => settings.collisionProbability = value);
-setupInputEventListener('neutron-speed', value => settings.neutronSpeed = value);
-setupInputEventListener('controlRodAbsorption', value => settings.controlRodAbsorptionProbability = value);
-
 function updateCountersHTML() {
     document.getElementById("energy-output").innerText = "Energy output: " + (energyOutput).toFixed(2) + " kW";
     document.getElementById("energy-this-frame").innerText = "Energy this frame: " + (energyThisFrame).toFixed(2) + " kW";
@@ -35,13 +21,11 @@ function initializeControls() {
     const controlRodTargetInput = document.getElementById('control-rod-target');
     const controlRodAbsorptionInput = document.getElementById('controlRodAbsorption');
 
-    controlRodTargetInput.value = controlRods[0].targetY;
-    collisionProbabilityInput.value = settings.collisionProbability;
-    neutronSpeedInput.value = settings.neutronSpeed;
-    decayProbabilityInput.value = settings.decayProbability;
-    controlRodAbsorptionInput.value = settings.controlRodAbsorptionProbability;
-
+    if (controlRodTargetInput && controlRods && controlRods.length > 0) {
+        controlRodTargetInput.value = controlRods[0].targetY;
+    }
+    if (collisionProbabilityInput) collisionProbabilityInput.value = settings.collisionProbability;
+    if (neutronSpeedInput) neutronSpeedInput.value = settings.neutronSpeed;
+    if (decayProbabilityInput) decayProbabilityInput.value = settings.decayProbability;
+    if (controlRodAbsorptionInput) controlRodAbsorptionInput.value = settings.controlRodAbsorptionProbability;
 }
-
-
-
