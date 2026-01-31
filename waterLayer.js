@@ -1,23 +1,23 @@
 // waterLayer.js
-// Renders a fullscreen water shader pass into the existing simGL context.
+// Renders a fullscreen water shader pass into the existing WebGL context.
 
-const waterLayer = (function () {
-    let gl = null;
-    let program = null;
-    let vao = null;
-    let uResolutionLoc = null;
-    let uTimeLoc = null;
+class WaterLayer {
+    constructor() {
+        this.gl = null;
+        this.program = null;
+        this.vao = null;
+        this.uResolutionLoc = null;
+        this.uTimeLoc = null;
+    }
 
-    function init(simGL, vsSourceExternal, fsSourceExternal) {
+    init(simGL, vsSourceExternal, fsSourceExternal) {
         if (!simGL) return;
         if (!vsSourceExternal || !fsSourceExternal) {
             console.error('waterLayer.init requires vertex and fragment shader source strings');
             return;
         }
-        gl = simGL;
-        const vert = vsSourceExternal;
-        const frag = fsSourceExternal;
-        program = createProgram(gl, vert, frag);
+        this.gl = simGL;
+        this.program = createProgram(this.gl, vsSourceExternal, fsSourceExternal);
 
         // Fullscreen quad (two triangles)
         const quad = new Float32Array([
@@ -25,32 +25,32 @@ const waterLayer = (function () {
             -1, 1, 1, -1, 1, 1
         ]);
 
-        vao = gl.createVertexArray();
-        gl.bindVertexArray(vao);
+        this.vao = this.gl.createVertexArray();
+        this.gl.bindVertexArray(this.vao);
 
-        const vbo = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
-        gl.bufferData(gl.ARRAY_BUFFER, quad, gl.STATIC_DRAW);
-        gl.enableVertexAttribArray(0);
-        gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+        const vbo = this.gl.createBuffer();
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, vbo);
+        this.gl.bufferData(this.gl.ARRAY_BUFFER, quad, this.gl.STATIC_DRAW);
+        this.gl.enableVertexAttribArray(0);
+        this.gl.vertexAttribPointer(0, 2, this.gl.FLOAT, false, 0, 0);
 
-        uResolutionLoc = gl.getUniformLocation(program, 'u_resolution');
-        uTimeLoc = gl.getUniformLocation(program, 'u_time');
+        this.uResolutionLoc = this.gl.getUniformLocation(this.program, 'u_resolution');
+        this.uTimeLoc = this.gl.getUniformLocation(this.program, 'u_time');
 
-        gl.bindVertexArray(null);
+        this.gl.bindVertexArray(null);
     }
 
-    function render(timeSeconds) {
-        if (!gl || !program) return;
-        gl.useProgram(program);
-        gl.bindVertexArray(vao);
-        gl.disable(gl.DEPTH_TEST);
-        gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-        if (uResolutionLoc) gl.uniform2f(uResolutionLoc, gl.canvas.width, gl.canvas.height);
-        if (uTimeLoc) gl.uniform1f(uTimeLoc, timeSeconds || 0.0);
-        gl.drawArrays(gl.TRIANGLES, 0, 6);
-        gl.bindVertexArray(null);
+    render(timeSeconds) {
+        if (!this.gl || !this.program) return;
+        this.gl.useProgram(this.program);
+        this.gl.bindVertexArray(this.vao);
+        this.gl.disable(this.gl.DEPTH_TEST);
+        this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
+        if (this.uResolutionLoc) this.gl.uniform2f(this.uResolutionLoc, this.gl.canvas.width, this.gl.canvas.height);
+        if (this.uTimeLoc) this.gl.uniform1f(this.uTimeLoc, timeSeconds || 0.0);
+        this.gl.drawArrays(this.gl.TRIANGLES, 0, 6);
+        this.gl.bindVertexArray(null);
     }
+}
 
-    return { init, render };
-})();
+const waterLayer = new WaterLayer();

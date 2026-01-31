@@ -44,7 +44,7 @@ class UraniumAtom {
   }
 
   createNeutron() {
-    addNeutron(this.position.x, this.position.y, this.radius);
+    neutron.spawn(this.position.x, this.position.y, this.radius);
   }
 }
 

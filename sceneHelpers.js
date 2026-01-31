@@ -3,6 +3,19 @@
 function initShadersAndGL() {
     gl = drawingContext;
 
+    glShit.waterCanvas = document.getElementById("waterCanvas");
+    if (glShit.waterCanvas) {
+        glShit.waterCanvas.width = screenRenderWidth;
+        glShit.waterCanvas.height = screenHeight;
+        glShit.waterGL = glShit.waterCanvas.getContext("webgl2", {
+            alpha: false,
+            depth: false,
+            antialias: false,
+            preserveDrawingBuffer: true,
+            premultipliedAlpha: true,
+        });
+    }
+
     // Core canvas (normal alpha compositing)
     glShit.coreCanvas = document.getElementById("coreCanvas");
     glShit.coreCanvas.width = screenRenderWidth;
@@ -32,11 +45,12 @@ function initShadersAndGL() {
 
     // Ensure required extension present (no-op if not)
     glShit.simGL.getExtension("EXT_color_buffer_float");
+    if (glShit.waterGL) glShit.waterGL.getExtension("EXT_color_buffer_float");
 
     // Initialize water background layer (fullscreen shader)
-    if (typeof waterLayer !== 'undefined') {
+    if (typeof waterLayer !== 'undefined' && glShit.waterGL) {
         try {
-            waterLayer.init(glShit.simGL, glShit.shaderCodes.waterVertCode, glShit.shaderCodes.waterFragCode);
+            waterLayer.init(glShit.waterGL, glShit.shaderCodes.waterVertCode, glShit.shaderCodes.waterFragCode);
         } catch (e) {
             console.warn('waterLayer init failed', e);
         }
@@ -46,14 +60,14 @@ function initShadersAndGL() {
     glShit.reportProgram = createProgram(glShit.simGL, glShit.shaderCodes.reportVertCode, glShit.shaderCodes.reportFragCode);
     glShit.uNeutronsLoc = glShit.simGL.getUniformLocation(glShit.simProgram, "u_neutrons");
 
-    glShit.readTex = createNeutronTexture(glShit.simGL, neutronBuffer);
-    glShit.writeTex = createNeutronTexture(glShit.simGL, null);
+    glShit.readTex = neutron.createTexture(glShit.simGL, neutron.buffer);
+    glShit.writeTex = neutron.createTexture(glShit.simGL, null);
 
     glShit.readFBO = createFBO(glShit.simGL, glShit.readTex);
     glShit.writeFBO = createFBO(glShit.simGL, glShit.writeTex);
 
     initRenderShader(glShit.simGL, glShit.shaderCodes.rendVertCode, glShit.shaderCodes.rendFragCode);
-    initReportSystem(glShit.simGL);
+    reportSystem.init(glShit.simGL);
     // Initialize GPU instanced atom renderer (fallback to CPU if fails)
     try {
         if (typeof atomsRenderer !== 'undefined') {
@@ -98,9 +112,9 @@ function initShadersAndGL() {
         glShit.useGpuSteam = true;
     }
 
-    if (typeof bubblesRenderer !== 'undefined') {
+    if (typeof bubblesRenderer !== 'undefined' && glShit.waterGL) {
         bubblesRenderer.init(
-            glShit.simGL,
+            glShit.waterGL,
             5000, // Max bubbles
             glShit.shaderCodes.bubblesVertCode,
             glShit.shaderCodes.bubblesFragCode
@@ -108,7 +122,7 @@ function initShadersAndGL() {
     }
 }
 
-function initSceneObjects() {
+function initSimulationObjects() {
     // Water cells
     for (let y = 0; y < uraniumAtomsCountY; y++) {
         for (let x = 0; x < uraniumAtomsCountX; x++) {
@@ -140,7 +154,9 @@ function initSceneObjects() {
     for (let atom of uraniumAtoms) {
         grid.addAtom(atom);
     }
+}
 
+function initUiObjects() {
     // UI + graphics helpers
     initializeControls();
     textFont(font);
@@ -152,10 +168,13 @@ function initSceneObjects() {
 
 
 function updateScene() {
+    // Update neutrons in GPU
+    neutron.update(glShit.simGL);
+    reportSystem.process(glShit.simGL);
     uraniumAtoms.forEach(s => s.update());
     controlRods.forEach(s => s.update());
 
-    updateWaterCells();
+    Water.update();
     interpolateWaterCellsUpwards();
 
     energyThisFrame /= 70;
@@ -166,63 +185,100 @@ function updateScene() {
     if (energyOutput > 10000) boom = true;
 }
 
-function renderScene() {
-    // UI overlay and 2D elements are drawn on the UICanvas 2D context
-    if (ui && ui.canvas) ui.canvas.draw();
+function drawScene() {
+    renderWaterLayer();
+    renderBubblesLayer();
+    renderSteamLayer();
+    renderAtomCoreLayer();
+    renderAtomGlowLayer();
+    renderNeutronLayer();
+    renderBordersLayer();
+    renderUiLayer();
 }
-function renderCoreLayer() {
-    // Draw steam + atom cores on the normal-alpha coreCanvas layer.
-    if ((!glShit.useCoreAtoms || !glShit.atomsCoreRenderer) && !glShit.useGpuSteam) return;
-    const gl = glShit.coreGL;
-    if (!gl) return;
+function renderWaterLayer() {
+    const gl = glShit.waterGL;
+    if (!gl || !glShit.waterCanvas) return;
+    ensureWaterLayerCleared(gl);
+    if (typeof waterLayer !== 'undefined' && waterLayer.render) {
+        waterLayer.render(millis() / 1000.0);
+    }
+}
 
+function renderBubblesLayer() {
+    const gl = glShit.waterGL;
+    if (!gl || !glShit.waterCanvas) return;
+    ensureWaterLayerCleared(gl);
+    if (typeof bubblesRenderer !== 'undefined') {
+        bubblesRenderer.render(glShit.waterCanvas.width, glShit.waterCanvas.height, millis() / 1000.0);
+    }
+}
+
+function renderSteamLayer() {
+    const gl = glShit.coreGL;
+    if (!gl || !glShit.coreCanvas || !glShit.useGpuSteam) return;
+    ensureCoreLayerCleared(gl);
+    if (typeof steamRenderer !== 'undefined') {
+        steamRenderer.updateInstances(waterCells);
+        steamRenderer.draw();
+    }
+}
+
+function renderAtomCoreLayer() {
+    const gl = glShit.coreGL;
+    if (!gl || !glShit.coreCanvas || !glShit.useCoreAtoms || !glShit.atomsCoreRenderer) return;
+    ensureCoreLayerCleared(gl);
+    glShit.atomsCoreRenderer.updateInstances(uraniumAtoms);
+    glShit.atomsCoreRenderer.draw(uraniumAtoms.length, { blendMode: 'alpha' });
+}
+
+function renderAtomGlowLayer() {
+    const gl = glShit.simGL;
+    if (!gl || !glShit.simCanvas || !glShit.useInstancedAtoms) return;
+    ensureSimLayerCleared(gl);
+    if (typeof atomsRenderer !== 'undefined') {
+        atomsRenderer.updateInstances(uraniumAtoms);
+        atomsRenderer.draw(uraniumAtoms.length, { blendMode: 'additive' });
+    }
+}
+
+function renderNeutronLayer() {
+    const gl = glShit.simGL;
+    if (!gl || !glShit.simCanvas) return;
+    ensureSimLayerCleared(gl);
+    neutron.draw(gl, { clear: false });
+}
+
+function renderBordersLayer() {
+    if (ui && ui.canvas) ui.canvas.drawBorders();
+}
+
+function renderUiLayer() {
+    if (ui && ui.canvas) ui.canvas.drawUi();
+}
+
+function ensureWaterLayerCleared(gl) {
+    if (glShit.waterClearFrame === frameCount) return;
+    glShit.waterClearFrame = frameCount;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.viewport(0, 0, glShit.waterCanvas.width, glShit.waterCanvas.height);
+    gl.clearColor(0, 0, 0, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+}
+
+function ensureCoreLayerCleared(gl) {
+    if (glShit.coreClearFrame === frameCount) return;
+    glShit.coreClearFrame = frameCount;
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, glShit.coreCanvas.width, glShit.coreCanvas.height);
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT);
-
-
-    // Steam first (below atoms)
-    if (glShit.useGpuSteam && typeof steamRenderer !== 'undefined') {
-        steamRenderer.updateInstances(waterCells);
-        steamRenderer.draw();
-    }
-
-    // Atom cores on top
-    if (glShit.useCoreAtoms && glShit.atomsCoreRenderer) {
-        glShit.atomsCoreRenderer.updateInstances(uraniumAtoms);
-        glShit.atomsCoreRenderer.draw(uraniumAtoms.length, { blendMode: 'alpha' });
-    }
 }
 
-// Render GPU overlays (steam/atoms/neutrons) onto the transparent simCanvas.
-// This avoids copying WebGL output through a 2D canvas (p5Copy), which can
-// introduce premultiply/alpha artifacts (dark halos) on non-black backgrounds.
-function renderSimOverlay() {
-    const gl = glShit.simGL;
-    if (!gl) return;
-
+function ensureSimLayerCleared(gl) {
+    if (glShit.simClearFrame === frameCount) return;
+    glShit.simClearFrame = frameCount;
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, glShit.simCanvas.width, glShit.simCanvas.height);
-    // Opaque black clear to start; waterLayer will draw a fullscreen background next.
     gl.clearColor(0, 0, 0, 1);
     gl.clear(gl.COLOR_BUFFER_BIT);
-
-    // Draw water background first (if available)
-    if (typeof waterLayer !== 'undefined' && waterLayer.render) {
-        waterLayer.render(millis() / 1000.0);
-    }
-
-    // Atoms (GPU instanced) - glow only (core is drawn in p5)
-    if (glShit.useInstancedAtoms && typeof atomsRenderer !== 'undefined') {
-        atomsRenderer.updateInstances(uraniumAtoms);
-        atomsRenderer.draw(uraniumAtoms.length, { blendMode: 'additive' });
-    }
-
-    // Neutrons on top
-    gpuDrawNeutrons(gl, { clear: false });
-
-    if (typeof bubblesRenderer !== 'undefined') {
-        bubblesRenderer.render(glShit.simCanvas.width, glShit.simCanvas.height, millis() / 1000.0);
-    }
 }

@@ -15,20 +15,20 @@ void main() {
     vec4 data = texture(u_neutrons, uv);
     vec2 pos = data.xy;
 
-    // 1. Lasketaan kuinka paljon 4:3 kuvaa skaalataan, jotta se täyttää pystysuunnan (768)
+    // 1. Compute scale so the 4:3 sim fills the vertical resolution (768).
     float scale = u_resolution.y / u_simSize.y; 
     
-    // 2. Lasketaan 4:3 alueen leveys näytöllä (600 -> 768, eli 800 -> 1024)
+    // 2. Compute the 4:3 draw width on screen (600 -> 768, so 800 -> 1024).
     float drawWidth = u_simSize.x * scale;
     
-    // 3. Lasketaan mustien reunojen leveys ( (1324 - 1024) / 2 = 150 )
+    // 3. Compute side border width ((1324 - 1024) / 2 = 150).
     float offsetX = (u_resolution.x - drawWidth) / 2.0;
 
-    // 4. Muunnetaan simulaatiopiste (0..800) näyttöpisteeksi (150..1174)
+    // 4. Convert sim coordinates (0..800) to screen coordinates (150..1174).
     float screenX = pos.x * scale + offsetX;
     float screenY = pos.y * scale;
 
-    // 5. Muunnetaan näyttöpisteet välille -1..1 (NDC)
+    // 5. Convert screen coordinates to -1..1 (NDC).
     float x = (screenX / u_resolution.x) * 2.0 - 1.0;
     float y = (screenY / u_resolution.y) * -2.0 + 1.0; // Invert Y
 

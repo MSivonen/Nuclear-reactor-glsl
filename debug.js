@@ -1,6 +1,7 @@
 function debug() {
     // show debug UI
-    const panel = document.getElementById('debug-panel');
+    cacheHtmlShit();
+    const panel = htmlShit['debug-panel'];
     if (panel) panel.style.display = 'block';
 
     //show html debug stuff
@@ -8,7 +9,9 @@ function debug() {
     //
 
     function setupInputEventListener(inputId, updateFunction) {
-        const inputElement = document.getElementById(inputId);
+        const inputElement = htmlShit[inputId] || document.getElementById(inputId);
+        htmlShit[inputId] = inputElement;
+        if (!inputElement) return;
         inputElement.addEventListener('input', () => {
             const newValue = parseFloat(inputElement.value);
             updateFunction(newValue);
@@ -19,4 +22,5 @@ function debug() {
     setupInputEventListener('collision-probability', value => settings.collisionProbability = value);
     setupInputEventListener('neutron-speed', value => settings.neutronSpeed = value);
     setupInputEventListener('controlRodAbsorption', value => settings.controlRodAbsorptionProbability = value);
+    setupInputEventListener('controlRodHitProbability', value => settings.controlRodHitProbability = value);
 }

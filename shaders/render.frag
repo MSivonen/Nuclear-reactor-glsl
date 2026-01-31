@@ -7,12 +7,12 @@ void main(){
     float coreSize=.003;
     float glowAmount=-4.;
     
-    // Keskitetty koordinaatti
+    // Centered coordinates
     vec2 p=gl_PointCoord*2.-1.;
     float d2=dot(p,p);
     if(d2>1.)discard;
     
-    // Core ja glow
+    // Core and glow
     float core=1.-smoothstep(0.,coreSize,d2);
     float glow=exp(glowAmount*d2);
     

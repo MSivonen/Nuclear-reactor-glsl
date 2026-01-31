@@ -19,6 +19,8 @@
     <label for="neutron-speed">Neutron Speed</label><br>
     <input type="number" id="controlRodAbsorption" min="0" max="1" step="0.01" value="0">
     <label for="controlRodAbsorption">Control Rod Absorption</label><br>
+    <input type="number" id="controlRodHitProbability" min="0" max="1" step="0.01" value="0">
+    <label for="controlRodHitProbability">Control Rod Hit Probability</label><br>
     <p id="collisions-per-second">Collisions per Second: 0</p>
     <p id="energy-output">Energy output: 0 kW</p>
     <p id="energy-this-frame">Energy this frame: 0 kW</p>
@@ -26,33 +28,33 @@
   </div>
 
   <div id="canvas-container" style="position: relative; width: 1067px; height: 600px;">
+    <canvas id="waterCanvas" width="1067" height="600"
+      style="position: absolute; left: 0; top: 0; pointer-events: none; z-index: 10;">
+    </canvas>
     <canvas id="coreCanvas" width="1067" height="600"
-      style="position: absolute; left: 0; top: 0; pointer-events: none; z-index: 5;">
+      style="position: absolute; left: 0; top: 0; pointer-events: none; z-index: 20;">
     </canvas>
     <canvas id="simCanvas" width="1067" height="600"
-      style="position: absolute; left: 0; top: 0; pointer-events: none; z-index: 10; mix-blend-mode: screen;">
+      style="position: absolute; left: 0; top: 0; pointer-events: none; z-index: 30; mix-blend-mode: screen;">
     </canvas>
   </div>
 
   <script src="sketch.js"></script>
-  <script src="neutronBuffer.js"></script>
+  <script src="neutron.js"></script>
+  <script src="reportSystem.js"></script>
   <script src="sceneHelpers.js"></script>
   <script src="grid.js"></script>
-  <script src="collisionReport.js"></script>
   <script src="ui.js"></script>
   <script src="uranium.js"></script>
   <script src="controlrod.js"></script>
   <script src="water.js"></script>
   <script src="meter.js"></script>
-  <script src="uiCanvas.js"></script>
-  <script src="drawFunctions.js"></script>
   <script src="miscFunctions.js"></script>
   <script src="shaderFunctions.js"></script>
   <script src="atomsRenderer.js"></script>
   <script src="steamRenderer.js"></script>
   <script src="bubblesRenderer.js"></script>
   <script src="waterLayer.js"></script>
-  <script src="sceneHelpers.js"></script>
   <script src="debug.js"></script>
 
 </body>

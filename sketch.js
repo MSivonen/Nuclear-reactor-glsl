@@ -23,26 +23,25 @@ const settings = {
 
 const defaultSettings = { ...settings };
 
-// === Misc shit ===
+// === Runtime state ===
 let uraniumAtoms = [];
 let controlRods = [];
 let waterCells = [];
 let grid;
 let boom = false;
-let collisionReport;
-let currentNeutronIndex = 0;
 let font;
 let energyOutput = 0;
 let energyThisFrame = 0;
 let energyOutputCounter = 0;
-let tex;
 let paused = false;
 
-
-
 const glShit = {
+  waterGL: null,
+  waterCanvas: null,
   simGL: null,
   simCanvas: null,
+  coreGL: null,
+  coreCanvas: null,
   simProgram: null,
   renderProgram: null,
   readTex: null,
@@ -61,6 +60,9 @@ const glShit = {
   reportVao: null,
   reportData: null,
   useGpuSteam: false,
+  waterClearFrame: -1,
+  coreClearFrame: -1,
+  simClearFrame: -1,
 
   shaderCodes: {
     simVertSrc: null,
@@ -144,6 +146,10 @@ function setup() {
   // Ensure the p5 canvas and simCanvas share the same positioned parent so
   // the WebGL overlay lines up (no unexpected offset from other DOM elements).
   cnv.parent('canvas-container');
+  cnv.style('position', 'absolute');
+  cnv.style('left', '0');
+  cnv.style('top', '0');
+  cnv.style('z-index', '0');
   glShit.shaderCodes.simVertCode = glShit.shaderCodes.simVertSrc.join('\n');
   glShit.shaderCodes.simFragCode = glShit.shaderCodes.simFragSrc.join('\n');
   glShit.shaderCodes.rendVertCode = glShit.shaderCodes.rendVertSrc.join('\n');
@@ -161,8 +167,8 @@ function setup() {
   glShit.shaderCodes.waterFragCode = glShit.shaderCodes.waterFragSrc.join('\n');
   // Delegate initialization to helpers
   initShadersAndGL();
-  collisionReport = new CollisionReport();
-  initSceneObjects();
+  initSimulationObjects();
+  initUiObjects();
   eventListeners();
 
 }
@@ -170,31 +176,17 @@ function setup() {
 function draw() {
   //Menu and other similar goes here, before paused check
 
-
-
   //
 
   if (paused) {
     //requestAnimationFrame(frame); //this will be used when we move away from p5
     return;
   }
-
-  // Update neutrons in GPU
-  gpuUpdateNeutrons(glShit.simGL);
-  processCollisions(glShit.simGL);
-
   // Update CPU-side state
   updateScene();
 
-  
   // Core layer (steam + atom cores) on coreCanvas
-  renderCoreLayer();
-  
-  // GPU overlays (steam/atoms/neutrons) on simCanvas
-  renderSimOverlay();
-
-  // Render js canvas portion
-  renderScene();
+  drawScene();
 
   energyThisFrame = 0;
 }

@@ -12,19 +12,19 @@ void main() {
     vec2 uv = (vec2(id % u_textureSize, id / u_textureSize) + 0.5) / float(u_textureSize);
     vec4 data = texture(u_neutrons, uv);
     
-    // Sim.frag kirjoittaa osuman tapauksessa pos = (-200,-200) ja w = atomID (>0).
-    // Varmistetaan että kyseessä on nimenomaan osuma: pos.x < 0.0 ja w > 0.0
+    // sim.frag writes pos = (-200,-200) and w = atomID (>0) on a hit.
+    // Confirm a real hit: pos.x < 0.0 and w > 0.0.
     float atomID = data.w;
 
     if (!(data.x < 0.0 && atomID > 0.0)) {
-        // Ei osumaa -> piirrä piste ruudun ulkopuolelle
+        // No hit -> draw offscreen.
         gl_Position = vec4(2.0, 2.0, 0.0, 1.0);
     } else {
-        // Muutetaan atomID (0...1229) takaisin 2D-koordinaateiksi raporttitekstuurissa
+        // Convert atomID (0...1229) back to 2D coordinates in the report texture.
         float x = mod(atomID - 1.0, float(u_uraniumCountX));
         float y = floor((atomID - 1.0) / float(u_uraniumCountX));
         
-        // NDC-koordinaatit -1...1 raporttitekstuurin alueella
+        // NDC coordinates -1...1 across the report texture.
         vec2 reportPos = (vec2(x, y) + 0.5) / vec2(u_uraniumCountX, u_uraniumCountY);
         gl_Position = vec4(reportPos * 2.0 - 1.0, 0.0, 1.0);
     }

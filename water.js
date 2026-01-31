@@ -11,45 +11,46 @@ class Water {
 
     }
 
-}
+    static update() {
+        // Update the temperature of the water cells as they transfer heat to neighbors.
+        const count = uraniumAtomsCountX * uraniumAtomsCountY;
+        let temperatureChanges = Water.temperatureChanges;
+        if (!temperatureChanges || temperatureChanges.length !== count) {
+            temperatureChanges = new Float32Array(count);
+            Water.temperatureChanges = temperatureChanges;
+        }
+        temperatureChanges.fill(0);
 
-function updateWaterCells() {
-    const count = uraniumAtomsCountX * uraniumAtomsCountY;
-    let temperatureChanges = updateWaterCells.temperatureChanges;
-    if (!temperatureChanges || temperatureChanges.length !== count) {
-        temperatureChanges = new Float32Array(count);
-        updateWaterCells.temperatureChanges = temperatureChanges;
-    }
-    temperatureChanges.fill(0);
+        for (let y = 0; y < uraniumAtomsCountY; y++) {
+            const row = y * uraniumAtomsCountX;
+            for (let x = 0; x < uraniumAtomsCountX; x++) {
+                const index = row + x;
+                const cellTemp = waterCells[index].temperature;
 
-    for (let y = 0; y < uraniumAtomsCountY; y++) {
-        const row = y * uraniumAtomsCountX;
-        for (let x = 0; x < uraniumAtomsCountX; x++) {
-            const index = row + x;
-            const cellTemp = waterCells[index].temperature;
+                // Right neighbor
+                if (x + 1 < uraniumAtomsCountX) {
+                    const neighborIndex = index + 1;
+                    const dT = settings.heatTransferCoefficient * (waterCells[neighborIndex].temperature - cellTemp);
+                    temperatureChanges[index] += dT;
+                    temperatureChanges[neighborIndex] -= dT;
+                }
 
-            // Right neighbor
-            if (x + 1 < uraniumAtomsCountX) {
-                const neighborIndex = index + 1;
-                const dT = settings.heatTransferCoefficient * (waterCells[neighborIndex].temperature - cellTemp);
-                temperatureChanges[index] += dT;
-                temperatureChanges[neighborIndex] -= dT;
+                // Down neighbor
+                if (y + 1 < uraniumAtomsCountY) {
+                    const neighborIndex = index + uraniumAtomsCountX;
+                    const dT = settings.heatTransferCoefficient * (waterCells[neighborIndex].temperature - cellTemp);
+                    temperatureChanges[index] += dT;
+                    temperatureChanges[neighborIndex] -= dT;
+                }
             }
+        }
 
-            // Down neighbor
-            if (y + 1 < uraniumAtomsCountY) {
-                const neighborIndex = index + uraniumAtomsCountX;
-                const dT = settings.heatTransferCoefficient * (waterCells[neighborIndex].temperature - cellTemp);
-                temperatureChanges[index] += dT;
-                temperatureChanges[neighborIndex] -= dT;
-            }
+        // Apply changes
+        for (let i = 0; i < count; i++) {
+            waterCells[i].temperature += temperatureChanges[i];
         }
     }
 
-    // Apply changes
-    for (let i = 0; i < count; i++) {
-        waterCells[i].temperature += temperatureChanges[i];
-    }
 }
 
 function interpolateWaterCellsUpwards() {
