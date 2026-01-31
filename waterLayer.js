@@ -8,6 +8,8 @@ class WaterLayer {
         this.vao = null;
         this.uResolutionLoc = null;
         this.uTimeLoc = null;
+        this.texture = null;
+        this.uTextureLoc = null;
     }
 
     init(simGL, vsSourceExternal, fsSourceExternal) {
@@ -18,6 +20,9 @@ class WaterLayer {
         }
         this.gl = simGL;
         this.program = createProgram(this.gl, vsSourceExternal, fsSourceExternal);
+        
+        // Load background texture
+        this.texture = this.loadTexture('textures/brickwall.jpg');
 
         // Fullscreen quad (two triangles)
         const quad = new Float32Array([
@@ -36,8 +41,33 @@ class WaterLayer {
 
         this.uResolutionLoc = this.gl.getUniformLocation(this.program, 'u_resolution');
         this.uTimeLoc = this.gl.getUniformLocation(this.program, 'u_time');
+        this.uTextureLoc = this.gl.getUniformLocation(this.program, 'u_backgroundTexture');
 
         this.gl.bindVertexArray(null);
+    }
+
+    loadTexture(url) {
+        const gl = this.gl;
+        const texture = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+    
+        // Put a single pixel in the texture so we can use it immediately.
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE,
+                      new Uint8Array([0, 0, 255, 255]));
+    
+        const image = new Image();
+        image.onload = function() {
+            gl.bindTexture(gl.TEXTURE_2D, texture);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+            
+            // Assume WebGL2, generate mips if possible, set parameters
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        };
+        image.src = url;
+        return texture;
     }
 
     render(timeSeconds) {
@@ -46,8 +76,16 @@ class WaterLayer {
         this.gl.bindVertexArray(this.vao);
         this.gl.disable(this.gl.DEPTH_TEST);
         this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
+        
         if (this.uResolutionLoc) this.gl.uniform2f(this.uResolutionLoc, this.gl.canvas.width, this.gl.canvas.height);
         if (this.uTimeLoc) this.gl.uniform1f(this.uTimeLoc, timeSeconds || 0.0);
+        
+        if (this.texture && this.uTextureLoc) {
+            this.gl.activeTexture(this.gl.TEXTURE0);
+            this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture);
+            this.gl.uniform1i(this.uTextureLoc, 0);
+        }
+
         this.gl.drawArrays(this.gl.TRIANGLES, 0, 6);
         this.gl.bindVertexArray(null);
     }

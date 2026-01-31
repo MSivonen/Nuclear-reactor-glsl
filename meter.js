@@ -9,7 +9,6 @@ class Meter {
         this.width = 110;
         this.height = 110;
         
-        // Pre-render the static meter background
         this.meterImage = this.createMeterImg();
     }
 
@@ -78,10 +77,8 @@ class Meter {
     update() {
         this.power = Math.max(0, energyThisFrame);
         // Smooth transition using easing functions
-        // map(this.power, 0, 1000, 0.5, TWO_PI - 0.5);
         const t = Math.min(Math.max(this.power / 1000, 0), 1);
         const targetAngle = 0.5 + t * (Math.PI * 2 - 1.0);
-
 
         const delta = targetAngle - this.needleAngle;
         this.needleAngle += delta * 0.1;

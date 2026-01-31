@@ -11,13 +11,14 @@ out vec4 outColor;
 void main(){
     // vQuadPos ranges from -0.5..0.5; scale to -1..1 for radial calc
     vec2 p = vQuadPos * 2.0;
-    float d2 = dot(p, p);
+    vec2 stretched = p * vec2(1.0, 0.5); // Elongate 2x in y direction
+    float d2 = dot(stretched, stretched);
     if(d2 > 1.0) discard;
 
     // Glow-only layer: the opaque core is drawn in the main p5 canvas.
     // Here we only emit light that will be screen-blended via CSS.
-    float fast = exp(-d2 * 200.0);
-    float tail = exp(-d2 * 2.0) * 0.25;
+    float fast = exp(-d2 * 500.0);
+    float tail = exp(-d2 * 1.0) * 0.25;
     float glow = fast + tail;
 
     // Determine glow strength from color intensity (less temp -> less glow)

@@ -14,7 +14,7 @@ void main(){
     vec3 centerColor=vec3(.7216,.8471,.6941);
     
     // Rectangular core with soft edges (antialiased)
-    float halfX=.7;// half-width of rectangle in -1..1 space
+    float halfX=.5;// half-width of rectangle in -1..1 space
     float halfY=1.1;// half-height
     float feather=.12;// softness of the edges
     
@@ -25,10 +25,10 @@ void main(){
     
     // X-direction gray -> narrow white -> gray gradient
     float centerDist=abs(p.x);// 0.0 at center, up to 1.0 at edges
-    float whiteBand=.88;// narrow white band half-width
-    if(vFlash>.5){
-        centerColor=vec3(.6,1.,.6);
-    }
+    float whiteBand=.33;// narrow white band half-width
+/*     if(vFlash>.5){
+        centerColor=vec3(0.39f, 0.63f, 0.39f);
+    } */
     float whiteFactor=1.-smoothstep(0.,whiteBand,centerDist);
     
     vec3 baseGray=vec3(.2784,.2784,.2784);
