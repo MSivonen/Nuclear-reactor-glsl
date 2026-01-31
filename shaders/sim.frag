@@ -9,11 +9,13 @@ uniform float collision_prob;
 uniform float controlRodHitProbability;
 uniform float controlRodAbsorptionProbability;
 
-const float SCREEN_W=800.;
-const float SCREEN_H=600.;
-const float ATOM_SPACING_X=800./41.;
-const float ATOM_SPACING_Y=600./30.;
-const float ATOM_RADIUS=5.;
+uniform float u_simWidth;
+uniform float u_simHeight;
+uniform float u_atomSpacingX;
+uniform float u_atomSpacingY;
+uniform float u_atomRadius;
+uniform float u_globalScale;
+
 
 out vec4 outColor;
 
@@ -32,13 +34,13 @@ void main(){
 
   pos+=vel;
 
-  if(pos.x<0.||pos.x>SCREEN_W||pos.y<0.||pos.y>SCREEN_H){
+  if(pos.x<0.||pos.x>u_simWidth||pos.y<0.||pos.y>u_simHeight){
     outColor=vec4(-200.,-200.,0.,0.);
     return;
   }
 
-  int col=int(pos.x/ATOM_SPACING_X);
-  int row=int(pos.y/ATOM_SPACING_Y);
+  int col=int(pos.x/u_atomSpacingX);
+  int row=int(pos.y/u_atomSpacingY);
 
   if((col+1)%7==0){
     // Map column to rod index: col=6 -> index 0, col=13 -> index 1, etc.
@@ -55,7 +57,7 @@ void main(){
         if(r2<controlRodAbsorptionProbability){
           outColor=vec4(-200.,-200.,0.,0.);
           return;
-        }else if(length(vel)>2.5){
+        }else if(length(vel)>2.5 * u_globalScale){
           vec2 newVel=vel*.5;
           outColor=vec4(pos+newVel,newVel.x,newVel.y);
           return;
@@ -66,13 +68,13 @@ void main(){
     int atomIndex=row*u_uraniumCountX+col;
 
     vec2 atomPos=vec2(
-      float(col)*ATOM_SPACING_X+ATOM_SPACING_X*.5,
-      float(row)*ATOM_SPACING_Y+ATOM_SPACING_Y*.5
+      float(col)*u_atomSpacingX+u_atomSpacingX*.5,
+      float(row)*u_atomSpacingY+u_atomSpacingY*.5
     );
 
     float distSq=dot(pos-atomPos,pos-atomPos);
     float speed=length(vel);
-    float adaptedRadius=ATOM_RADIUS*(collision_prob*(20./speed));
+    float adaptedRadius=u_atomRadius*(collision_prob*((20.*u_globalScale)/speed));
 
     if(distSq<adaptedRadius*adaptedRadius){
       hitID=float(atomIndex)+1.;

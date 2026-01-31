@@ -54,22 +54,10 @@ function eventListeners() {
 }
 
 function scaleMouse(xx, yy) {
-    // Translate to the center of the canvas
-    let translatedX = xx - screenRenderWidth / 2;
-    let translatedY = yy - screenHeight / 2;
+    const simXOffset = (screenRenderWidth - screenSimWidth) / 2;
+    const finalX = xx - simXOffset;
+    const finalY = yy;
 
-    // Scale by the inverse of the scaling factor
-    let scaleFactor = 1; // (screenHeight / screenHeight);
-    let scaledX = translatedX / scaleFactor;
-    let scaledY = translatedY / scaleFactor;
-
-    // Translate back to the original position
-    let finalX = scaledX + screenSimWidth / 2;
-    let finalY = scaledY + screenHeight / 2;
-
-    return {
-        x: finalX,
-        y: finalY
-    };
+    return { x: finalX, y: finalY };
 }
 

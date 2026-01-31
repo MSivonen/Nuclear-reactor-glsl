@@ -62,6 +62,14 @@ class Neutron {
         gl.uniform1f(gl.getUniformLocation(glShit.simProgram, "controlRodHitProbability"), settings.controlRodHitProbability);
         gl.uniform1f(gl.getUniformLocation(glShit.simProgram, "controlRodAbsorptionProbability"), settings.controlRodAbsorptionProbability);
 
+        gl.uniform1f(gl.getUniformLocation(glShit.simProgram, "u_simWidth"), screenSimWidth);
+        gl.uniform1f(gl.getUniformLocation(glShit.simProgram, "u_simHeight"), screenHeight);
+        gl.uniform1f(gl.getUniformLocation(glShit.simProgram, "u_atomSpacingX"), uraniumAtomsSpacingX);
+        gl.uniform1f(gl.getUniformLocation(glShit.simProgram, "u_atomSpacingY"), uraniumAtomsSpacingY);
+        // settings.uraniumSize is diameter, pass radius (approx 5 at base)
+        gl.uniform1f(gl.getUniformLocation(glShit.simProgram, "u_atomRadius"), settings.uraniumSize / 2.0);
+        gl.uniform1f(gl.getUniformLocation(glShit.simProgram, "u_globalScale"), globalScale);
+
         drawFullscreenQuad(gl);
 
         // Ping-pong

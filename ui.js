@@ -9,7 +9,8 @@ const htmlShit = {
     'energy-output': null,
     'energy-this-frame': null,
     'neutron-speed-display': null,
-    'debug-panel': null
+    'debug-panel': null,
+    'link-rods': null
 };
 
 function cacheHtmlShit() {
@@ -25,6 +26,7 @@ function cacheHtmlShit() {
     htmlShit['energy-this-frame'] = document.getElementById('energy-this-frame');
     htmlShit['neutron-speed-display'] = document.getElementById('neutron-speed-display');
     htmlShit['debug-panel'] = document.getElementById('debug-panel');
+    htmlShit['link-rods'] = document.getElementById('link-rods');
     htmlShit.cached = true;
 }
 
@@ -70,9 +72,9 @@ function initializeControls() {
 
 class UICanvas {
     constructor() {
-        this.width = 1067;
-        this.height = 600;
-        this.simWidth = 800;
+        this.width = screenRenderWidth;
+        this.height = screenHeight;
+        this.simWidth = screenSimWidth;
         this.simXOffset = (this.width - this.simWidth) / 2;
         this.lastFrame = -1;
 
@@ -131,10 +133,10 @@ function drawBorders(ctx, offsetX = 0) {
 function drawFPS(ctx, offsetX) {
     ui.fpsText = Math.floor(ui.avgFps);
 
-    const x = offsetX + 11;
-    const y = 27;
+    const x = offsetX + 11 * globalScale;
+    const y = 27 * globalScale;
 
-    ctx.font = '30px HarryP, sans-serif';
+    ctx.font = `${30 * globalScale}px HarryP, sans-serif`;
     ctx.textAlign = 'start';
     ctx.textBaseline = 'alphabetic';
 
@@ -161,21 +163,21 @@ function gameOver(ctx, offsetX = 0) {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
-    ctx.font = '142px HarryP, sans-serif';
+    ctx.font = `${142 * globalScale}px HarryP, sans-serif`;
     ctx.fillStyle = 'black';
-    ctx.fillText(boomText, centerX + (Math.random() - 0.5) * 10, centerY + (Math.random() - 0.5) * 10);
+    ctx.fillText(boomText, centerX + (Math.random() - 0.5) * 10 * globalScale, centerY + (Math.random() - 0.5) * 10 * globalScale);
 
-    ctx.font = '134px HarryP, sans-serif';
+    ctx.font = `${134 * globalScale}px HarryP, sans-serif`;
     ctx.fillStyle = 'rgba(144,238,144,0.9)';
-    ctx.fillText(boomText, centerX + (Math.random() - 0.5) * 8, centerY + (Math.random() - 0.5) * 8);
+    ctx.fillText(boomText, centerX + (Math.random() - 0.5) * 8 * globalScale, centerY + (Math.random() - 0.5) * 8 * globalScale);
 
-    ctx.font = '132px HarryP, sans-serif';
+    ctx.font = `${132 * globalScale}px HarryP, sans-serif`;
     ctx.fillStyle = 'rgba(255,77,11,0.95)';
-    ctx.fillText(boomText, centerX + (Math.random() - 0.5) * 6, centerY + (Math.random() - 0.5) * 6);
+    ctx.fillText(boomText, centerX + (Math.random() - 0.5) * 6 * globalScale, centerY + (Math.random() - 0.5) * 6 * globalScale);
 
-    ctx.font = '120px HarryP, sans-serif';
+    ctx.font = `${120 * globalScale}px HarryP, sans-serif`;
     ctx.fillStyle = 'white';
-    ctx.fillText(boomText, centerX + (Math.random() - 0.5) * 4, centerY + (Math.random() - 0.5) * 4);
+    ctx.fillText(boomText, centerX + (Math.random() - 0.5) * 4 * globalScale, centerY + (Math.random() - 0.5) * 4 * globalScale);
 
     ctx.restore();
 }

@@ -20,6 +20,8 @@ class ControlRod {
     }
 
     update() {
+        this.movementSpeed = 1 * globalScale;
+
         if (this.y < this.targetY) {
             this.y += this.movementSpeed;
         } else if (this.y > this.targetY) {
@@ -57,7 +59,7 @@ class ControlRodsSlider {
             }
         }
 
-        const HANDLE_RADIUS = 10;
+        const HANDLE_RADIUS = 10 * globalScale;
 
         ctx.save();
 
@@ -82,9 +84,20 @@ class ControlRodsSlider {
             const i = this.draggingIndex;
             // Clamp handle to simulation vertical bounds
             const newY = Math.min(Math.max(simMousePos.y, 0), screenHeight);
-            this.handleY[i] = newY;
-            // Set rod's target to follow (top = bottom - height)
-            if (controlRods[i]) controlRods[i].targetY = this.handleY[i] - controlRods[i].height;
+            // If 'link-rods' checkbox is present and checked, move all handles to same Y
+            const linkCheckbox = (typeof htmlShit !== 'undefined' && htmlShit['link-rods']) ? htmlShit['link-rods'] : document.getElementById('link-rods');
+            const linked = linkCheckbox ? !!linkCheckbox.checked : false;
+
+            if (linked) {
+                for (let j = 0; j < this.handleY.length; j++) {
+                    this.handleY[j] = newY;
+                    if (controlRods[j]) controlRods[j].targetY = this.handleY[j] - controlRods[j].height;
+                }
+            } else {
+                this.handleY[i] = newY;
+                // Set rod's target to follow (top = bottom - height)
+                if (controlRods[i]) controlRods[i].targetY = this.handleY[i] - controlRods[i].height;
+            }
         }
 
         // Release

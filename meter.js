@@ -1,13 +1,13 @@
 class Meter {
     constructor(x, y) {
-        this.x = x;
-        this.y = y;
+        this.x = x * globalScale;
+        this.y = y * globalScale;
         this.power = 0;
         this.needleAngle = 0;
         this.warning = false;
 
-        this.width = 110;
-        this.height = 110;
+        this.width = 110 * globalScale;
+        this.height = 110 * globalScale;
         
         this.meterImage = this.createMeterImg();
     }
@@ -62,7 +62,7 @@ class Meter {
         ctx.translate(drawX + this.width / 2, drawY + this.height / 2);
         ctx.rotate(this.needleAngle);
         
-        const needleWidth = 3;
+        const needleWidth = 3 * globalScale;
         ctx.fillStyle = 'black';
         
         // Needle rect

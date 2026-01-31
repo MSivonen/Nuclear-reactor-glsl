@@ -11,7 +11,7 @@ void main(){
     // vQuadPos ranges from -0.5..0.5; scale to -1..1
     vec2 p=vQuadPos*2.;
 
-    vec3 centerColor=vec3(.7216,.8471,.6941);
+    vec3 centerColor=vec3(0.47f, 0.59f, 0.45f);
     
     // Rectangular core with soft edges (antialiased)
     float halfX=.5;// half-width of rectangle in -1..1 space

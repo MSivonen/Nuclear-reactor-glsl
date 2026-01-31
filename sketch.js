@@ -1,13 +1,16 @@
 // === Screen constants ===
-const screenSimWidth = 800;
-const screenHeight = 600;
-const controlRodsStartPos = -screenHeight * .9;
+let screenWidth = 1920;
+let screenHeight = 1080;
+let controlRodsStartPos = -screenHeight * .9;
 
-// Render resolution matching 1.7777 aspect ratio with 600px height.
-const screenRenderWidth = 1067; // Math.ceil(600 * (16/9))
+let screenSimWidth = Math.floor(screenHeight*4/3);
+screenWidth=screenSimWidth<=screenWidth?screenWidth:screenSimWidth;
 const waterColor = [52, 95, 120];
 
-const settings = {
+// Global scale factor (1.0 when height == 600)
+let globalScale = 1.0;
+
+const baseSettings = {
   neutronSpeed: 5,
   collisionProbability: 0.055,
   decayProbability: 0.0001,
@@ -21,7 +24,9 @@ const settings = {
   neutronSize: 80
 };
 
-const defaultSettings = { ...settings };
+let settings = { ...baseSettings };
+
+const defaultSettings = { ...baseSettings };
 
 // === Runtime state ===
 let uraniumAtoms = [];
@@ -111,11 +116,11 @@ const ui = {
 //scene variables
 const uraniumAtomsCountX = 41;
 const uraniumAtomsCountY = 30;
-const uraniumAtomsSpacingX = screenSimWidth / uraniumAtomsCountX;
-const uraniumAtomsSpacingY = screenHeight / uraniumAtomsCountY;
+let uraniumAtomsSpacingX;
+let uraniumAtomsSpacingY;
 const controlRodCount = 5;
-const controlRodWidth = 10;
-const controlRodHeight = 600;
+let controlRodWidth;
+let controlRodHeight;
 const NEUTRON_STRIDE = 4;
 const MAX_NEUTRONS = 512;
 const MAX_NEUTRONS_SQUARED = MAX_NEUTRONS * MAX_NEUTRONS;
@@ -140,7 +145,37 @@ function preload() {
   glShit.shaderCodes.waterFragSrc = loadStrings('shaders/water.frag');
 }
 
+function updateDimensions() {
+  // Use manual `screenWidth` and `screenHeight` values set at top of file.
+  screenRenderWidth = screenWidth;
+
+  // update the single global scale value (base height = 600 => scale 1)
+  globalScale = screenHeight / 600;
+
+  // Simulation width stays tied to the simulation aspect (4:3 relative to height)
+  screenSimWidth = screenHeight * (4 / 3);
+
+  uraniumAtomsSpacingX = screenSimWidth / uraniumAtomsCountX;
+  uraniumAtomsSpacingY = screenHeight / uraniumAtomsCountY;
+
+  controlRodWidth = 10 * globalScale;
+  controlRodHeight = 600 * globalScale;
+  controlRodsStartPos = -screenHeight * 0.9;
+
+  settings.uraniumSize = baseSettings.uraniumSize * globalScale;
+  settings.neutronSize = baseSettings.neutronSize * globalScale;
+  settings.neutronSpeed = baseSettings.neutronSpeed * globalScale;
+}
+
+function windowResized() {
+  // Automatic resizing on window events is disabled. Use manual resizing
+  // (call updateDimensions() after changing `screenWidth`/`screenHeight`).
+  return;
+}
+
 function setup() {
+  updateDimensions();
+
   //debug(); //DO NOT REMOVE THIS LINE
   const cnv = createCanvas(screenRenderWidth, screenHeight, WEBGL);
   // Ensure the p5 canvas and simCanvas share the same positioned parent so
