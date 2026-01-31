@@ -90,10 +90,10 @@ class AtomsRenderer {
             const base = i * this.instanceFloatCount;
             this.instanceData[base + 0] = a.position.x;
             this.instanceData[base + 1] = a.position.y;
-            // p5 color -> components 0..255
-            const r = red(a.color) / 255.0;
-            const g = green(a.color) / 255.0;
-            const b = blue(a.color) / 255.0;
+            // color object -> components 0..255
+            const r = (a.color && typeof a.color.r !== 'undefined') ? (a.color.r / 255.0) : 0.0;
+            const g = (a.color && typeof a.color.g !== 'undefined') ? (a.color.g / 255.0) : 0.0;
+            const b = (a.color && typeof a.color.b !== 'undefined') ? (a.color.b / 255.0) : 0.0;
             const alpha = (a.flash > 0) ? 1.0 : 1.0;
             this.instanceData[base + 2] = r;
             this.instanceData[base + 3] = g;
@@ -120,7 +120,7 @@ class AtomsRenderer {
         const rendHeightLoc = this.gl.getUniformLocation(this.program, "render_height");
         // Instance positions are in simulation/draw coordinates (screenDrawWidth/Height)
         // so the shader can scale+letterbox into the render canvas.
-        this.gl.uniform1f(rendHeightLoc, screenSimHeight);
+        this.gl.uniform1f(rendHeightLoc, screenHeight);
         const rendWidthLoc = this.gl.getUniformLocation(this.program, "render_width");
         this.gl.uniform1f(rendWidthLoc, screenSimWidth);
 
@@ -164,21 +164,8 @@ class AtomsRenderer {
         gl2.clear(gl2.COLOR_BUFFER_BIT);
 
         this.draw(uraniumAtoms.length);
-
-        if (!glShit.p5Copy) {
-            glShit.p5Copy = createGraphics(
-                screenSimWidth,
-                screenSimHeight
-            );
-        }
-
-        glShit.p5Copy.drawingContext.drawImage(
-            glShit.simCanvas,
-            0,
-            0
-        );
-
-        image(glShit.p5Copy, 0, 0);
+        // Rendering is done directly to the WebGL sim canvas; UI composition
+        // is handled by CSS mix-blend or by the UICanvas overlay. No p5 copy needed.
     }
 }
 

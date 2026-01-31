@@ -1,6 +1,6 @@
 class Water {
     constructor(x, y) {
-        this.position = createVector(x, y);
+        this.position = { x: x, y: y };
         this.temperature = 25;
         this.specificHeatCapacity = 4186;
         this.mass = 0.1;
@@ -11,15 +11,24 @@ class Water {
 
     }
 
-    draw(img) {
-        img.noStroke();
-        let coolColor = color(22, 88, 90, 0);
-        let hotColor = color(224, 255, 255, 200);
-        let t = map(this.temperature, 25, 1700, 0, 1);
-        this.color = lerpColor(coolColor, hotColor, t);
-        img.fill(this.color);
-        img.rectMode(CENTER);
-        img.rect(this.position.x, this.position.y, uraniumAtomsSpacingX * 1.02, uraniumAtomsSpacingY * 1.02);
+    draw(ctx, offsetX = 0) {
+        // Interpolate between cool and hot colors
+        const t = Math.min(1, Math.max(0, (this.temperature - 25) / (1700 - 25)));
+        const cool = { r: 22, g: 88, b: 90, a: 0 };
+        const hot = { r: 224, g: 255, b: 255, a: 200 };
+        const r = Math.round(cool.r + (hot.r - cool.r) * t);
+        const g = Math.round(cool.g + (hot.g - cool.g) * t);
+        const b = Math.round(cool.b + (hot.b - cool.b) * t);
+        const a = (cool.a + (hot.a - cool.a) * t) / 255;
+
+        this.color = { r, g, b, a };
+
+        const x = offsetX + this.position.x - (uraniumAtomsSpacingX * 1.02) / 2;
+        const y = this.position.y - (uraniumAtomsSpacingY * 1.02) / 2;
+        ctx.save();
+        ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${a})`;
+        ctx.fillRect(x, y, uraniumAtomsSpacingX * 1.02, uraniumAtomsSpacingY * 1.02);
+        ctx.restore();
     }
 }
 

@@ -114,7 +114,7 @@ class SteamRenderer {
         const rendHeightLoc = this.gl.getUniformLocation(this.program, "render_height");
         // Instance positions are in simulation/draw coordinates (screenDrawWidth/Height)
         // so the shader can scale+letterbox into the render canvas.
-        this.gl.uniform1f(rendHeightLoc, screenSimHeight);
+        this.gl.uniform1f(rendHeightLoc, screenHeight);
         const rendWidthLoc = this.gl.getUniformLocation(this.program, "render_width");
         this.gl.uniform1f(rendWidthLoc, screenSimWidth);
         this.gl.drawArraysInstanced(this.gl.TRIANGLES, 0, 6, instanceCount);

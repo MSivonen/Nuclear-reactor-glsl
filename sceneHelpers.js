@@ -6,7 +6,7 @@ function initShadersAndGL() {
     // Core canvas (normal alpha compositing)
     glShit.coreCanvas = document.getElementById("coreCanvas");
     glShit.coreCanvas.width = screenRenderWidth;
-    glShit.coreCanvas.height = screenRenderHeight;
+    glShit.coreCanvas.height = screenHeight;
     glShit.coreGL = glShit.coreCanvas.getContext("webgl2", {
         alpha: true,
         depth: false,
@@ -17,7 +17,7 @@ function initShadersAndGL() {
 
     glShit.simCanvas = document.getElementById("simCanvas");
     glShit.simCanvas.width = screenRenderWidth;
-    glShit.simCanvas.height = screenRenderHeight;
+    glShit.simCanvas.height = screenHeight;
 
     // Use an opaque (black) drawing buffer. The page composites simCanvas over the
     // p5 canvas using CSS `mix-blend-mode: screen`, so black means "no effect" and
@@ -88,6 +88,15 @@ function initShadersAndGL() {
             );
             glShit.useGpuSteam = true;
         }
+
+        if (typeof bubblesRenderer !== 'undefined') {
+            bubblesRenderer.init(
+                glShit.simGL,
+                5000, // Max bubbles
+                glShit.shaderCodes.bubblesVertCode,
+                glShit.shaderCodes.bubblesFragCode
+            );
+        }
 }
 
 function initSceneObjects() {
@@ -103,7 +112,7 @@ function initSceneObjects() {
     // Uranium atoms and control rods
     for (let x = 0; x < uraniumAtomsCountX; x++) {
         if ((x + 1) % 7 === 0) {
-            controlRods.push(new ControlRod(x * uraniumAtomsSpacingX + controlRodWidth / 2, -screenSimHeight / 2));
+            controlRods.push(new ControlRod(x * uraniumAtomsSpacingX + controlRodWidth / 2, -screenHeight / 2));
         } else {
             for (let y = 0; y < uraniumAtomsCountY; y++) {
                 let waterCellIndex = x + y * uraniumAtomsCountX;
@@ -128,6 +137,7 @@ function initSceneObjects() {
     textFont(font);
     ui.meter = new Meter(700, 500);
     ui.controlSlider = new ControlRodsSlider();
+    ui.canvas = new UICanvas();
 }
 
 
@@ -148,23 +158,8 @@ function updateScene() {
 }
 
 function renderScene() {
-    translate(-screenSimWidth / 2, -screenSimHeight / 2);
-    background(waterColor);
-
-    push();
-    translate(screenSimWidth / 2, screenSimHeight / 2);
-    scale(screenRenderHeight / screenSimHeight);
-    translate(-screenSimWidth / 2, -screenSimHeight / 2);
-
-    controlRods.forEach(s => s.draw());
-
-    ui.meter.show();
-    ui.controlSlider.slider();
-    gameOver();
-    drawFPS();
-    //drawBorders();
-
-    pop();
+    // UI overlay and 2D elements are drawn on the UICanvas 2D context
+    if (ui && ui.canvas) ui.canvas.draw();
 }
 function renderCoreLayer() {
     // Draw steam + atom cores on the normal-alpha coreCanvas layer.
@@ -212,4 +207,8 @@ function renderSimOverlay() {
 
     // Neutrons on top
     gpuDrawNeutrons(gl, { clear: false });
+
+    if (typeof bubblesRenderer !== 'undefined') {
+        bubblesRenderer.render(glShit.simCanvas.width, glShit.simCanvas.height, millis() / 1000.0);
+    }
 }

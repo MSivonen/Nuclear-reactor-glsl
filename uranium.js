@@ -1,9 +1,9 @@
 // UraniumAtom Class
 class UraniumAtom {
   constructor(x, y, waterCell) {
-    this.position = createVector(x, y);
+    this.position = { x: x, y: y };
     this.radius = settings.uraniumSize;
-    this.color = color(50);
+    this.color = { r: 50, g: 50, b: 50, a: 255 };
     this.isHit = false;
     this.flash = 0;
     this.heat = 25;
@@ -11,15 +11,17 @@ class UraniumAtom {
     this.index = null;
   }
 
-  draw() {
-    noStroke();
-    fill(this.color);
-    rectMode(CENTER);
-    rect(this.position.x, this.position.y, this.radius * 2, this.radius * 2);
+  draw(ctx, offsetX = 0) {
+    const x = offsetX + this.position.x;
+    const y = this.position.y;
+    ctx.save();
+    ctx.fillStyle = `rgba(${Math.round(this.color.r)}, ${Math.round(this.color.g)}, ${Math.round(this.color.b)}, ${this.color.a / 255})`;
+    ctx.fillRect(x - this.radius, y - this.radius, this.radius * 2, this.radius * 2);
+    ctx.restore();
   }
 
   update() {
-    if (random() < settings.decayProbability) {
+    if (Math.random() < settings.decayProbability) {
       this.createNeutron();
     }
     this.flash--;
@@ -48,29 +50,29 @@ class UraniumAtom {
 
 function computeUraniumColor(heat, flash) {
   if (flash > 0) {
-    return color(255, 255, 255);
+    return { r: 255, g: 255, b: 255, a: 255 };
   }
 
   if (heat <= 250) {
     const t = heat / 250;
     const r = lerp(0, 255, t);
     const g = lerp(40, 0, t);
-    return color(clamp255(r), clamp255(g), 0);
+    return { r: clamp255(r), g: clamp255(g), b: 0, a: 255 };
   }
 
   if (heat <= 1000) {
     const t = (heat - 250) / 250;
     const g = lerp(0, 255, t);
-    return color(255, clamp255(g), 0);
+    return { r: 255, g: clamp255(g), b: 0, a: 255 };
   }
 
   if (heat <= 1500) {
     const t = (heat - 500) / 500;
     const b = lerp(0, 255, t);
-    return color(255, 255, clamp255(b));
+    return { r: 255, g: 255, b: clamp255(b), a: 255 };
   }
 
-  return color(255, 255, 255);
+  return { r: 255, g: 255, b: 255, a: 255 };
 }
 
 function clamp255(value) {

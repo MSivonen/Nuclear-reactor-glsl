@@ -25,17 +25,18 @@
   <p id="energy-this-frame">Energy this frame: 0 kW</p>
   <p id="neutron-speed-display">Neutron Speed: 5</p>
 
-  <div id="canvas-container" style="position: relative; width: 1384px; height: 768px;">
-    <canvas id="coreCanvas" width="1384" height="768"
+  <div id="canvas-container" style="position: relative; width: 1067px; height: 600px;">
+    <canvas id="coreCanvas" width="1067" height="600"
       style="position: absolute; left: 0; top: 0; pointer-events: none; z-index: 5;">
     </canvas>
-    <canvas id="simCanvas" width="1384" height="768"
+    <canvas id="simCanvas" width="1067" height="600"
       style="position: absolute; left: 0; top: 0; pointer-events: none; z-index: 10; mix-blend-mode: screen;">
     </canvas>
   </div>
 
   <script src="sketch.js"></script>
   <script src="neutronBuffer.js"></script>
+  <script src="sceneHelpers.js"></script>
   <script src="grid.js"></script>
   <script src="collisionReport.js"></script>
   <script src="ui.js"></script>
@@ -43,11 +44,13 @@
   <script src="controlrod.js"></script>
   <script src="water.js"></script>
   <script src="meter.js"></script>
+  <script src="uiCanvas.js"></script>
   <script src="drawFunctions.js"></script>
   <script src="miscFunctions.js"></script>
   <script src="shaderFunctions.js"></script>
   <script src="atomsRenderer.js"></script>
   <script src="steamRenderer.js"></script>
+  <script src="bubblesRenderer.js"></script>
   <script src="sceneHelpers.js"></script>
 
 </body>

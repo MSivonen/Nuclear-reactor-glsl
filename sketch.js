@@ -1,23 +1,24 @@
 // === Screen constants ===
 const screenSimWidth = 800;
-const screenSimHeight = 600;
-const controlRodsStartPos = screenSimHeight * .9;
-const screenRenderWidth = 1384;
-const screenRenderHeight = 768;
-const waterColor = [22, 88, 90];
+const screenHeight = 600;
+const controlRodsStartPos = screenHeight * .1;
+
+// Render resolution matching 1.7777 aspect ratio with 600px height.
+const screenRenderWidth = 1067; // Math.ceil(600 * (16/9))
+const waterColor = [52, 95, 214];
 
 const settings = {
   neutronSpeed: 5,
-  collisionProbability: 0.08,
+  collisionProbability: 0.055,
   decayProbability: 0.0001,
-  controlRodAbsorptionProbability: 0.55,
-  controlRodHitProbability: 0.225,
+  controlRodAbsorptionProbability: 0.1,
+  controlRodHitProbability: 0.325,
   waterFlowSpeed: 0.3,
   heatingRate: 1500,
   uraniumToWaterHeatTransfer: 0.1,
   heatTransferCoefficient: 0.04,
-  uraniumSize: 5,
-  neutronSize: 150
+  uraniumSize: 10,
+  neutronSize: 80
 };
 
 const defaultSettings = { ...settings };
@@ -35,6 +36,7 @@ let energyOutput = 0;
 let energyThisFrame = 0;
 let energyOutputCounter = 0;
 let tex;
+let paused = false;
 
 
 
@@ -104,7 +106,7 @@ const ui = {
 const uraniumAtomsCountX = 41;
 const uraniumAtomsCountY = 30;
 const uraniumAtomsSpacingX = screenSimWidth / uraniumAtomsCountX;
-const uraniumAtomsSpacingY = screenSimHeight / uraniumAtomsCountY;
+const uraniumAtomsSpacingY = screenHeight / uraniumAtomsCountY;
 const controlRodCount = 5;
 const controlRodWidth = 10;
 const controlRodHeight = 600;
@@ -126,10 +128,12 @@ function preload() {
   glShit.shaderCodes.atomsCoreFragSrc = loadStrings('shaders/atoms_core.frag');
   glShit.shaderCodes.steamVertSrc = loadStrings('shaders/steam.vert');
   glShit.shaderCodes.steamFragSrc = loadStrings('shaders/steam.frag');
+  glShit.shaderCodes.bubblesVertSrc = loadStrings('shaders/bubbles.vert');
+  glShit.shaderCodes.bubblesFragSrc = loadStrings('shaders/bubbles.frag');
 }
 
 function setup() {
-  const cnv = createCanvas(screenRenderWidth, screenRenderHeight, WEBGL);
+  const cnv = createCanvas(screenRenderWidth, screenHeight, WEBGL);
   // Ensure the p5 canvas and simCanvas share the same positioned parent so
   // the WebGL overlay lines up (no unexpected offset from other DOM elements).
   cnv.parent('canvas-container');
@@ -144,14 +148,25 @@ function setup() {
   glShit.shaderCodes.atomsCoreFragCode = glShit.shaderCodes.atomsCoreFragSrc.join('\n');
   glShit.shaderCodes.steamVertCode = glShit.shaderCodes.steamVertSrc.join('\n');
   glShit.shaderCodes.steamFragCode = glShit.shaderCodes.steamFragSrc.join('\n');
+  glShit.shaderCodes.bubblesVertCode = glShit.shaderCodes.bubblesVertSrc.join('\n');
+  glShit.shaderCodes.bubblesFragCode = glShit.shaderCodes.bubblesFragSrc.join('\n');
   // Delegate initialization to helpers
   initShadersAndGL();
   collisionReport = new CollisionReport();
   initSceneObjects();
+  eventListeners();
 
 }
 
 function draw() {
+  //Menu and other similar goes here, before paused check
+
+
+  if (paused) {
+    //requestAnimationFrame(frame); //this will be used when we move away from p5
+    return;
+  }
+
   // Update neutrons in GPU
   gpuUpdateNeutrons(glShit.simGL);
   processCollisions(glShit.simGL);

@@ -20,7 +20,19 @@ function resetSimulation() {
     boom = false;
 }
 
-function gameOver() {
+function eventListeners(){
+    document.addEventListener("visibilitychange", () => {
+        paused = document.hidden;
+        if (!paused) last = performance.now();
+    });
+    window.addEventListener("blur", () => paused = true);
+    window.addEventListener("focus", () => {
+        paused = false;
+        last = performance.now();
+    });
+}
+
+function gameOver(ctx, offsetX = 0) {
     if (!boom) return;
     if (mouseIsPressed && mouseButton === LEFT) {
         resetSimulation();
@@ -29,36 +41,46 @@ function gameOver() {
     settings.collisionProbability = 0;
     const boomText = 'Boom mathafuka';
 
-    fill(0, 0, 0);
-    textSize(142);
-    textAlign(CENTER, CENTER);
-    text(boomText, screenSimWidth / (2 + random(0, 0.03)), screenSimHeight / (2 + random(0, 0.03)));
-    filter(BLUR, 25);
-    fill(144, 238, 144);
-    textSize(134);
-    text(boomText, screenSimWidth / (2 + random(0, 0.04)), screenSimHeight / (2 + random(0, 0.04)));
-    filter(BLUR, 15);
-    textSize(132);
-    fill(255, 77, 11);
-    text(boomText, screenSimWidth / (2 + random(0, 0.02)), screenSimHeight / (2 + random(0, 0.02)));
-    filter(BLUR, 5);
-    fill(255, 255, 255);
-    text(boomText, screenSimWidth / (2 + random(0, 0.02)), screenSimHeight / (2 + random(0, 0.02)));
+    const centerX = offsetX + screenSimWidth / 2;
+    const centerY = screenHeight / 2;
+
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // Layered glow/blur approximation by rendering multiple stroked/filled texts
+    ctx.font = '142px HarryP, sans-serif';
+    ctx.fillStyle = 'black';
+    ctx.fillText(boomText, centerX + (Math.random() - 0.5) * 10, centerY + (Math.random() - 0.5) * 10);
+
+    ctx.font = '134px HarryP, sans-serif';
+    ctx.fillStyle = 'rgba(144,238,144,0.9)';
+    ctx.fillText(boomText, centerX + (Math.random() - 0.5) * 8, centerY + (Math.random() - 0.5) * 8);
+
+    ctx.font = '132px HarryP, sans-serif';
+    ctx.fillStyle = 'rgba(255,77,11,0.95)';
+    ctx.fillText(boomText, centerX + (Math.random() - 0.5) * 6, centerY + (Math.random() - 0.5) * 6);
+
+    ctx.font = '120px HarryP, sans-serif';
+    ctx.fillStyle = 'white';
+    ctx.fillText(boomText, centerX + (Math.random() - 0.5) * 4, centerY + (Math.random() - 0.5) * 4);
+
+    ctx.restore();
 }
 
 function scaleMouse(xx, yy) {
     // Translate to the center of the canvas
     let translatedX = xx - screenRenderWidth / 2;
-    let translatedY = yy - screenRenderHeight / 2;
+    let translatedY = yy - screenHeight / 2;
 
     // Scale by the inverse of the scaling factor
-    let scaleFactor = (screenRenderHeight / screenSimHeight);// * 0.9;
+    let scaleFactor = 1; // (screenHeight / screenHeight);
     let scaledX = translatedX / scaleFactor;
     let scaledY = translatedY / scaleFactor;
 
     // Translate back to the original position
     let finalX = scaledX + screenSimWidth / 2;
-    let finalY = scaledY + screenSimHeight / 2;
+    let finalY = scaledY + screenHeight / 2;
 
     return {
         x: finalX,

@@ -134,7 +134,7 @@ function gpuUpdateNeutrons(gl) {
 
     gl.useProgram(glShit.simProgram);
 
-    let rodYPos = controlRods[0].y+screenSimHeight;
+    let rodYPos = controlRods[0].y+screenHeight;
     let uRodsLoc = gl.getUniformLocation(glShit.simProgram, "u_controlRods");
     gl.uniform1f(uRodsLoc, rodYPos);
 
@@ -248,7 +248,7 @@ function gpuDrawNeutrons(gl, { clear = true } = {}) {
 
     gl.uniform1i(glShit.uRenderTexSizeLoc, MAX_NEUTRONS);
     gl.uniform2f(glShit.uRenderResLoc, glShit.simCanvas.width, glShit.simCanvas.height);
-    gl.uniform2f(glShit.uRenderSimSizeLoc, screenSimWidth, screenSimHeight);
+    gl.uniform2f(glShit.uRenderSimSizeLoc, screenSimWidth, screenHeight);
     gl.uniform1f(glShit.uRenderNeutronSizeLoc, settings.neutronSize);
 
     gl.activeTexture(gl.TEXTURE0);
