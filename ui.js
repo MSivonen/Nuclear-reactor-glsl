@@ -1,87 +1,3 @@
-const htmlShit = {
-    'decay-probability': null,
-    'collision-probability': null,
-    'neutron-speed': null,
-    'controlRodAbsorption': null,
-    'controlRodHitProbability': null,
-    'control-rod-target': null,
-    'collisions-per-second': null,
-    'energy-output': null,
-    'energy-this-frame': null,
-    'neutron-speed-display': null,
-    'debug-panel': null,
-    'link-rods': null
-};
-
-function cacheHtmlShit() {
-    if (htmlShit.cached) return;
-    htmlShit['decay-probability'] = document.getElementById('decay-probability');
-    htmlShit['collision-probability'] = document.getElementById('collision-probability');
-    htmlShit['neutron-speed'] = document.getElementById('neutron-speed');
-    htmlShit['controlRodAbsorption'] = document.getElementById('controlRodAbsorption');
-    htmlShit['controlRodHitProbability'] = document.getElementById('controlRodHitProbability');
-    htmlShit['control-rod-target'] = document.getElementById('control-rod-target');
-    htmlShit['collisions-per-second'] = document.getElementById('collisions-per-second');
-    htmlShit['energy-output'] = document.getElementById('energy-output');
-    htmlShit['energy-this-frame'] = document.getElementById('energy-this-frame');
-    htmlShit['neutron-speed-display'] = document.getElementById('neutron-speed-display');
-    htmlShit['debug-panel'] = document.getElementById('debug-panel');
-    htmlShit['link-rods'] = document.getElementById('link-rods');
-    htmlShit.cached = true;
-}
-
-function updateCountersHTML() {
-    cacheHtmlShit();
-    if (htmlShit['energy-output']) {
-        // energyOutput is physical kW averaged over last second. Format as watts so SI prefixes read correctly (e.g. 5000 kW -> 5MW)
-        if (typeof formatLarge === 'function') {
-            htmlShit['energy-output'].innerText = `Energy output per second: ${formatLarge(energyOutput * 1000, 'W')}`;
-        } else {
-            htmlShit['energy-output'].innerText = `Energy output per second: ${energyOutput.toFixed(2)} kW`;
-        }
-    }
-
-    const collisionsPerSecondElement = htmlShit['collisions-per-second'];
-    const currentTime = performance.now();
-    const timeSinceLastUpdate = (currentTime - ui.lastUpdateTime) / 1000;
-
-    if (timeSinceLastUpdate >= 1 && collisionsPerSecondElement) {
-        const collisionsPerSecond = ui.collisionsThisSecond / timeSinceLastUpdate;
-        collisionsPerSecondElement.innerText = `Collisions per Second: ${collisionsPerSecond.toFixed(2)}`;
-        ui.lastUpdateTime = currentTime;
-        ui.collisionsThisSecond = 0;
-    }
-
-    if (htmlShit['energy-this-frame']) {
-        const incomeVal = (typeof lastMoneyPerSecond === 'number') ? lastMoneyPerSecond : 0;
-        const balanceVal = (typeof player !== 'undefined' && player && typeof player.getBalance === 'function') ? player.getBalance() : 0;
-        if (typeof formatLarge === 'function') {
-            htmlShit['energy-this-frame'].innerText = `Income: ${formatLarge(incomeVal, 'n€')}/s   Balance: ${formatLarge(balanceVal, 'n€')}`;
-        } else {
-            htmlShit['energy-this-frame'].innerText = `Income: ${incomeVal.toFixed(2)} n€/s   Balance: ${balanceVal.toFixed(2)} n€`;
-        }
-    }
-}
-
-function initializeControls() {
-    cacheHtmlShit();
-    const collisionProbabilityInput = htmlShit['collision-probability'];
-    const neutronSpeedInput = htmlShit['neutron-speed'];
-    const decayProbabilityInput = htmlShit['decay-probability'];
-    const controlRodTargetInput = htmlShit['control-rod-target'];
-    const controlRodAbsorptionInput = htmlShit['controlRodAbsorption'];
-    const controlRodHitProbabilityInput = htmlShit['controlRodHitProbability'];
-
-    if (controlRodTargetInput && controlRods && controlRods.length > 0) {
-        controlRodTargetInput.value = controlRods[0].targetY;
-    }
-    if (collisionProbabilityInput) collisionProbabilityInput.value = settings.collisionProbability;
-    if (neutronSpeedInput) neutronSpeedInput.value = settings.neutronSpeed;
-    if (decayProbabilityInput) decayProbabilityInput.value = settings.decayProbability;
-    if (controlRodAbsorptionInput) controlRodAbsorptionInput.value = settings.controlRodAbsorptionProbability;
-    if (controlRodHitProbabilityInput) controlRodHitProbabilityInput.value = settings.controlRodHitProbability;
-}
-
 class UICanvas {
     constructor() {
         this.width = screenRenderWidth;
@@ -118,6 +34,7 @@ class UICanvas {
         // Pause Menu State
         this.pauseMenuState = 'MAIN';
         this.saveSlots = ['Empty', '2026-02-01 12:00', 'Empty'];
+        this.draggingSlider = null;
         
         // New Settings Structure
         this.uiSettings = {
@@ -375,7 +292,7 @@ class UICanvas {
                  // Fill slider logic
                  const poolVal = settingObj.vol; // 0.0 to 1.0
                  if (poolVal > 0) {
-                     ctx.fillStyle = '#aaa'; 
+                     ctx.fillStyle = '#6cc460'; 
                      ctx.fillRect(sliderX, sliderY, sliderWidth * poolVal, sliderH);
                  }
 
@@ -498,6 +415,15 @@ class UICanvas {
             w: contentWidth,
             h: devBtnHeight
         };
+        currentY += devBtnHeight + 10 * globalScale;
+
+        // Settings Button
+        layout.elements.settingsButton = {
+            x: marginX,
+            y: currentY,
+            w: contentWidth,
+            h: devBtnHeight
+        };
 
         return layout;
     }
@@ -518,7 +444,7 @@ class UICanvas {
             ctx.font = `${30 * globalScale}px UIFont1, sans-serif`;
             ctx.fillStyle = '#90EE90';
             ctx.fillText(`${formatLarge(player.getBalance(), 'n€')}`, this.simXOffset / 2, 100 * globalScale);
-            ctx.font = `${20 * globalScale}px Arial, sans-serif`;
+            ctx.font = `${20 * globalScale}px UIFont1, sans-serif`;
             ctx.fillStyle = '#aaa';
             ctx.fillText(`${formatLarge(lastMoneyPerSecond, 'n€')}/s`, this.simXOffset / 2, 130 * globalScale);
         }
@@ -546,13 +472,13 @@ class UICanvas {
         ctx.strokeRect(elements.linkToggle.x, elements.linkToggle.y, elements.linkToggle.w, elements.linkToggle.h);
         
         ctx.fillStyle = 'white';
-        ctx.font = `${fontScale}px Arial, sans-serif`;
+        ctx.font = `${fontScale}px UIFont1, sans-serif`;
         // Text slightly offset from toggle
         ctx.fillText("Link Rods", elements.linkToggle.x + linkToggleSize + 5 * globalScale, elements.linkToggle.y + linkToggleSize * 0.8);
 
         // Water Flow Slider
         ctx.fillStyle = 'white';
-        ctx.font = `${fontScale}px Arial, sans-serif`;
+        ctx.font = `${fontScale}px UIFont1, sans-serif`;
         ctx.fillText("Water Flow", elements.waterSlider.x, elements.waterSlider.y - shopLabelGap * globalScale);
 
         ctx.strokeStyle = 'white';
@@ -587,7 +513,7 @@ class UICanvas {
                  ctx.strokeRect(mod.x, mod.y, mod.w, mod.h);
                  
                  ctx.fillStyle = 'white';
-                 ctx.font = `${fontScale}px Arial, sans-serif`;
+                 ctx.font = `${fontScale}px UIFont1, sans-serif`;
                  ctx.textAlign = 'center';
                  ctx.textBaseline = 'middle';
                  ctx.fillText(mod.value, mod.x + mod.w / 2, mod.y + mod.h / 2);
@@ -605,32 +531,37 @@ class UICanvas {
                  ctx.strokeRect(item.x, item.y, item.w, item.h);
 
                  ctx.fillStyle = canAfford ? 'white' : '#777';
-                 ctx.font = `${fontScale}px Arial, sans-serif`;
+                 ctx.font = `${fontScale}px UIFont1, sans-serif`;
                  ctx.textAlign = 'left';
-                 ctx.fillText(shop.items[item.key].name, item.x + 5 * globalScale, item.y + item.h * 0.7);
+                 ctx.textBaseline = 'middle';
+                 ctx.fillText(shop.items[item.key].name, item.x + 5 * globalScale, item.y + item.h / 2);
 
                  ctx.textAlign = 'right';
-                 ctx.font = `${fontScale}px Arial, sans-serif`;
+                 ctx.font = `${fontScale}px UIFont1, sans-serif`;
                  ctx.fillStyle = canAfford ? '#ffd700' : '#886600';
                  
                  let priceText = formatLarge(buyInfo.cost, 'n€');
-                 ctx.fillText(priceText, item.x + item.w - 5 * globalScale, item.y + item.h * 0.7);
+                 ctx.fillText(priceText, item.x + item.w - 5 * globalScale, item.y + item.h / 2);
              });
         }
 
         // 3. Settings & Dev Mode
         ctx.textAlign = 'center';
-        ctx.font = `${fontScale*1.5}px UIFont1, sans-serif`;
-        ctx.fillStyle = 'white';
-        ctx.fillText("SETTINGS", elements.settingsLabel.x, elements.settingsLabel.y);
 
         ctx.fillStyle = settings.cheatMode ? '#5cb85c' : '#d9534f';
         ctx.fillRect(elements.devButton.x, elements.devButton.y, elements.devButton.w, elements.devButton.h);
         
         ctx.fillStyle = 'white';
-        ctx.font = `${fontScale}px Arial, sans-serif`;
+        ctx.font = `${fontScale}px UIFont1, sans-serif`;
         ctx.textBaseline = 'middle';
         ctx.fillText(settings.cheatMode ? "DEV MODE ON" : "DEV MODE", this.simXOffset / 2, elements.devButton.y + elements.devButton.h / 2);
+
+        // Settings Button
+        ctx.fillStyle = '#444';
+        ctx.fillRect(elements.settingsButton.x, elements.settingsButton.y, elements.settingsButton.w, elements.settingsButton.h);
+        
+        ctx.fillStyle = 'white';
+        ctx.fillText("SETTINGS", this.simXOffset / 2, elements.settingsButton.y + elements.settingsButton.h / 2);
         
         ctx.restore();
     }
@@ -718,9 +649,86 @@ class UICanvas {
             // 3. Settings / Dev Mode
             if (y >= elements.devButton.y && y <= elements.devButton.y + elements.devButton.h) {
                 settings.cheatMode = !settings.cheatMode;
-                if (settings.cheatMode && player) player.addMoney(1000000);
+                if (settings.cheatMode && player) player.addMoney(1000000); //edit this to make everything cost 0
+            }
+
+            if (y >= elements.settingsButton.y && y <= elements.settingsButton.y + elements.settingsButton.h) {
+                paused = true;
+                this.pauseMenuState = 'SETTINGS';
             }
         }
+    }
+
+    handleMouseDrag(x, y) {
+        // Handle dragging for sliders
+        if (this.draggingSlider) {
+            // Continue dragging the active slider, ignore y position
+            if (this.draggingSlider.type === 'water') {
+                const layout = this.getSidebarLayout();
+                const { elements } = layout;
+                const sliderX = elements.waterSlider.x;
+                const sliderW = elements.waterSlider.w;
+                const newVal = (x - sliderX) / sliderW;
+                settings.waterFlowSpeed = Math.max(0, Math.min(1, newVal));
+            } else if (this.draggingSlider.type === 'audio') {
+                const btn = this.draggingSlider.button;
+                const pScale = globalScale * 0.6;
+                const w = btn.w;
+                const boxSize = 25 * pScale;
+                const sliderWidth = 100 * pScale * 1.5;
+                const gap = 15 * pScale;
+                const boxX = btn.x + w - boxSize - 20 * pScale;
+                const sliderX = boxX - sliderWidth - gap;
+                const newVol = (x - sliderX) / sliderWidth;
+                btn.settingObj.vol = Math.max(0, Math.min(1, newVol));
+            }
+            return;
+        }
+
+        // Check if starting drag on a slider
+        if (paused) {
+            // For pause menu sliders
+            const menu = this.getMenuElements();
+            const pScale = globalScale * 0.6;
+            
+            for (const btn of menu.buttons) {
+                if (btn.type === 'slider_checkbox') {
+                    const h = btn.h;
+                    const w = btn.w;
+                    const boxSize = 25 * pScale;
+                    const sliderWidth = 100 * pScale * 1.5;
+                    const gap = 15 * pScale;
+                    const sliderH = 10 * pScale * (4 / 3);
+                    const boxX = btn.x + w - boxSize - 20 * pScale;
+                    const sliderX = boxX - sliderWidth - gap;
+                    const sliderY = btn.y + (h - sliderH) / 2;
+                    // Check if starting drag on slider
+                    if (x >= sliderX && x <= sliderX + sliderWidth && y >= sliderY && y <= sliderY + sliderH) {
+                        this.draggingSlider = { type: 'audio', button: btn };
+                        const newVol = (x - sliderX) / sliderWidth;
+                        btn.settingObj.vol = Math.max(0, Math.min(1, newVol));
+                        return;
+                    }
+                }
+            }
+        } else {
+            // For sidebar sliders
+            if (x < this.simXOffset) {
+                const layout = this.getSidebarLayout();
+                const { elements } = layout;
+                // Water Flow Slider
+                if (y >= elements.waterSlider.y && y <= elements.waterSlider.y + elements.waterSlider.h && x >= elements.waterSlider.x && x <= elements.waterSlider.x + elements.waterSlider.w) {
+                    this.draggingSlider = { type: 'water' };
+                    const newVal = (x - elements.waterSlider.x) / elements.waterSlider.w * 1.0;
+                    settings.waterFlowSpeed = Math.max(0, Math.min(1, newVal));
+                    return;
+                }
+            }
+        }
+    }
+
+    handleMouseRelease() {
+        this.draggingSlider = null;
     }
 }
 
@@ -729,7 +737,6 @@ function drawBorders(ctx, offsetX = 0) {
     ctx.fillStyle = 'black';
     // Fill anything to the left of simulation (already covered by sidebar usually, but keep for safety)
     ctx.fillRect(0, 0, offsetX, screenHeight);
-    // Remove the right side fill to let it go to the edge
     ctx.restore();
 }
 

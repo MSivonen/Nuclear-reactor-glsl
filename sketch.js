@@ -247,6 +247,18 @@ function mousePressed() {
   }
 }
 
+function mouseDragged() {
+  if (ui && ui.canvas && typeof ui.canvas.handleMouseDrag === 'function') {
+    ui.canvas.handleMouseDrag(mouseX, mouseY);
+  }
+}
+
+function mouseReleased() {
+  if (ui && ui.canvas && typeof ui.canvas.handleMouseRelease === 'function') {
+    ui.canvas.handleMouseRelease();
+  }
+}
+
 function keyPressed() {
   if (key === 'p' || key === 'P' || keyCode === ESCAPE) {
     paused = !paused;
