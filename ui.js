@@ -33,7 +33,7 @@ class UICanvas {
 
         // Pause Menu State
         this.pauseMenuState = 'MAIN';
-        this.saveSlots = ['Empty', '2026-02-01 12:00', 'Empty'];
+        this.pendingSaveSlot = null;
         this.draggingSlider = null;
         
         // New Settings Structure
@@ -113,9 +113,10 @@ class UICanvas {
                 return {
                     title: "SAVE GAME",
                     buttons: generateLayout([
-                        { text: `Slot 1: ${this.saveSlots[0]}`, action: () => { console.log("Saved Slot 1"); this.saveSlots[0] = new Date().toLocaleString(); this.pauseMenuState = 'MAIN'; } },
-                        { text: `Slot 2: ${this.saveSlots[1]}`, action: () => { console.log("Saved Slot 2"); this.saveSlots[1] = new Date().toLocaleString(); this.pauseMenuState = 'MAIN'; } },
-                        { text: `Slot 3: ${this.saveSlots[2]}`, action: () => { console.log("Saved Slot 3"); this.saveSlots[2] = new Date().toLocaleString(); this.pauseMenuState = 'MAIN'; } },
+                        { text: `Slot 1: ${playerState ? playerState.saveSlots[0] : 'Empty'}`, action: () => { if (playerState) { if (playerState.hasSave(0)) { this.pendingSaveSlot = 0; this.pauseMenuState = 'SAVE_CONFIRM'; } else { playerState.saveGame(0); this.pauseMenuState = 'MAIN'; } } } },
+                        { text: `Slot 2: ${playerState ? playerState.saveSlots[1] : 'Empty'}`, action: () => { if (playerState) { if (playerState.hasSave(1)) { this.pendingSaveSlot = 1; this.pauseMenuState = 'SAVE_CONFIRM'; } else { playerState.saveGame(1); this.pauseMenuState = 'MAIN'; } } } },
+                        { text: `Slot 3: ${playerState ? playerState.saveSlots[2] : 'Empty'}`, action: () => { if (playerState) { if (playerState.hasSave(2)) { this.pendingSaveSlot = 2; this.pauseMenuState = 'SAVE_CONFIRM'; } else { playerState.saveGame(2); this.pauseMenuState = 'MAIN'; } } } },
+                        { text: "DELETE SAVE", action: () => { this.pauseMenuState = 'DELETE_SAVE'; } },
                         { text: "BACK", action: () => { this.pauseMenuState = 'MAIN'; } }
                     ], btnWidth)
                 };
@@ -123,9 +124,9 @@ class UICanvas {
                  return {
                     title: "LOAD GAME",
                     buttons: generateLayout([
-                        { text: `Slot 1: ${this.saveSlots[0]}`, action: () => { console.log("Loaded Slot 1"); this.pauseMenuState = 'MAIN'; } },
-                        { text: `Slot 2: ${this.saveSlots[1]}`, action: () => { console.log("Loaded Slot 2"); this.pauseMenuState = 'MAIN'; } },
-                        { text: `Slot 3: ${this.saveSlots[2]}`, action: () => { console.log("Loaded Slot 3"); this.pauseMenuState = 'MAIN'; } },
+                        { text: `Slot 1: ${playerState ? playerState.saveSlots[0] : 'Empty'}`, action: () => { if (playerState) { playerState.loadGame(0); paused = false; } this.pauseMenuState = 'MAIN'; } },
+                        { text: `Slot 2: ${playerState ? playerState.saveSlots[1] : 'Empty'}`, action: () => { if (playerState) { playerState.loadGame(1); paused = false; } this.pauseMenuState = 'MAIN'; } },
+                        { text: `Slot 3: ${playerState ? playerState.saveSlots[2] : 'Empty'}`, action: () => { if (playerState) { playerState.loadGame(2); paused = false; } this.pauseMenuState = 'MAIN'; } },
                         { text: "BACK", action: () => { this.pauseMenuState = 'MAIN'; } }
                     ], btnWidth)
                 };
@@ -188,6 +189,36 @@ class UICanvas {
                     buttons: generateLayout([
                         { text: "YES", action: () => { if (typeof resetSimulation === 'function') resetSimulation(); paused = false; this.pauseMenuState = 'MAIN'; } },
                         { text: "NO", action: () => { this.pauseMenuState = 'MAIN'; } }
+                    ], btnWidth)
+                };
+            case 'SAVE_CONFIRM':
+                const slotNum = this.pendingSaveSlot + 1;
+                return {
+                    title: `OVERWRITE SLOT ${slotNum}?`,
+                    warning: "Existing save will be lost!",
+                    buttons: generateLayout([
+                        { text: "YES", action: () => { if (playerState) playerState.saveGame(this.pendingSaveSlot); this.pauseMenuState = 'MAIN'; } },
+                        { text: "NO", action: () => { this.pauseMenuState = 'SAVE'; } }
+                    ], btnWidth)
+                };
+            case 'DELETE_SAVE':
+                return {
+                    title: "DELETE SAVE",
+                    buttons: generateLayout([
+                        { text: `Delete Slot 1: ${playerState ? playerState.saveSlots[0] : 'Empty'}`, action: () => { this.pendingSaveSlot = 0; this.pauseMenuState = 'DELETE_CONFIRM'; } },
+                        { text: `Delete Slot 2: ${playerState ? playerState.saveSlots[1] : 'Empty'}`, action: () => { this.pendingSaveSlot = 1; this.pauseMenuState = 'DELETE_CONFIRM'; } },
+                        { text: `Delete Slot 3: ${playerState ? playerState.saveSlots[2] : 'Empty'}`, action: () => { this.pendingSaveSlot = 2; this.pauseMenuState = 'DELETE_CONFIRM'; } },
+                        { text: "BACK", action: () => { this.pauseMenuState = 'MAIN'; } }
+                    ], btnWidth)
+                };
+            case 'DELETE_CONFIRM':
+                const delSlotNum = this.pendingSaveSlot + 1;
+                return {
+                    title: `DELETE SLOT ${delSlotNum}?`,
+                    warning: "This cannot be undone!",
+                    buttons: generateLayout([
+                        { text: "YES", action: () => { if (playerState) playerState.deleteSave(this.pendingSaveSlot); this.pauseMenuState = 'MAIN'; } },
+                        { text: "NO", action: () => { this.pauseMenuState = 'DELETE_SAVE'; } }
                     ], btnWidth)
                 };
             default:
@@ -561,7 +592,7 @@ class UICanvas {
         ctx.fillRect(elements.settingsButton.x, elements.settingsButton.y, elements.settingsButton.w, elements.settingsButton.h);
         
         ctx.fillStyle = 'white';
-        ctx.fillText("SETTINGS", this.simXOffset / 2, elements.settingsButton.y + elements.settingsButton.h / 2);
+        ctx.fillText("MENU", this.simXOffset / 2, elements.settingsButton.y + elements.settingsButton.h / 2);
         
         ctx.restore();
     }
@@ -654,7 +685,7 @@ class UICanvas {
 
             if (y >= elements.settingsButton.y && y <= elements.settingsButton.y + elements.settingsButton.h) {
                 paused = true;
-                this.pauseMenuState = 'SETTINGS';
+                this.pauseMenuState = 'MAIN';
             }
         }
     }

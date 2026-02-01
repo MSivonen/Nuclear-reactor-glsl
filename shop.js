@@ -142,5 +142,16 @@ class Shop {
                 break;
         }
     }
+
+    serialize() {
+        return {
+            buyAmount: this.buyAmount
+        };
+    }
+
+    deserialize(obj) {
+        if (!obj) return;
+        this.buyAmount = obj.buyAmount || 1;
+    }
 }
 window.Shop = Shop;

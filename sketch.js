@@ -42,6 +42,7 @@ let energyOutputCounter = 0; // accumulator: sum(power_kW * dt) over the second
 let player = null;
 let upgrades = null; // Upgrades instance
 let shop = null;
+let playerState = null;
 let lastMoneyPerSecond = 0;
 let paused = false;
 var renderTime = 0;
@@ -220,6 +221,7 @@ function setup() {
   if (typeof Upgrades !== 'undefined') upgrades = new Upgrades();
   if (typeof Player !== 'undefined') player = new Player();
   if (typeof Shop !== 'undefined') shop = new Shop();
+  if (typeof PlayerState !== 'undefined') playerState = new PlayerState();
 
   initUiObjects();
   eventListeners();

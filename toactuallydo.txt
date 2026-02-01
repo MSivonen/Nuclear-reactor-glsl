@@ -37,9 +37,9 @@ More detailed info in todo.txt. Check it always before starting a stage here.
 
 3.5) Choose a font. (DONE)
 
-4) Save/Load (three slots) (NOT STARTED)
+4) Save/Load (three slots) (DONE)
 	- Importance: 4/5  Difficulty: 2/5
-	- Local saving (IndexedDB/localStorage) with three quick slots, and explicit Save/Load in the menu.
+	v- Local saving (IndexedDB/localStorage) with three quick slots, and explicit Save/Load in the menu.
 	- Files: `playerState.js`, `ui.js`
 
 5) Sound effects & minimal SFX (NOT STARTED)
