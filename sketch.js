@@ -1,16 +1,16 @@
 // === Screen constants ===
-let screenWidth = 1920;
-let screenHeight = 1080;
+let screenHeight = 600;
+let screenWidth = Math.floor(screenHeight * 1.7778);
+let screenSimWidth = Math.floor(screenHeight * (4 / 3));
+let SHOP_WIDTH = screenWidth - screenSimWidth;
 let controlRodsStartPos = -screenHeight * .9;
 
-let screenSimWidth = Math.floor(screenHeight*4/3);
-screenWidth=screenSimWidth<=screenWidth?screenWidth:screenSimWidth;
 const waterColor = [52, 95, 120];
 
 // Global scale factor (1.0 when height == 600)
 let globalScale = 1.0;
 
-const baseSettings = {
+const defaultSettings = {
   neutronSpeed: 5,
   collisionProbability: 0.055,
   decayProbability: 0.0001,
@@ -20,13 +20,14 @@ const baseSettings = {
   heatingRate: 1500,
   uraniumToWaterHeatTransfer: 0.1,
   heatTransferCoefficient: 0.04,
+  inletTemperature: 15,
+  moneyExponent: 1.5,
   uraniumSize: 10,
-  neutronSize: 80
+  neutronSize: 80,
+  linkRods: false,
+  cheatMode: false
 };
-
-let settings = { ...baseSettings };
-
-const defaultSettings = { ...baseSettings };
+let settings = { ...defaultSettings };
 
 // === Runtime state ===
 let uraniumAtoms = [];
@@ -37,8 +38,13 @@ let boom = false;
 let font;
 let energyOutput = 0;
 let energyThisFrame = 0;
-let energyOutputCounter = 0;
+let energyOutputCounter = 0; // accumulator: sum(power_kW * dt) over the second
+let player = null;
+let upgrades = null; // Upgrades instance
+let shop = null;
+let lastMoneyPerSecond = 0;
 let paused = false;
+var renderTime = 0;
 
 const glShit = {
   waterGL: null,
@@ -109,9 +115,16 @@ const ui = {
   avgFps: 0,
   prevTime: 0,
   framesCounted: 0,
+  accumulatedTime: 0,
   meter: null,
   controlSlider: null
 };
+
+//game variables
+const game = {
+  // threshold in physical kW (5 MW = 5000 kW)
+  boomValue: 5000000
+}
 
 //scene variables
 const uraniumAtomsCountX = 41;
@@ -127,7 +140,6 @@ const MAX_NEUTRONS_SQUARED = MAX_NEUTRONS * MAX_NEUTRONS;
 
 
 function preload() {
-  font = loadFont("HARRYP_.TTF");
   glShit.shaderCodes.simVertSrc = loadStrings('shaders/sim.vert');
   glShit.shaderCodes.simFragSrc = loadStrings('shaders/sim.frag');
   glShit.shaderCodes.rendVertSrc = loadStrings('shaders/render.vert');
@@ -147,13 +159,13 @@ function preload() {
 
 function updateDimensions() {
   // Use manual `screenWidth` and `screenHeight` values set at top of file.
+  screenWidth = Math.floor(screenHeight * 1.7778);
+  screenSimWidth = Math.floor(screenHeight * (4 / 3));
+  SHOP_WIDTH = screenWidth - screenSimWidth;
   screenRenderWidth = screenWidth;
 
   // update the single global scale value (base height = 600 => scale 1)
   globalScale = screenHeight / 600;
-
-  // Simulation width stays tied to the simulation aspect (4:3 relative to height)
-  screenSimWidth = screenHeight * (4 / 3);
 
   uraniumAtomsSpacingX = screenSimWidth / uraniumAtomsCountX;
   uraniumAtomsSpacingY = screenHeight / uraniumAtomsCountY;
@@ -162,9 +174,9 @@ function updateDimensions() {
   controlRodHeight = 600 * globalScale;
   controlRodsStartPos = -screenHeight * 0.9;
 
-  settings.uraniumSize = baseSettings.uraniumSize * globalScale;
-  settings.neutronSize = baseSettings.neutronSize * globalScale;
-  settings.neutronSpeed = baseSettings.neutronSpeed * globalScale;
+  settings.uraniumSize = settings.uraniumSize * globalScale;
+  settings.neutronSize = settings.neutronSize * globalScale;
+  settings.neutronSpeed = settings.neutronSpeed * globalScale;
 }
 
 function windowResized() {
@@ -203,25 +215,55 @@ function setup() {
   // Delegate initialization to helpers
   initShadersAndGL();
   initSimulationObjects();
+
+  // Economy objects: instantiate here so UI and per-second hooks can use them
+  if (typeof Upgrades !== 'undefined') upgrades = new Upgrades();
+  if (typeof Player !== 'undefined') player = new Player();
+  if (typeof Shop !== 'undefined') shop = new Shop();
+
   initUiObjects();
   eventListeners();
 
 }
 
 function draw() {
-  //Menu and other similar goes here, before paused check
-
-  //
-
-  if (paused) {
-    //requestAnimationFrame(frame); //this will be used when we move away from p5
-    return;
+  if (!paused) {
+    if (typeof deltaTime !== 'undefined') renderTime += deltaTime / 1000.0;
+    
+    // Update CPU-side state
+    updateScene();
+    
+    energyThisFrame = 0; // Reset accumulator for next frame
   }
-  // Update CPU-side state
-  updateScene();
 
   // Core layer (steam + atom cores) on coreCanvas
+  // This draws the scene using 'renderTime' (if updated in sceneHelpers)
+  // and draws the UI/Pause Menu on top
   drawScene();
+}
+function mousePressed() {
+  if (ui && ui.canvas && typeof ui.canvas.handleMouseClick === 'function') {
+    ui.canvas.handleMouseClick(mouseX, mouseY);
+  }
+}
 
-  energyThisFrame = 0;
+function keyPressed() {
+  if (key === 'p' || key === 'P' || keyCode === ESCAPE) {
+    paused = !paused;
+    if (!paused) {
+        if (typeof ui !== 'undefined') ui.lastUpdateTime = performance.now();
+    }
+  }
+
+  if (settings.cheatMode) {
+    if (key === 'm' || key === 'M') {
+      if (player) player.addMoney(player.getBalance() * 0.1 + 10000);
+      console.log("Cheat: Added money");
+    }
+    // 'C' to clear/cool reactor for testing?
+    if (key === 'c' || key === 'C') {
+        uraniumAtoms.forEach(u => u.temperature = 0);
+        console.log("Cheat: Temperature reset");
+    }
+  }
 }

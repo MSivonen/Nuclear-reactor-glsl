@@ -1,0 +1,108 @@
+MAKING A GAME
+
+=== Definitions: === 
+-Atom group: the bunch of atoms between two control rod slots
+-Atom column: one vertical column inside of an atom group
+-Slot: A place where an atom (group) or a control rod can be
+
+=== Setup: === 
+-Make slots for atoms and control rods. The slot places are fixed, but the slots can be empty or filled.
+    -Atoms are toggled on/off with UraniumAtom.hasAtom
+    -Make a method in the class to toggle atom groups on and off
+        -Calculate the positions of atoms and blah blah
+            -Atoms are marked with this.atomGroup for easier filtering
+-Make an object of starting stats, which can be upgraded later.
+
+=== Player starts with: === 
+    -Game starts in start screen
+    -two groups of atoms, the two centermost ones
+        -each group has three columns of atoms
+        -each group has 15 rows of atoms
+    -one control rod, the center one
+
+=== Max upgrades are: === 
+    -six columns of atom groups, each group has 6x30 atoms (total 36x30)
+    -five control rods
+
+=== Shop: === 
+    -atoms to a group. The centermost slot is filled first, prioritize left/top one if there is multiple slots equally close to center
+        -ctrl+click to buy 5
+        -shift+click to buy 10
+    -Control rods. Same logic, centermost first.
+    -Can the stuff be bought whenever or does the reactor need to be shut down first? / to be decided later
+    -Max water flow rate
+
+=== UI elements that will be revealed in time: ===
+    -Meter when x amount of heat is reached
+    -Power output display when x+y amount of heat is reached
+    -Amount of money when x+y+z amount of heat is reached
+    -Water speed valve appears when buying 5th water speed upgrade.
+    -Link rods button appears when second rod is bought
+
+=== Economy: === 
+    -"Money" is the amount of energy produced
+    -Game money unit is a nuclear euro, eg "Neuro", plural "Neuri", symbol "n€"
+    -Need to think of an increasing price ramp
+    -New atom group should be relatively expensive
+
+=== Gameplay features to add: ===
+    -!!!!!Save/load game locally!!!!!
+        -Three save slots?
+    -Control the speed of water
+        -Faster max speed via upgrades
+        -Bubbles' speed is altered with this
+        -And of course heat transfer
+    -Water moves energy out of the screen, calculate how much and give "money" to Player
+    -Hotter water is exponentially more expensive than cold water, this encourages the player to build heat instead of running the reactor cold
+    -Better game over mechanic. The atoms should melt at a certain point... Or does the water explode? Or both?
+        -Prettier boom animation
+        -What happens when game over? 
+            -Not a hc insta kill.
+            -Prestige?
+                -Some task must be completed to prestige. Max power output? Blow up once? Different for every prestige?
+                -What should be better after prestige?
+                    -Water heat capacity?
+                    -Collision probability neutrons-atoms?
+                    -Control rod slowing probability?
+            -Lose some shit and try again?
+                -Atoms?
+                -Money?
+                -Rods?
+                -Make sure to not reduce anything to less than new game amount
+    -Degrading atoms that need replacing? MAYBE later...
+        -Automatic healing of atoms when they're cooled a lot?
+        -And/or buy atom healing?
+
+=== Sound: ===
+    -Minimal sfx
+        -Geiger counter tick when neutron is spawned?
+        -Alarm when going too hot
+        -Steam sound when running warm
+    -Music?
+        -Maybe later, not a priority
+
+=== UI: ===
+    -Control rod sliders
+    -Water speed slider
+    -Menu
+        *Entered with esc key. Pauses the game*
+        -Start/restart
+        -Save/load
+        -Options
+            -Turn visual-only graphics layers on/off
+        -Tutorial on/off
+    -Meter rework to make it's scale scale with more powerful reactor or max power reached? Must be tested.
+    -Force widescreen aspect ratio (1.78:1). Move the simulation canvases to the right to make room for ui elements on the left.
+    -Add stats and graphs
+        -One of the last things to do
+
+=== Tutorial: ===
+    -A tutorial window will pause the game and show some text. Blink the according element (layer) on screen.
+    -Window will appear on screen on start and when new stuff is unlocked.
+    -Make a tutorial function with args:
+        -Title
+        -Text
+        -Blinking layer (optional)
+        -Tutorial window size
+            -Or make it dynamic size?
+        -Tutorial window position

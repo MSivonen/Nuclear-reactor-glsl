@@ -1,13 +1,44 @@
 function oncePerSecond() {
     if (millis() - ui.prevTime >= 1000) {
-        energyOutput = energyOutputCounter / ui.framesCounted;
+        // Compute per-second average physical power (kW)
+        const elapsed = ui.accumulatedTime || 0;
+        const avgPhysicalKW = (elapsed > 0) ? (energyOutputCounter / elapsed) : 0;
+        energyOutput = avgPhysicalKW; // store as physical kW
+
+        // Money: exponential mapping with threshold (discard under 10 kW)
+        let moneyThisSecond = 0;
+        if (energyOutput >= 10) {
+            moneyThisSecond = Math.pow(energyOutput / 100.0, settings.moneyExponent);
+        }
+        lastMoneyPerSecond = moneyThisSecond;
+        if (typeof player !== 'undefined' && player && typeof player.addMoney === 'function') {
+            player.addMoney(moneyThisSecond);
+        }
+
+        // Reset accumulators
         energyOutputCounter = 0;
+        ui.accumulatedTime = 0;
+
+        // FPS bookkeeping
         ui.avgFps = ui.framesCounted;
         ui.framesCounted = 0;
         ui.prevTime = millis();
+
+        if (typeof updateCountersHTML === 'function') updateCountersHTML();
+        // Bomb check: energyOutput is in physical kW, boomValue is kW
+        if (energyOutput >= game.boomValue) boom = true;
     } else {
         ui.framesCounted++;
     }
+}
+
+function formatLarge(amount, unit, decimals=2) {
+    const abs = Math.abs(amount);
+    const sign = amount < 0 ? '-' : '';
+    if (abs >= 1e9) return sign + (abs / 1e9).toFixed(decimals).replace(/\.00$/, '') + 'G' + unit;
+    if (abs >= 1e6) return sign + (abs / 1e6).toFixed(decimals).replace(/\.00$/, '') + 'M' + unit;
+    if (abs >= 1e3) return sign + (abs / 1e3).toFixed(decimals).replace(/\.00$/, '') + 'k' + unit;
+    return sign + amount.toFixed(decimals).replace(/\.00$/, '') + unit;
 }
 
 function resetSimulation() {
@@ -31,7 +62,7 @@ function resetSimulation() {
             }
         }
     }
-    Object.assign(settings, defaultSettings);
+    settings = { ...defaultSettings };
     initializeControls();
     boom = false;
 }
@@ -54,8 +85,7 @@ function eventListeners() {
 }
 
 function scaleMouse(xx, yy) {
-    const simXOffset = (screenRenderWidth - screenSimWidth) / 2;
-    const finalX = xx - simXOffset;
+    const finalX = xx - SHOP_WIDTH;
     const finalY = yy;
 
     return { x: finalX, y: finalY };

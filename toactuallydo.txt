@@ -1,0 +1,79 @@
+PRIORITIZED TASKS — Reactor Game Development Roadmap
+More detailed info in todo.txt. Check it always before starting a stage here.
+
+1) Power output system & water flow control (DONE)
+	- Importance: 5/5  Difficulty: 3/5
+	v- Replace placeholder energy output system with a physical calculation: energy = mass_flow * specific_heat * deltaT per timestep. Convert water cell heat moved out of top of screen per-frame into "energy" (money).
+	- Files: `water.js`, `reportSystem.js`, `ui.js` (water speed slider), `steamRenderer.js` (visual feedback)
+    v- Show power per second on screen
+    v- Game over does not reset values properly
+
+2) Economy & player state (DONE) — quick win
+	- Importance: 5/5  Difficulty: 2/5
+	v- Add `Player` class for storing currency, owned columns/groups, rod count, and upgrades. Connect accumulation from power output to currency.
+	v- Files: add `player.js`, update `reportSystem.js` and `sketch.js`
+
+2.5) Widescreen layout & shop area (DONE)
+	- Importance: 4/5  Difficulty: 2/5
+	v- Force widescreen aspect (1.78:1), move main simulation canvases to the right, free left panel for shop/buttons/UI. 
+    v- If the player uses 4:3 screen, there will be black bars on top and bottom
+	v- Files: `uiCanvas.js`, `style.css`, `index.html`
+	v- Add a cheat/devmode button to have infinite money and another to grant full upgrades (dev-only).
+	v-Layout from top to bottom:
+		v-Money 
+		v-Money per second
+		v-Controls
+			v-Link rods
+			-Water valve
+		v-Shop
+		v-Settings
+		v-Devmode button
+
+3) Shop UI & Pause Menu (DONE)
+	v- Importance: 4/5  Difficulty: 2/5
+	v- Add a pause menu (Esc or settings button) that pauses the simulation and shows restart (function exists), Save/Load buttons, and dummy Options buttons (video/audio placeholders for now). Also add buy buttons to the left shop panel; support ctrl/shift for multi-buy.
+    v- Devmode / cheat mode, set all prices to 0 if enabled
+	v- Files: `ui.js`, `uiCanvas.js`, `sketch.js`, `shop.js` (new)
+
+3.5) Choose a font. (DONE)
+
+4) Save/Load (three slots) (NOT STARTED)
+	- Importance: 4/5  Difficulty: 2/5
+	- Local saving (IndexedDB/localStorage) with three quick slots, and explicit Save/Load in the menu.
+	- Files: `playerState.js`, `ui.js`
+
+5) Sound effects & minimal SFX (NOT STARTED)
+	- Importance: 2/5  Difficulty: 1/5
+	- Add Geiger tick when neutrons spawn, alarm when temperature/warning thresholds hit, steam ambience when running warm. UI feedback sounds for shop buttons. Make different sounds optional in Options and add volume sliders for each effect, and main sfx volume+toggle, music volume+toggle.
+	- Files: `ui.js`, new `audio.js`
+
+6) Control rods: upgrades & automation (NOT STARTED)
+	- Importance: 4/5  Difficulty: 3/5
+	- Buying additional rods, linking rods UI, and simple automation/scheduling for rods.
+	- Files: `controlrod.js`, `ui.js`, `sketch.js`
+
+7) Atom group/column purchase logic (NOT STARTED)
+	- Importance: 4/5  Difficulty: 2/5
+	- Implement centermost-first filling rules, bulk-buy (ctrl/shift), and UI feedback for available slots. Expose water flow control once 5 water upgrades purchased (valve UI).
+	- Files: `uranium.js`, `sketch.js`, `ui.js`, `water.js`
+
+8) Water upgrades, bubbles interaction & visual feedback (NOT STARTED)
+	- Importance: 3/5  Difficulty: 2/5
+	- Max water speed upgrades, bubble speed tied to flow, and stronger heat transport tweaks.
+	- Files: `water.js`, `bubblesRenderer.js`, `ui.js`
+
+9) Failure mechanics: melting, explosions & prestige hooks (NOT STARTED)
+	- Importance: 3/5  Difficulty: 4/5
+	- Gradual melting thresholds, escalating warnings, optional explosions, and a prestige reset path with persistent upgrades.
+	- Files: `uranium.js`, `water.js`, `prestige.js` (new), `sketch.js`
+
+10) Meter rework (NOT STARTED)
+	- Importance: 3/5  Difficulty: 2/5
+	- Make meter scale with reactor power. Must be tested to figure out the numbers.
+
+11) Make all the menu items work
+
+
+Notes on first task: I'll replace the placeholder energy formula with a calorimetric approach: compute mass flow from water speed and cross-section, multiply by specific heat (configurable), and the temperature delta of water cells as they exit the simulation. That produces a physically meaningful energy per-frame convertible to in-game currency.
+
+

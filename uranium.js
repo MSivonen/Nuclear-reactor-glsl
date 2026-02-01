@@ -1,6 +1,6 @@
 // UraniumAtom Class
 class UraniumAtom {
-  constructor(x, y, waterCell) {
+  constructor(x, y, waterCell, hasAtom, atomGroup) {
     this.position = { x: x, y: y };
     this.radius = settings.uraniumSize;
     this.color = { r: 50, g: 50, b: 50, a: 255 };
@@ -9,6 +9,8 @@ class UraniumAtom {
     this.heat = 25;
     this.waterCell = waterCell;
     this.index = null;
+    this.hasAtom = hasAtom;
+    this.atomGroup = atomGroup;
   }
 
   draw(ctx, offsetX = 0) {
@@ -34,7 +36,7 @@ class UraniumAtom {
     const deltaT = (this.heat - this.waterCell.temperature) * settings.uraniumToWaterHeatTransfer;
     this.heat -= deltaT;
     this.waterCell.temperature += deltaT;
-    energyThisFrame += deltaT;
+
   }
 
   hitByNeutron() {

@@ -22,7 +22,7 @@ class WaterLayer {
         this.program = createProgram(this.gl, vsSourceExternal, fsSourceExternal);
         
         // Load background texture
-        this.texture = this.loadTexture('textures/brickwall.jpg');
+        this.texture = this.loadTexture('assets/brickwall.jpg');
 
         // Fullscreen quad (two triangles)
         const quad = new Float32Array([

@@ -4,8 +4,18 @@ html, body {
 }
 
 @font-face {
-  font-family: 'HarryP';
-  src: url('HARRYP_.TTF');
+  font-family: 'UIFont1';
+  src: url('assets/SpecialElite-Regular.ttf');
+}
+
+@font-face {
+  font-family: 'boom1';
+  src: url('assets/RubikBurned-Regular.ttf');
+}
+
+@font-face {
+  font-family: 'boom2';
+  src: url('assets/RubikPuddles-Regular.ttf');
 }
 
 #canvas-container {
@@ -14,11 +24,9 @@ html, body {
 }
 
 /* Background for the simulation area (matches `waterColor` in sketch.js) */
-/*
 #canvas-container {
-  background: rgb(52, 95, 214);
+  background: rgb(255, 55, 55);
 }
-*/
 
 canvas {
   display: block;

@@ -68,9 +68,26 @@ class Meter {
         // Needle rect
         ctx.beginPath();
 
-        ctx.rect(-needleWidth / 2, 0, needleWidth, screenHeight/13);
+        ctx.rect(-needleWidth / 2, 0, needleWidth, globalScale*45);
         ctx.fill();
         
+        ctx.restore();
+
+        // Draw power text
+        ctx.save();
+        ctx.fillStyle = 'gray';
+        ctx.beginPath();
+        ctx.roundRect(drawX + this.width / 4, drawY + this.height - 80 * globalScale, this.width / 2, globalScale*17,globalScale*5);
+        ctx.fill();
+        ctx.restore();
+        ctx.save();
+
+        ctx.fillStyle = 'light-green';
+        ctx.font = `${12 * globalScale}px Arial, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const powerText = formatLarge(Math.round(energyOutput*1000), 'W',0);
+        ctx.fillText(powerText, drawX + this.width / 2, drawY + this.height - 70 * globalScale);
         ctx.restore();
     }
 

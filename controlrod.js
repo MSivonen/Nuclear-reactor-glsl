@@ -65,16 +65,20 @@ class ControlRodsSlider {
 
         // Input handling: start drag if pressed and not already dragging
         if (mouseIsPressed && this.draggingIndex === -1) {
-            for (let i = 0; i < controlRods.length; i++) {
-                const rod = controlRods[i];
-                const handleX = rod.x + rod.width / 2;
-                const handleY = this.handleY[i];
-                const dx = simMousePos.x - handleX;
-                const dy = simMousePos.y - handleY;
-                //if (Math.sqrt(dx * dx + dy * dy) <= HANDLE_RADIUS + 4) { //grab the balls
-                if (-dx <= HANDLE_RADIUS && dx <= HANDLE_RADIUS) {//grab anywhere in y direction
-                    this.draggingIndex = i;
-                    break;
+            if (typeof paused !== 'undefined' && paused) {
+                // Do not allow grabbing when paused
+            } else {
+                for (let i = 0; i < controlRods.length; i++) {
+                    const rod = controlRods[i];
+                    const handleX = rod.x + rod.width / 2;
+                    const handleY = this.handleY[i];
+                    const dx = simMousePos.x - handleX;
+                    const dy = simMousePos.y - handleY;
+                    //if (Math.sqrt(dx * dx + dy * dy) <= HANDLE_RADIUS + 4) { //grab the balls
+                    if (-dx <= HANDLE_RADIUS && dx <= HANDLE_RADIUS) {//grab anywhere in y direction
+                        this.draggingIndex = i;
+                        break;
+                    }
                 }
             }
         }
@@ -84,9 +88,8 @@ class ControlRodsSlider {
             const i = this.draggingIndex;
             // Clamp handle to simulation vertical bounds
             const newY = Math.min(Math.max(simMousePos.y, 0), screenHeight);
-            // If 'link-rods' checkbox is present and checked, move all handles to same Y
-            const linkCheckbox = (typeof htmlShit !== 'undefined' && htmlShit['link-rods']) ? htmlShit['link-rods'] : document.getElementById('link-rods');
-            const linked = linkCheckbox ? !!linkCheckbox.checked : false;
+            // If 'link-rods' is checked in settings, move all handles to same Y
+            const linked = settings.linkRods;
 
             if (linked) {
                 for (let j = 0; j < this.handleY.length; j++) {

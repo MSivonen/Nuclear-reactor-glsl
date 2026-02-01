@@ -5,8 +5,9 @@ function initShadersAndGL() {
 
     glShit.waterCanvas = document.getElementById("waterCanvas");
     if (glShit.waterCanvas) {
-        glShit.waterCanvas.width = screenRenderWidth;
+        glShit.waterCanvas.width = screenSimWidth;
         glShit.waterCanvas.height = screenHeight;
+        glShit.waterCanvas.style.left = SHOP_WIDTH + 'px';
         glShit.waterGL = glShit.waterCanvas.getContext("webgl2", {
             alpha: false,
             depth: false,
@@ -18,8 +19,9 @@ function initShadersAndGL() {
 
     // Core canvas (normal alpha compositing)
     glShit.coreCanvas = document.getElementById("coreCanvas");
-    glShit.coreCanvas.width = screenRenderWidth;
+    glShit.coreCanvas.width = screenSimWidth;
     glShit.coreCanvas.height = screenHeight;
+    glShit.coreCanvas.style.left = SHOP_WIDTH + 'px';
     glShit.coreGL = glShit.coreCanvas.getContext("webgl2", {
         alpha: true,
         depth: false,
@@ -29,8 +31,9 @@ function initShadersAndGL() {
     });
 
     glShit.simCanvas = document.getElementById("simCanvas");
-    glShit.simCanvas.width = screenRenderWidth;
+    glShit.simCanvas.width = screenSimWidth;
     glShit.simCanvas.height = screenHeight;
+    glShit.simCanvas.style.left = SHOP_WIDTH + 'px';
 
     // Use an opaque (black) drawing buffer. The page composites simCanvas over the
     // p5 canvas using CSS `mix-blend-mode: screen`, so black means "no effect" and
@@ -159,7 +162,6 @@ function initSimulationObjects() {
 function initUiObjects() {
     // UI + graphics helpers
     initializeControls();
-    textFont(font);
     ui.meter = new Meter(700, 500);
     ui.controlSlider = new ControlRodsSlider();
     ui.canvas = new UICanvas();
@@ -174,15 +176,50 @@ function updateScene() {
     uraniumAtoms.forEach(s => s.update());
     controlRods.forEach(s => s.update());
 
+    // Update water temperatures (conduction & uranium heat transfer)
     Water.update();
+
+    // Capture top-row temperatures before the upward flow moves water out of the scene
+    const topCount = uraniumAtomsCountX;
+    const topTemps = new Float32Array(topCount);
+    for (let x = 0; x < topCount; x++) {
+        const index = x + 0 * uraniumAtomsCountX;
+        topTemps[x] = waterCells[index].temperature;
+    }
+
+    // Move water upwards (this will change top-row cell temperatures)
     interpolateWaterCellsUpwards();
 
-    energyThisFrame /= 70;
-    energyOutputCounter += energyThisFrame;
+    // Compute calorimetric energy removed by outflow at the top row this frame
+    // Treat settings.waterFlowSpeed as fraction of a cell leaving per frame (option A)
+    const fractionOut = settings.waterFlowSpeed;
+    const inletTemp = (typeof settings.inletTemperature !== 'undefined') ? settings.inletTemperature : 15;
+    let totalJoulesOut = 0;
+    for (let x = 0; x < topCount; x++) {
+        const index = x + 0 * uraniumAtomsCountX;
+        const T_out = topTemps[x];
+        const massMoved = fractionOut * (waterCells[index].mass || 0.1); // kg moved this frame
+        const c = (waterCells[index].specificHeatCapacity || 4186);
+        const deltaT = T_out - inletTemp;
+        const dE = massMoved * c * deltaT; // Joules per frame
+        totalJoulesOut += dE/1000;
+    }
+
+    // Convert Joules/frame -> kW (kJ/s) by dividing by frame time
+    let dt = (typeof deltaTime !== 'undefined') ? (deltaTime / 1000.0) : (1.0 / 60.0);
+    if (dt <= 0) dt = 1.0 / 60.0;
+    const powerW = totalJoulesOut / dt; // Watts
+    const powerKW = powerW / 1000.0; // physical kW
+
+    // `energyThisFrame` is the game-scaled instantaneous power (kW-game units)
+    energyThisFrame = powerKW;
+
+    // Accumulate physical kW * seconds so we can compute exact per-second averages
+    energyOutputCounter += powerKW * dt;
+    if (typeof ui.accumulatedTime === 'undefined') ui.accumulatedTime = 0;
+    ui.accumulatedTime += dt;
     ui.meter.update();
-    //updateCountersHTML(); //for tweaking and debugging
     oncePerSecond();
-    if (energyOutput > 10000) boom = true;
 }
 
 function drawScene() {
@@ -200,7 +237,7 @@ function renderWaterLayer() {
     if (!gl || !glShit.waterCanvas) return;
     ensureWaterLayerCleared(gl);
     if (typeof waterLayer !== 'undefined' && waterLayer.render) {
-        waterLayer.render(millis() / 1000.0);
+        waterLayer.render((typeof renderTime !== 'undefined') ? renderTime : millis() / 1000.0);
     }
 }
 
@@ -209,7 +246,7 @@ function renderBubblesLayer() {
     if (!gl || !glShit.waterCanvas) return;
     ensureWaterLayerCleared(gl);
     if (typeof bubblesRenderer !== 'undefined') {
-        bubblesRenderer.render(glShit.waterCanvas.width, glShit.waterCanvas.height, millis() / 1000.0);
+        bubblesRenderer.render(glShit.waterCanvas.width, glShit.waterCanvas.height, (typeof renderTime !== 'undefined') ? renderTime : millis() / 1000.0);
     }
 }
 
