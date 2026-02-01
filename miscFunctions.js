@@ -65,6 +65,9 @@ function resetSimulation() {
     settings = { ...defaultSettings };
     initializeControls();
     boom = false;
+    boomStartTime = 0; // Reset the boom animation timer
+    energyOutput = 0;
+    energyOutputCounter = 0;
 }
 
 function eventListeners() {

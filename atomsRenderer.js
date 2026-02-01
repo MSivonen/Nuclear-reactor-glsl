@@ -116,7 +116,9 @@ class AtomsRenderer {
         this.gl.useProgram(this.program);
         this.gl.bindVertexArray(this.vao);
         const uResLoc = this.gl.getUniformLocation(this.program, 'u_resolution');
-        this.gl.uniform2f(uResLoc, this.gl.canvas.width, this.gl.canvas.height);
+        // FIX: Use simulation width/height (viewport size), not full canvas size.
+        // ScreenSimWidth is global from sketch.js
+        this.gl.uniform2f(uResLoc, screenSimWidth, screenHeight);
         const rendHeightLoc = this.gl.getUniformLocation(this.program, "render_height");
         // Instance positions are in simulation/draw coordinates (screenDrawWidth/Height)
         // so the shader can scale+letterbox into the render canvas.
@@ -156,16 +158,16 @@ class AtomsRenderer {
     }
 
     renderImage() {
+        // Deprecated helper, but if called, it needs correct handling.
         const gl2 = glShit.simGL;
 
         gl2.bindFramebuffer(gl2.FRAMEBUFFER, null);
-        gl2.viewport(0, 0, glShit.simCanvas.width, glShit.simCanvas.height);
-        gl2.clearColor(0, 0, 0, 0);
-        gl2.clear(gl2.COLOR_BUFFER_BIT);
+        // gl2.viewport(0, 0, glShit.simCanvas.width, glShit.simCanvas.height); // REMOVED
+        // We assume caller sets viewport. If renderImage is called standalone, it might break.
+        // gl2.clearColor(0, 0, 0, 0); // REMOVED
+        // gl2.clear(gl2.COLOR_BUFFER_BIT); // REMOVED
 
         this.draw(uraniumAtoms.length);
-        // Rendering is done directly to the WebGL sim canvas; UI composition
-        // is handled by CSS mix-blend or by the UICanvas overlay. No p5 copy needed.
     }
 }
 

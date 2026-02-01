@@ -74,8 +74,8 @@ class ControlRodsSlider {
                     const handleY = this.handleY[i];
                     const dx = simMousePos.x - handleX;
                     const dy = simMousePos.y - handleY;
-                    //if (Math.sqrt(dx * dx + dy * dy) <= HANDLE_RADIUS + 4) { //grab the balls
-                    if (-dx <= HANDLE_RADIUS && dx <= HANDLE_RADIUS) {//grab anywhere in y direction
+                    if (Math.sqrt(dx * dx + dy * dy) <= HANDLE_RADIUS + 4) { //grab the balls
+                    //if (-dx <= HANDLE_RADIUS && dx <= HANDLE_RADIUS) {//grab anywhere in y direction
                         this.draggingIndex = i;
                         break;
                     }

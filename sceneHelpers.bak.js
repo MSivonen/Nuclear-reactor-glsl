@@ -1,76 +1,80 @@
 // Helpers to cleanly initialize and run per-frame logic for the sketch
 
 function initShadersAndGL() {
-    // SINGLE CANVAS REFACTOR
-    glShit.gameCanvas = document.getElementById("gameCanvas");
-    
-    // Set size to match screen settings
-    if (glShit.gameCanvas) {
-        glShit.gameCanvas.width = screenRenderWidth; 
-        glShit.gameCanvas.height = screenHeight;
-        
-        // Create ONE WebGL2 context
-        gl = glShit.gameCanvas.getContext("webgl2", {
-            alpha: false, // Opaque canvas
-            depth: false, // We handle layering manually / painter's algorithm
+    gl = drawingContext;
+
+    glShit.waterCanvas = document.getElementById("waterCanvas");
+    if (glShit.waterCanvas) {
+        glShit.waterCanvas.width = screenSimWidth;
+        glShit.waterCanvas.height = screenHeight;
+        glShit.waterCanvas.style.left = SHOP_WIDTH + 'px';
+        glShit.waterGL = glShit.waterCanvas.getContext("webgl2", {
+            alpha: true,
+            depth: false,
             antialias: false,
             preserveDrawingBuffer: true,
             premultipliedAlpha: true,
         });
-    } else {
-        console.error("Game canvas not found!");
-        return;
     }
 
-    if (!gl) {
-         console.error("WebGL2 not supported");
-         return;
-    }
+    // Core canvas (normal alpha compositing)
+    glShit.coreCanvas = document.getElementById("coreCanvas");
+    glShit.coreCanvas.width = screenSimWidth;
+    glShit.coreCanvas.height = screenHeight;
+    glShit.coreCanvas.style.left = SHOP_WIDTH + 'px';
+    glShit.coreGL = glShit.coreCanvas.getContext("webgl2", {
+        alpha: true,
+        depth: false,
+        antialias: false,
+        preserveDrawingBuffer: false,
+        premultipliedAlpha: true,
+    });
 
-    // Provide this single context to all "legacy" slots so existing renderers work
-    glShit.waterGL = gl;
-    glShit.simGL = gl;
-    glShit.coreGL = gl;
+    glShit.simCanvas = document.getElementById("simCanvas");
+    glShit.simCanvas.width = screenSimWidth;
+    glShit.simCanvas.height = screenHeight;
+    glShit.simCanvas.style.left = SHOP_WIDTH + 'px';
 
-    // Provide the single canvas to all "legacy" canvas slots (for width/height checks)
-    glShit.waterCanvas = glShit.gameCanvas;
-    glShit.simCanvas = glShit.gameCanvas;
-    glShit.coreCanvas = glShit.gameCanvas;
+    // Use a drawing buffer with alpha for proper compositing with lower layers.
+    glShit.simGL = glShit.simCanvas.getContext("webgl2", {
+        alpha: true,
+        depth: false,
+        antialias: false,
+        preserveDrawingBuffer: true,
+        premultipliedAlpha: true,
+    });
 
     // Ensure required extension present (no-op if not)
-    gl.getExtension("EXT_color_buffer_float");
+    glShit.simGL.getExtension("EXT_color_buffer_float");
+    if (glShit.waterGL) glShit.waterGL.getExtension("EXT_color_buffer_float");
 
     // Initialize water background layer (fullscreen shader)
-    if (typeof waterLayer !== 'undefined') {
+    if (typeof waterLayer !== 'undefined' && glShit.waterGL) {
         try {
-            waterLayer.init(gl, glShit.shaderCodes.waterVertCode, glShit.shaderCodes.waterFragCode);
+            waterLayer.init(glShit.waterGL, glShit.shaderCodes.waterVertCode, glShit.shaderCodes.waterFragCode);
         } catch (e) {
             console.warn('waterLayer init failed', e);
         }
     }
 
-    glShit.simProgram = createProgram(gl, glShit.shaderCodes.simVertCode, glShit.shaderCodes.simFragCode);
-    glShit.reportProgram = createProgram(gl, glShit.shaderCodes.reportVertCode, glShit.shaderCodes.reportFragCode);
-    glShit.explosionProgram = createProgram(gl, glShit.shaderCodes.explosionVertCode, glShit.shaderCodes.explosionFragCode);
-    
-    // Uniform locations (simProgram)
-    glShit.uNeutronsLoc = gl.getUniformLocation(glShit.simProgram, "u_neutrons");
+    glShit.simProgram = createProgram(glShit.simGL, glShit.shaderCodes.simVertCode, glShit.shaderCodes.simFragCode);
+    glShit.reportProgram = createProgram(glShit.simGL, glShit.shaderCodes.reportVertCode, glShit.shaderCodes.reportFragCode);
+    glShit.explosionProgram = createProgram(glShit.simGL, glShit.shaderCodes.explosionVertCode, glShit.shaderCodes.explosionFragCode);
+    glShit.uNeutronsLoc = glShit.simGL.getUniformLocation(glShit.simProgram, "u_neutrons");
 
-    // Simulation textures (still use FBOs for simulation steps, that's fine)
-    glShit.readTex = neutron.createTexture(gl, neutron.buffer);
-    glShit.writeTex = neutron.createTexture(gl, null);
+    glShit.readTex = neutron.createTexture(glShit.simGL, neutron.buffer);
+    glShit.writeTex = neutron.createTexture(glShit.simGL, null);
 
-    glShit.readFBO = createFBO(gl, glShit.readTex);
-    glShit.writeFBO = createFBO(gl, glShit.writeTex);
+    glShit.readFBO = createFBO(glShit.simGL, glShit.readTex);
+    glShit.writeFBO = createFBO(glShit.simGL, glShit.writeTex);
 
-    initRenderShader(gl, glShit.shaderCodes.rendVertCode, glShit.shaderCodes.rendFragCode);
-    reportSystem.init(gl);
-    
+    initRenderShader(glShit.simGL, glShit.shaderCodes.rendVertCode, glShit.shaderCodes.rendFragCode);
+    reportSystem.init(glShit.simGL);
     // Initialize GPU instanced atom renderer (fallback to CPU if fails)
     try {
         if (typeof atomsRenderer !== 'undefined') {
             atomsRenderer.init(
-                gl,
+                glShit.simGL,
                 uraniumAtomsCountX * uraniumAtomsCountY,
                 glShit.shaderCodes.atomsVertCode,
                 glShit.shaderCodes.atomsFragCode
@@ -82,12 +86,12 @@ function initShadersAndGL() {
         glShit.useInstancedAtoms = false;
     }
 
-    // Atom core renderer 
+    // Atom core renderer on coreCanvas
     try {
-        if (typeof AtomsRenderer !== 'undefined') {
+        if (glShit.coreGL && typeof AtomsRenderer !== 'undefined') {
             glShit.atomsCoreRenderer = new AtomsRenderer();
             glShit.atomsCoreRenderer.init(
-                gl,
+                glShit.coreGL,
                 uraniumAtomsCountX * uraniumAtomsCountY,
                 glShit.shaderCodes.atomsVertCode,
                 glShit.shaderCodes.atomsCoreFragCode
@@ -99,10 +103,10 @@ function initShadersAndGL() {
         glShit.useCoreAtoms = false;
     }
 
-    // Steam renderer 
+    // Steam renderer on coreCanvas (no CPU fallback)
     if (typeof steamRenderer !== 'undefined') {
         steamRenderer.init(
-            gl,
+            glShit.coreGL,
             uraniumAtomsCountX * uraniumAtomsCountY,
             glShit.shaderCodes.steamVertCode,
             glShit.shaderCodes.steamFragCode
@@ -110,10 +114,10 @@ function initShadersAndGL() {
         glShit.useGpuSteam = true;
     }
 
-    if (typeof bubblesRenderer !== 'undefined') {
+    if (typeof bubblesRenderer !== 'undefined' && glShit.waterGL) {
         bubblesRenderer.init(
-            gl,
-            5000, 
+            glShit.waterGL,
+            5000, // Max bubbles
             glShit.shaderCodes.bubblesVertCode,
             glShit.shaderCodes.bubblesFragCode
         );
@@ -159,14 +163,7 @@ function initUiObjects() {
     initializeControls();
     ui.meter = new Meter(700, 500);
     ui.controlSlider = new ControlRodsSlider();
-    // This creates an offscreen 2D canvas now (per ui.js changes)
     ui.canvas = new UICanvas();
-    
-    // Init the overlay shader for drawing the UI texture
-    if (typeof uiOverlay !== 'undefined' && glShit.gameCanvas) {
-        const gl = glShit.gameCanvas.getContext('webgl2');
-        uiOverlay.init(gl);
-    }
 }
 
 
@@ -225,103 +222,27 @@ function updateScene() {
 }
 
 function drawScene() {
-    const gl = glShit.waterGL; // They are all the same now
-    
-    // 1. Clear the entire frame (Color + Depth if checking it, but we don't)
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    gl.viewport(0, 0, glShit.gameCanvas.width, glShit.gameCanvas.height);
-    gl.clearColor(0.2, 0.3, 0.4, 1.0); // Default background if water fails, but waterLayer should cover it
-    gl.clear(gl.COLOR_BUFFER_BIT);
-
-    // RENDER LAYERS
-    // IMPORTANT: The Simulation Area (Sim) is offset by SHOP_WIDTH.
-    // We must adjust viewport for Sim layers so coordinate (0,0) in Sim matches (SHOP_WIDTH, 0) on screen.
-    // GL viewport is (x, y, w, h). y=0 is bottom.
-    // ui.js defines simXOffset = SHOP_WIDTH.
-    
-    const simX = SHOP_WIDTH;
-    const simW = screenSimWidth;
-    const simH = screenHeight;
-
-    // 2. Render Water Background (Opaque)
-    gl.viewport(simX, 0, simW, simH);
-    gl.disable(gl.BLEND);
     renderWaterLayer();
-
-    // 3. Render Bubbles (Alpha Blend)
-    gl.viewport(simX, 0, simW, simH);
-    gl.enable(gl.BLEND);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    renderBubblesLayer(); // Pass viewport size if needed? See bubblesRenderer call below.
-
-
-    // 4. Render Steam (Alpha Blend)
-    gl.viewport(simX, 0, simW, simH);
+    renderBubblesLayer();
     renderSteamLayer();
-
-    // 5. Render Atom Cores (Alpha Blend - Opaque sprites)
-    gl.viewport(simX, 0, simW, simH);
     renderAtomCoreLayer();
-
-    // 6. Render Atom GLOWS (Additive)
-    gl.viewport(simX, 0, simW, simH); 
-    // The original CSS used mix-blend-mode: screen. 
-    // In WebGL: gl.blendFunc(gl.ONE, gl.ONE) is standard additive.
-    // gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_COLOR) is Screen.
-    // Let's try Additive first as it's common for glows.
-    gl.blendFunc(gl.ONE, gl.ONE); 
     renderAtomGlowLayer();
-
-    // 7. Render Neutrons (Additive)
-    gl.viewport(simX, 0, simW, simH);
     renderNeutronLayer();
-
-    // 8. Explosion (Alpha Blend for proper alpha)
-    if (boom) {
-         gl.viewport(simX, 0, simW, simH);
-         gl.enable(gl.BLEND);
-         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-         renderExplosionLayer();
-    }
-
-    // 9. UI Overlay (Normal Alpha Blend)
-    // First, draw the UI components to the offscreen 2D canvas
-    if (ui && ui.canvas) {
-        ui.canvas.drawBorders();
-        ui.canvas.drawUi();
-        
-        // Then draw that canvas as a texture over the scene
-        // UI is Full Screen (includes shop)
-        if (typeof uiOverlay !== 'undefined') {
-            gl.bindFramebuffer(gl.FRAMEBUFFER, null); // ensure we are on screen
-            // Reset viewport to full screen for UI
-            gl.viewport(0, 0, glShit.gameCanvas.width, glShit.gameCanvas.height);
-            uiOverlay.render(gl, ui.canvas.canvas);
-        }
-    }
+    if (boom) renderExplosionLayer();
+    renderBordersLayer();
+    renderUiLayer();
 }
 function renderExplosionLayer() {
     if (!boom) return;
     const gl = glShit.simGL;
-    if (!gl || !glShit.explosionProgram) return;
-    // ensureSimLayerCleared(gl); -> Removed
-    
-    // Define sim dimensions (same as in drawScene)
-    const simX = SHOP_WIDTH;
-    const simW = screenSimWidth;
-    const simH = screenHeight;
+    if (!gl || !glShit.simCanvas || !glShit.explosionProgram) return;
+    ensureSimLayerCleared(gl);
     
     gl.useProgram(glShit.explosionProgram);
     
     // Set uniforms
     const u_resolution = gl.getUniformLocation(glShit.explosionProgram, "u_resolution");
-    gl.uniform2f(u_resolution, simW, simH);
-    
-    const u_viewportX = gl.getUniformLocation(glShit.explosionProgram, "u_viewportX");
-    gl.uniform1f(u_viewportX, simX);
-    
-    const u_viewportY = gl.getUniformLocation(glShit.explosionProgram, "u_viewportY");
-    gl.uniform1f(u_viewportY, 0);
+    gl.uniform2f(u_resolution, glShit.simCanvas.width, glShit.simCanvas.height);
     
     const u_time = gl.getUniformLocation(glShit.explosionProgram, "u_time");
     gl.uniform1f(u_time, (typeof renderTime !== 'undefined') ? renderTime : millis() / 1000.0);
@@ -341,23 +262,27 @@ function renderExplosionLayer() {
     drawFullscreenQuad(gl);
 }
 function renderWaterLayer() {
-    // Uses waterGL (same as main)
+    const gl = glShit.waterGL;
+    if (!gl || !glShit.waterCanvas) return;
+    ensureWaterLayerCleared(gl);
     if (typeof waterLayer !== 'undefined' && waterLayer.render) {
         waterLayer.render((typeof renderTime !== 'undefined') ? renderTime : millis() / 1000.0);
     }
 }
 
 function renderBubblesLayer() {
-    if (typeof bubblesRenderer !== 'undefined' && glShit.waterCanvas) {
-        // We must pass SIM dimensions (width, height), not Full or "Canvas" dimensions.
-        // bubblesRenderer uses these for u_resolution to scale particles 0..Width -> -1..1
-        bubblesRenderer.render(screenSimWidth, screenHeight, (typeof renderTime !== 'undefined') ? renderTime : millis() / 1000.0);
+    const gl = glShit.waterGL;
+    if (!gl || !glShit.waterCanvas) return;
+    ensureWaterLayerCleared(gl);
+    if (typeof bubblesRenderer !== 'undefined') {
+        bubblesRenderer.render(glShit.waterCanvas.width, glShit.waterCanvas.height, (typeof renderTime !== 'undefined') ? renderTime : millis() / 1000.0);
     }
 }
 
 function renderSteamLayer() {
-    if (!glShit.useGpuSteam) return;
-    // ensureCoreLayerCleared(gl); -> Removed
+    const gl = glShit.coreGL;
+    if (!gl || !glShit.coreCanvas || !glShit.useGpuSteam) return;
+    ensureCoreLayerCleared(gl);
     if (typeof steamRenderer !== 'undefined') {
         steamRenderer.updateInstances(waterCells);
         steamRenderer.draw();
@@ -365,15 +290,17 @@ function renderSteamLayer() {
 }
 
 function renderAtomCoreLayer() {
-    if (!glShit.useCoreAtoms || !glShit.atomsCoreRenderer) return;
-    // ensureCoreLayerCleared(gl); -> Removed
+    const gl = glShit.coreGL;
+    if (!gl || !glShit.coreCanvas || !glShit.useCoreAtoms || !glShit.atomsCoreRenderer) return;
+    ensureCoreLayerCleared(gl);
     glShit.atomsCoreRenderer.updateInstances(uraniumAtoms);
     glShit.atomsCoreRenderer.draw(uraniumAtoms.length, { blendMode: 'alpha' });
 }
 
 function renderAtomGlowLayer() {
-    if (!glShit.useInstancedAtoms) return;
-    // ensureSimLayerCleared(gl); -> Removed
+    const gl = glShit.simGL;
+    if (!gl || !glShit.simCanvas || !glShit.useInstancedAtoms) return;
+    ensureSimLayerCleared(gl);
     if (typeof atomsRenderer !== 'undefined') {
         atomsRenderer.updateInstances(uraniumAtoms);
         atomsRenderer.draw(uraniumAtoms.length, { blendMode: 'additive' });
@@ -381,20 +308,43 @@ function renderAtomGlowLayer() {
 }
 
 function renderNeutronLayer() {
-    // ensureSimLayerCleared(gl); -> Removed
-    neutron.draw(glShit.simGL, { clear: false });
+    const gl = glShit.simGL;
+    if (!gl || !glShit.simCanvas) return;
+    ensureSimLayerCleared(gl);
+    neutron.draw(gl, { clear: false });
 }
 
-// These are now handled inside drawScene logic for UI
 function renderBordersLayer() {
-    // No-op here, called in drawScene
+    if (ui && ui.canvas) ui.canvas.drawBorders();
 }
 
 function renderUiLayer() {
-    // No-op here, called in drawScene
+    if (ui && ui.canvas) ui.canvas.drawUi();
 }
 
-// Deprecated clearing functions - kept as no-ops or just frame trackers if needed
-function ensureWaterLayerCleared(gl) { return; }
-function ensureCoreLayerCleared(gl) { return; }
-function ensureSimLayerCleared(gl) { return; }
+function ensureWaterLayerCleared(gl) {
+    if (glShit.waterClearFrame === frameCount) return;
+    glShit.waterClearFrame = frameCount;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.viewport(0, 0, glShit.waterCanvas.width, glShit.waterCanvas.height);
+    gl.clearColor(0, 0, 0, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+}
+
+function ensureCoreLayerCleared(gl) {
+    if (glShit.coreClearFrame === frameCount) return;
+    glShit.coreClearFrame = frameCount;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.viewport(0, 0, glShit.coreCanvas.width, glShit.coreCanvas.height);
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+}
+
+function ensureSimLayerCleared(gl) {
+    if (glShit.simClearFrame === frameCount) return;
+    glShit.simClearFrame = frameCount;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.viewport(0, 0, glShit.simCanvas.width, glShit.simCanvas.height);
+    gl.clearColor(0, 0, 0, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+}

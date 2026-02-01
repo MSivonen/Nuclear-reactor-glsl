@@ -75,9 +75,17 @@ class WaterLayer {
         this.gl.useProgram(this.program);
         this.gl.bindVertexArray(this.vao);
         this.gl.disable(this.gl.DEPTH_TEST);
-        this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
+        // this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height); // Controlled externally
         
-        if (this.uResolutionLoc) this.gl.uniform2f(this.uResolutionLoc, this.gl.canvas.width, this.gl.canvas.height);
+        // Pass SimWidth not CanvasWidth for resolution, because we are rendering to a viewport that is only SimWidth wide
+        // And the shader likely uses u_res to correct aspect ratio or UVs.
+        // Actually, if we use viewport, gl_FragCoord is in window space.
+        // If shader uses gl_FragCoord / u_resolution, it expects 0..1 range.
+        // If viewport is offset, gl_FragCoord.x is offset. 
+        // We should probably pass the Viewport Size here, not full canvas size.
+        // But since we can't easily access the viewport rect, let's assume the sceneHelper sets it up.
+        // The original code passed canvas.width which was SimWidth.
+        if (this.uResolutionLoc) this.gl.uniform2f(this.uResolutionLoc, screenSimWidth, screenHeight);
         if (this.uTimeLoc) this.gl.uniform1f(this.uTimeLoc, timeSeconds || 0.0);
         
         if (this.texture && this.uTextureLoc) {

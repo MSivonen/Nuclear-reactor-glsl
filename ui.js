@@ -18,6 +18,9 @@ class UICanvas {
         this.canvas.style.pointerEvents = 'none';
         this.canvas.id = "UI";
 
+        // We do NOT append to DOM anymore; this is now an offscreen buffer
+        // rendered via WebGL texture.
+        /*
         const container = document.getElementById('canvas-container');
         if (container) {
             container.appendChild(this.canvas);
@@ -25,6 +28,7 @@ class UICanvas {
             console.warn('Canvas container not found, appending to body');
             document.body.appendChild(this.canvas);
         }
+        */
 
         this.ctx = this.canvas.getContext('2d');
         
@@ -448,6 +452,15 @@ class UICanvas {
         };
         currentY += devBtnHeight + 10 * globalScale;
 
+        // Boom Button
+        layout.elements.boomButton = {
+            x: marginX,
+            y: currentY,
+            w: contentWidth,
+            h: devBtnHeight
+        };
+        currentY += devBtnHeight + 10 * globalScale;
+
         // Settings Button
         layout.elements.settingsButton = {
             x: marginX,
@@ -587,6 +600,13 @@ class UICanvas {
         ctx.textBaseline = 'middle';
         ctx.fillText(settings.cheatMode ? "DEV MODE ON" : "DEV MODE", this.simXOffset / 2, elements.devButton.y + elements.devButton.h / 2);
 
+        // Boom Button
+        ctx.fillStyle = boom ? '#ff4500' : '#8b0000';
+        ctx.fillRect(elements.boomButton.x, elements.boomButton.y, elements.boomButton.w, elements.boomButton.h);
+        
+        ctx.fillStyle = 'white';
+        ctx.fillText("BOOM!", this.simXOffset / 2, elements.boomButton.y + elements.boomButton.h / 2);
+
         // Settings Button
         ctx.fillStyle = '#444';
         ctx.fillRect(elements.settingsButton.x, elements.settingsButton.y, elements.settingsButton.w, elements.settingsButton.h);
@@ -681,6 +701,10 @@ class UICanvas {
             if (y >= elements.devButton.y && y <= elements.devButton.y + elements.devButton.h) {
                 settings.cheatMode = !settings.cheatMode;
                 if (settings.cheatMode && player) player.addMoney(1000000); //edit this to make everything cost 0
+            }
+
+            if (y >= elements.boomButton.y && y <= elements.boomButton.y + elements.boomButton.h) {
+                boom = !boom;
             }
 
             if (y >= elements.settingsButton.y && y <= elements.settingsButton.y + elements.settingsButton.h) {
@@ -790,7 +814,7 @@ function drawFPS(ctx, offsetX) {
 
 function gameOver(ctx, offsetX = 0) {
     if (!boom) return;
-    if (mouseIsPressed && mouseButton === LEFT) {
+    if (mouseIsPressed && mouseButton === RIGHT) {
         resetSimulation();
         return;
     }

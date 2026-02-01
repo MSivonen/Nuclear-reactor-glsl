@@ -24,12 +24,11 @@ class BubblesRenderer {
             // Existing atoms use coordinates. I'll use 0..1 normalized for X to be resolution independent, 
             // or match screen coordinates if that's the convention.
             // Screen is 1067x600. Let's use screen coords to match others.
-            // Start X: random across the simulation area but centered within the full canvas
-            // simCanvas width may be larger than the logical simulation width (`screenSimWidth`),
-            // so offset instances to center the sim region horizontally.
-            const canvasWidth = (this.gl && this.gl.canvas) ? this.gl.canvas.width : screenSimWidth;
-            const simOffsetX = (canvasWidth - screenSimWidth) * 0.5;
-            this.instanceData[idx + 0] = simOffsetX + Math.random() * screenSimWidth;
+            // Start X: random across the simulation area
+            // We are rendering into a VIEWPORT that matches the simulation size.
+            // So coordinates should be 0..screenSimWidth relative to that viewport.
+            // No offset needed.
+            this.instanceData[idx + 0] = Math.random() * screenSimWidth;
             
             // size: "small" -> 2..22
             const minSize = 2;
@@ -95,8 +94,10 @@ class BubblesRenderer {
 
         const uRes = this.gl.getUniformLocation(this.program, "u_resolution");
         const uTime = this.gl.getUniformLocation(this.program, "u_time");
-
-        this.gl.uniform2f(uRes, width, height);
+        
+        // Pass SimWidth (width) and SimHeight (height) to u_resolution so particles scale correctly.
+        // We rely on external gl.viewport(SHOP_WIDTH, 0, width, height) being set.
+        this.gl.uniform2f(uRes, width, height); 
         this.gl.uniform1f(uTime, time);
 
         this.gl.drawArraysInstanced(this.gl.TRIANGLES, 0, 6, this.maxInstances);

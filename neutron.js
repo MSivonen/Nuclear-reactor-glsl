@@ -30,6 +30,10 @@ class Neutron {
     }
 
     update(gl) {
+        // Critical: Disable blending for GPGPU simulation step!
+        // With a shared context, previous render passes (like UI) leave blending enabled.
+        gl.disable(gl.BLEND);
+        
         gl.bindFramebuffer(gl.FRAMEBUFFER, glShit.writeFBO);
         gl.viewport(0, 0, MAX_NEUTRONS, MAX_NEUTRONS);
         gl.clearColor(0, 0, 0, 0);
@@ -83,8 +87,11 @@ class Neutron {
     }
 
     draw(gl, { clear = true } = {}) {
+        // We do NOT clear or set Viewport here anymore (handled in sceneHelpers/drawScene)
+        // unless we really need to bind FBO null explicitly (which we do, but viewport is external)
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        gl.viewport(0, 0, glShit.simCanvas.width, glShit.simCanvas.height);
+        // gl.viewport(...) -> REMOVED because we set the viewport for the SIMULATION area in drawScene
+
         if (clear) {
             gl.clearColor(0, 0, 0, 1);
             gl.clear(gl.COLOR_BUFFER_BIT);
@@ -96,7 +103,8 @@ class Neutron {
         gl.blendFuncSeparate(gl.ONE, gl.ONE_MINUS_SRC_COLOR, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 
         gl.uniform1i(glShit.uRenderTexSizeLoc, MAX_NEUTRONS);
-        gl.uniform2f(glShit.uRenderResLoc, glShit.simCanvas.width, glShit.simCanvas.height);
+        // Res is screenSimWidth/Height for the shader logic to map pos -> Clip
+        gl.uniform2f(glShit.uRenderResLoc, screenSimWidth, screenHeight);
         gl.uniform2f(glShit.uRenderSimSizeLoc, screenSimWidth, screenHeight);
         gl.uniform1f(glShit.uRenderNeutronSizeLoc, settings.neutronSize);
 

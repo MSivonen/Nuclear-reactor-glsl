@@ -28,14 +28,9 @@
   </div>
 
   <div id="canvas-container" style="position: relative; width: 1067px; height: 600px;">
-    <canvas id="waterCanvas" width="1067" height="600"
-      style="position: absolute; left: 0; top: 0; pointer-events: none; z-index: 10;">
-    </canvas>
-    <canvas id="coreCanvas" width="1067" height="600"
-      style="position: absolute; left: 0; top: 0; pointer-events: none; z-index: 20;">
-    </canvas>
-    <canvas id="simCanvas" width="1067" height="600"
-      style="position: absolute; left: 0; top: 0; pointer-events: none; z-index: 30; mix-blend-mode: screen;">
+    <!-- Single WebGL Canvas for the entire game -->
+    <canvas id="gameCanvas" width="1067" height="600"
+      style="position: absolute; left: 0; top: 0; z-index: 10;">
     </canvas>
   </div>
 
@@ -49,6 +44,7 @@
   <script src="player.js"></script>
   <script src="playerState.js"></script>
   <script src="ui.js"></script>
+  <script src="uiOverlay.js"></script>
   <script src="uranium.js"></script>
   <script src="controlrod.js"></script>
   <script src="water.js"></script>

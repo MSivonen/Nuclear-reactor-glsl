@@ -110,7 +110,8 @@ class SteamRenderer {
         this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
         this.gl.bindVertexArray(this.vao);
         const uResLoc = this.gl.getUniformLocation(this.program, 'u_resolution');
-        this.gl.uniform2f(uResLoc, this.gl.canvas.width, this.gl.canvas.height);
+        // FIX: Use simulation width (viewport), not full canvas width
+        this.gl.uniform2f(uResLoc, screenSimWidth, screenHeight);
         const rendHeightLoc = this.gl.getUniformLocation(this.program, "render_height");
         // Instance positions are in simulation/draw coordinates (screenDrawWidth/Height)
         // so the shader can scale+letterbox into the render canvas.

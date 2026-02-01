@@ -11,7 +11,7 @@ const waterColor = [52, 95, 120];
 let globalScale = 1.0;
 
 const defaultSettings = {
-  neutronSpeed: 5,
+  neutronSpeed: 5, // Restored to original speed now that simulation is fixed
   collisionProbability: 0.055,
   decayProbability: 0.0001,
   controlRodAbsorptionProbability: 0.1,
@@ -34,11 +34,12 @@ let uraniumAtoms = [];
 let controlRods = [];
 let waterCells = [];
 let grid;
-let boom = false;
+var boom = false;
+var boomStartTime = 0;
 let font;
-let energyOutput = 0;
+var energyOutput = 0;
 let energyThisFrame = 0;
-let energyOutputCounter = 0; // accumulator: sum(power_kW * dt) over the second
+var energyOutputCounter = 0; // accumulator: sum(power_kW * dt) over the second
 let player = null;
 let upgrades = null; // Upgrades instance
 let shop = null;
@@ -56,6 +57,7 @@ const glShit = {
   coreCanvas: null,
   simProgram: null,
   renderProgram: null,
+  explosionProgram: null,
   readTex: null,
   writeTex: null,
   readFBO: null,
@@ -89,6 +91,8 @@ const glShit = {
     steamFragSrc: null,
     waterVertSrc: null,
     waterFragSrc: null,
+    explosionVertSrc: null,
+    explosionFragSrc: null,
     simVertCode: null,
     simFragCode: null,
     rendVertCode: null,
@@ -101,6 +105,8 @@ const glShit = {
     steamFragCode: null,
     waterVertCode: null,
     waterFragCode: null,
+    explosionVertCode: null,
+    explosionFragCode: null,
     atomsCoreFragCode: null,
     atomsCoreFragSrc: null
   }
@@ -156,6 +162,8 @@ function preload() {
   glShit.shaderCodes.bubblesFragSrc = loadStrings('shaders/bubbles.frag');
   glShit.shaderCodes.waterVertSrc = loadStrings('shaders/water.vert');
   glShit.shaderCodes.waterFragSrc = loadStrings('shaders/water.frag');
+  glShit.shaderCodes.explosionVertSrc = loadStrings('shaders/explosion.vert');
+  glShit.shaderCodes.explosionFragSrc = loadStrings('shaders/explosion.frag');
 }
 
 function updateDimensions() {
@@ -190,14 +198,20 @@ function setup() {
   updateDimensions();
 
   //debug(); //DO NOT REMOVE THIS LINE
-  const cnv = createCanvas(screenRenderWidth, screenHeight, WEBGL);
-  // Ensure the p5 canvas and simCanvas share the same positioned parent so
-  // the WebGL overlay lines up (no unexpected offset from other DOM elements).
-  cnv.parent('canvas-container');
-  cnv.style('position', 'absolute');
-  cnv.style('left', '0');
-  cnv.style('top', '0');
-  cnv.style('z-index', '0');
+  // We use a manual HTML canvas "gameCanvas" for drawing.
+  // We use p5 just for the loop and events.
+  // We create a tiny or hidden canvas to keep P5 happy, or just use noCanvas()?
+  // noCanvas() is usually best if we don't want the default canvas.
+  noCanvas();
+  
+  // However, we need to ensure our 'gameCanvas' is sized correctly.
+  const gameCnv = document.getElementById('gameCanvas');
+  if (gameCnv) {
+     gameCnv.width = screenRenderWidth;
+     gameCnv.height = screenHeight;
+  }
+
+  // glShit.shaderCodes... initialization matches existing logic
   glShit.shaderCodes.simVertCode = glShit.shaderCodes.simVertSrc.join('\n');
   glShit.shaderCodes.simFragCode = glShit.shaderCodes.simFragSrc.join('\n');
   glShit.shaderCodes.rendVertCode = glShit.shaderCodes.rendVertSrc.join('\n');
@@ -213,6 +227,8 @@ function setup() {
   glShit.shaderCodes.bubblesFragCode = glShit.shaderCodes.bubblesFragSrc.join('\n');
   glShit.shaderCodes.waterVertCode = glShit.shaderCodes.waterVertSrc.join('\n');
   glShit.shaderCodes.waterFragCode = glShit.shaderCodes.waterFragSrc.join('\n');
+  glShit.shaderCodes.explosionVertCode = glShit.shaderCodes.explosionVertSrc.join('\n');
+  glShit.shaderCodes.explosionFragCode = glShit.shaderCodes.explosionFragSrc.join('\n');
   // Delegate initialization to helpers
   initShadersAndGL();
   initSimulationObjects();
@@ -234,6 +250,8 @@ function draw() {
     
     // Update CPU-side state
     updateScene();
+    
+    if (boom && boomStartTime == 0) boomStartTime = renderTime;
     
     energyThisFrame = 0; // Reset accumulator for next frame
   }
