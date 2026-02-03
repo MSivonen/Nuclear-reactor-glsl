@@ -33,6 +33,16 @@ const loadingTasks = [
   createShaderLoadTask("explosion vertex shader", 'shaders/explosion.vert', 'explosionVertSrc', 'explosionVertCode'),
   createShaderLoadTask("explosion fragment shader", 'shaders/explosion.frag', 'explosionFragSrc', 'explosionFragCode'),
   {
+      name: "Pre-Initializing Neutron System",
+      func: () => {
+          if (typeof Neutron !== 'undefined') {
+              window.neutron = new Neutron();
+          } else {
+              console.error("Neutron class not loaded!");
+          }
+      }
+  },
+  {
     name: "Initializing shaders and GL",
     func: () => initShadersAndGL()
   },
@@ -58,7 +68,21 @@ const loadingTasks = [
     func: () => eventListeners()
   },
   {
-    name: "Initializing audio",
+    name: "Initializing audio context",
     func: () => audioManager.init()
+  },
+  ...audioManager.assets.map(asset => ({
+    name: `Loading sound: ${asset.key}`,
+    func: () => audioManager.loadSoundPromise(asset.key, asset.path)
+  })),
+  {
+    name: "Configuring audio tracks",
+    func: async () => {
+        if (ui && ui.canvas && ui.canvas.uiSettings) {
+             audioManager.setupTracks(ui.canvas.uiSettings.audio);
+        } else {
+            console.error("UI Settings not ready for Audio setup");
+        }
+    }
   }
 ];

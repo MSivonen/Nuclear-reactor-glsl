@@ -40,10 +40,10 @@ let font;
 var energyOutput = 0;
 let energyThisFrame = 0;
 var energyOutputCounter = 0; // accumulator: sum(power_kW * dt) over the second
-let player = null;
-let upgrades = null; // Upgrades instance
-let shop = null;
-let playerState = null;
+// let player = null;
+// let upgrades = null; // Upgrades instance
+// let shop = null;
+// let playerState = null;
 let lastMoneyPerSecond = 0;
 let paused = false;
 var renderTime = 0;
@@ -69,8 +69,8 @@ const ui = {
 
 //game variables
 const game = {
-  // threshold in physical kW (5 MW = 5000 kW)
-  boomValue: 1000000
+  // threshold in physical kW (1 MW = 1000 kW)
+  boomValue: 1000
 }
 
 //scene variables
@@ -84,7 +84,7 @@ let controlRodHeight;
 const NEUTRON_STRIDE = 4;
 const MAX_NEUTRONS = 512;
 const MAX_NEUTRONS_SQUARED = MAX_NEUTRONS * MAX_NEUTRONS;
-let neutron;
+// let neutron;
 
 
 function updateDimensions() {
@@ -111,7 +111,8 @@ function updateDimensions() {
 
 function setup() {
   updateDimensions();
-  neutron = new Neutron();
+  // neutron = new Neutron(); // Now handled in loadingTasks.js to ensure it exists for GL init
+  
   //debug(); //DO NOT REMOVE THIS LINE
   // We use a manual HTML canvas "gameCanvas" for drawing.
   // We use p5 just for the loop and events.
@@ -132,6 +133,7 @@ function setup() {
   await loader.startLoading(loadingTasks, () => {
     loading = false;
     document.getElementById('loading-screen').style.display = 'none';
+    if (typeof audioManager !== 'undefined') audioManager.startAmbience();
   });
 })();
 
@@ -140,6 +142,12 @@ function draw() {
 
     return;
   }
+  
+  if (typeof audioManager !== 'undefined') {
+      // Pass settings and energy metric to audio mixer
+      // Use energyOutput (last second average) for smoother audio level than the accumulating counter
+      audioManager.update(deltaTime, settings, energyOutput, paused, game.boomValue);
+  }
 
   if (!paused) {
     if (typeof deltaTime !== 'undefined') renderTime += deltaTime / 1000.0;
@@ -147,7 +155,10 @@ function draw() {
     // Update CPU-side state
     updateScene();
 
-    if (boom && boomStartTime == 0) boomStartTime = renderTime;
+    if (boom && boomStartTime == 0) {
+        boomStartTime = renderTime;
+        if (typeof audioManager !== 'undefined') audioManager.playSfx('boom');
+    }
   }
 
   // Core layer (steam + atom cores) on coreCanvas

@@ -12,7 +12,7 @@ class PlayerState {
             player: player ? player.serialize() : null,
             shop: shop ? shop.serialize() : null,
             settings: settings ? { ...settings } : null,
-            uiSettings: ui ? ui.uiSettings : null,
+            uiSettings: (ui && ui.canvas) ? ui.canvas.uiSettings : null,
             version: '1.0'
         };
 
@@ -52,8 +52,8 @@ class PlayerState {
             }
 
             // Load UI settings
-            if (saveData.uiSettings && ui) {
-                ui.uiSettings = saveData.uiSettings;
+            if (saveData.uiSettings && ui && ui.canvas) {
+                ui.canvas.uiSettings = saveData.uiSettings;
             }
 
             // Reset simulation

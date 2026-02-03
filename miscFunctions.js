@@ -42,6 +42,11 @@ function formatLarge(amount, unit, decimals=2) {
 }
 
 function resetSimulation() {
+    // Fade out boom if active
+    if (typeof audioManager !== 'undefined') {
+        audioManager.fadeOutSfx('boom', 2.0); // 1.0 second fade out
+    }
+    
     for (let atom of uraniumAtoms) {
         atom.temperature = 25;
     }

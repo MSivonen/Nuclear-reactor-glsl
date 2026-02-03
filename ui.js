@@ -46,9 +46,8 @@ class UICanvas {
                 master: { vol: 1.0, enabled: true },
                 sfx: { vol: 1.0, enabled: true },
                 steam: { vol: 1.0, enabled: true },
-                neutron: { vol: 1.0, enabled: true },
                 water: { vol: 1.0, enabled: true },
-                music: { vol: 1.0, enabled: true }
+                ambience: { vol: 1.0, enabled: true }
             },
             video: {
                 bubbles: true,
@@ -147,10 +146,9 @@ class UICanvas {
                 const audioKeys = [
                     { label: 'Master Volume', key: 'master' },
                     { label: 'All SFX', key: 'sfx' },
+                    { label: 'Ambience', key: 'ambience' },
                     { label: 'Steam', key: 'steam' },
-                    { label: 'Neutron', key: 'neutron' },
-                    { label: 'Water', key: 'water' },
-                    { label: 'Music', key: 'music' }
+                    { label: 'Water', key: 'water' }
                 ];
                 
                 return {
@@ -653,6 +651,7 @@ class UICanvas {
 
                     } else {
                         // Standard Button or Simple Checkbox
+                        if (typeof audioManager !== 'undefined') audioManager.playSfx('click');
                         if (btn.action) btn.action();
                     }
                     return;
@@ -684,6 +683,7 @@ class UICanvas {
             // Modifiers
             for (const mod of elements.modifiers) {
                 if (y >= mod.y && y <= mod.y + mod.h && x >= mod.x && x <= mod.x + mod.w) {
+                    if (typeof audioManager !== 'undefined') audioManager.playSfx('click');
                     shop.setBuyAmount(mod.value);
                     return;
                 }
@@ -692,6 +692,7 @@ class UICanvas {
             // Items
             for (const item of elements.shopItems) {
                 if (y >= item.y && y <= item.y + item.h) {
+                    if (typeof audioManager !== 'undefined') audioManager.playSfx('click');
                     shop.buy(item.key);
                     return;
                 }
@@ -699,6 +700,7 @@ class UICanvas {
 
             // 3. Settings / Dev Mode
             if (y >= elements.devButton.y && y <= elements.devButton.y + elements.devButton.h) {
+                if (typeof audioManager !== 'undefined') audioManager.playSfx('click');
                 settings.cheatMode = !settings.cheatMode;
                 if (settings.cheatMode && player) player.addMoney(1000000); //edit this to make everything cost 0
             }

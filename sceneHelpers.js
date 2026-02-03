@@ -53,8 +53,20 @@ function initShadersAndGL() {
     glShit.reportProgram = createProgram(gl, glShit.shaderCodes.reportVertCode, glShit.shaderCodes.reportFragCode);
     glShit.explosionProgram = createProgram(gl, glShit.shaderCodes.explosionVertCode, glShit.shaderCodes.explosionFragCode);
     
-    // Uniform locations (simProgram)
     glShit.uNeutronsLoc = gl.getUniformLocation(glShit.simProgram, "u_neutrons");
+    
+    // Ensure neutron instance exists or create a temp helper if needed
+    // But ideally neutron is instantiated in setup(). 
+    // Here we are in initShadersAndGL() which runs inside loadingTasks
+    if (typeof neutron === 'undefined' || !neutron) {
+        // Create a temporary instance just for the texture helper methods if needed
+        // Or better yet, ensure neutron is global. 
+        // We will assume "Neutron" class is loaded (fixed in index.html)
+        // and create a local instance if the global isn't ready.
+        if (typeof Neutron !== 'undefined') {
+            globalThis.neutron = new Neutron();
+        }
+    }
 
     // Simulation textures (still use FBOs for simulation steps, that's fine)
     glShit.readTex = neutron.createTexture(gl, neutron.buffer);
