@@ -75,9 +75,28 @@ MAKING A GAME
 
 === Sound: ===
     -Minimal sfx
-        -Geiger counter tick when neutron is spawned?
+        -Ambient sounds when running
+            -Play/mix/overlap randomly, with random volumes (30%-100%) and pitches (+-15%)
+                    -electric-hum
+                    -high-energy-buzzing (this one with 50% lower volume than others)
+                    -industrial-hum
+                    -scifi-generator
+                    -steam-bubbles
+                    -steam-bubbles2
+            -Water sounds
+                -water_low for low flow
+                -water_high for high flow
+            -Steam sound when running warm
+                -Steam1_low for cool
+                -Steam3_mid for intermediate heat
+                -Steam2_highPitch for hot
+            -Water and steam sounds should blend/mix smoothly from lower to higher level sound. Do not stop the lower sound, but make it 30% quieter.
         -Alarm when going too hot
-        -Steam sound when running warm
+        -Explosion sound
+            -boom
+        -Button click sounds for ui
+            -click
+        
     -Music?
         -Maybe later, not a priority
 

@@ -28,14 +28,27 @@
   </div>
 
   <div id="canvas-container" style="position: relative; width: 1067px; height: 600px;">
+    <!-- Loading Screen -->
+    <div id="loading-screen" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; background-color: black; color: white; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 20; font-family: Arial, sans-serif;">
+      <h1>Loading...</h1>
+      <div style="width: 200px; height: 20px; background-color: gray; margin: 20px 0;">
+        <div id="loading-bar" style="height: 100%; background-color: green; width: 0%;"></div>
+      </div>
+      <p id="loading-percentage">0%</p>
+      <p id="loading-task">Initializing...</p>
+    </div>
     <!-- Single WebGL Canvas for the entire game -->
     <canvas id="gameCanvas" width="1067" height="600"
       style="position: absolute; left: 0; top: 0; z-index: 10;">
     </canvas>
   </div>
 
+  <script src="loader.js"></script>
+  <script src="gl.js"></script>
+  <script src="loadingTasks.js"></script>
   <script src="sketch.js"></script>
   <script src="neutron.js"></script>
+  <script src="audio.js"></script>
   <script src="reportSystem.js"></script>
   <script src="sceneHelpers.js"></script>
   <script src="grid.js"></script>
@@ -56,6 +69,7 @@
   <script src="bubblesRenderer.js"></script>
   <script src="waterLayer.js"></script>
   <script src="debug.js"></script>
+  <script src="input.js"></script>
 
 </body>
 

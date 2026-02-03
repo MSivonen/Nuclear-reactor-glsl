@@ -48,69 +48,9 @@ let lastMoneyPerSecond = 0;
 let paused = false;
 var renderTime = 0;
 
-const glShit = {
-  waterGL: null,
-  waterCanvas: null,
-  simGL: null,
-  simCanvas: null,
-  coreGL: null,
-  coreCanvas: null,
-  simProgram: null,
-  renderProgram: null,
-  explosionProgram: null,
-  readTex: null,
-  writeTex: null,
-  readFBO: null,
-  writeFBO: null,
-  quadVao: null,
-  uNeutronsLoc: null,
-  uRenderResLoc: null,
-  uRenderTexSizeLoc: null,
-  uRenderSimSizeLoc: null,
-  uRenderNeutronSizeLoc: null,
-  uRenderNeutronsLoc: null,
-  reportTex: null,
-  reportFBO: null,
-  reportVao: null,
-  reportData: null,
-  useGpuSteam: false,
-  waterClearFrame: -1,
-  coreClearFrame: -1,
-  simClearFrame: -1,
+// Loading screen variables
+let loading = true;
 
-  shaderCodes: {
-    simVertSrc: null,
-    simFragSrc: null,
-    rendVertSrc: null,
-    rendFragSrc: null,
-    reportVertSrc: null,
-    reportFragSrc: null,
-    atomsVertSrc: null,
-    atomsFragSrc: null,
-    steamVertSrc: null,
-    steamFragSrc: null,
-    waterVertSrc: null,
-    waterFragSrc: null,
-    explosionVertSrc: null,
-    explosionFragSrc: null,
-    simVertCode: null,
-    simFragCode: null,
-    rendVertCode: null,
-    rendFragCode: null,
-    reportVertCode: null,
-    reportFragCode: null,
-    atomsVertCode: null,
-    atomsFragCode: null,
-    steamVertCode: null,
-    steamFragCode: null,
-    waterVertCode: null,
-    waterFragCode: null,
-    explosionVertCode: null,
-    explosionFragCode: null,
-    atomsCoreFragCode: null,
-    atomsCoreFragSrc: null
-  }
-};
 
 const ui = {
   totalNeutrons: 0,
@@ -130,7 +70,7 @@ const ui = {
 //game variables
 const game = {
   // threshold in physical kW (5 MW = 5000 kW)
-  boomValue: 5000000
+  boomValue: 1000000
 }
 
 //scene variables
@@ -144,27 +84,8 @@ let controlRodHeight;
 const NEUTRON_STRIDE = 4;
 const MAX_NEUTRONS = 512;
 const MAX_NEUTRONS_SQUARED = MAX_NEUTRONS * MAX_NEUTRONS;
+let neutron;
 
-
-function preload() {
-  glShit.shaderCodes.simVertSrc = loadStrings('shaders/sim.vert');
-  glShit.shaderCodes.simFragSrc = loadStrings('shaders/sim.frag');
-  glShit.shaderCodes.rendVertSrc = loadStrings('shaders/render.vert');
-  glShit.shaderCodes.rendFragSrc = loadStrings('shaders/render.frag');
-  glShit.shaderCodes.reportVertSrc = loadStrings('shaders/report.vert');
-  glShit.shaderCodes.reportFragSrc = loadStrings('shaders/report.frag');
-  glShit.shaderCodes.atomsVertSrc = loadStrings('shaders/atoms.vert');
-  glShit.shaderCodes.atomsFragSrc = loadStrings('shaders/atoms.frag');
-  glShit.shaderCodes.atomsCoreFragSrc = loadStrings('shaders/atoms_core.frag');
-  glShit.shaderCodes.steamVertSrc = loadStrings('shaders/steam.vert');
-  glShit.shaderCodes.steamFragSrc = loadStrings('shaders/steam.frag');
-  glShit.shaderCodes.bubblesVertSrc = loadStrings('shaders/bubbles.vert');
-  glShit.shaderCodes.bubblesFragSrc = loadStrings('shaders/bubbles.frag');
-  glShit.shaderCodes.waterVertSrc = loadStrings('shaders/water.vert');
-  glShit.shaderCodes.waterFragSrc = loadStrings('shaders/water.frag');
-  glShit.shaderCodes.explosionVertSrc = loadStrings('shaders/explosion.vert');
-  glShit.shaderCodes.explosionFragSrc = loadStrings('shaders/explosion.frag');
-}
 
 function updateDimensions() {
   // Use manual `screenWidth` and `screenHeight` values set at top of file.
@@ -188,114 +109,49 @@ function updateDimensions() {
   settings.neutronSpeed = settings.neutronSpeed * globalScale;
 }
 
-function windowResized() {
-  // Automatic resizing on window events is disabled. Use manual resizing
-  // (call updateDimensions() after changing `screenWidth`/`screenHeight`).
-  return;
-}
-
 function setup() {
   updateDimensions();
-
+  neutron = new Neutron();
   //debug(); //DO NOT REMOVE THIS LINE
   // We use a manual HTML canvas "gameCanvas" for drawing.
   // We use p5 just for the loop and events.
-  // We create a tiny or hidden canvas to keep P5 happy, or just use noCanvas()?
-  // noCanvas() is usually best if we don't want the default canvas.
   noCanvas();
-  
+
   // However, we need to ensure our 'gameCanvas' is sized correctly.
   const gameCnv = document.getElementById('gameCanvas');
   if (gameCnv) {
-     gameCnv.width = screenRenderWidth;
-     gameCnv.height = screenHeight;
+    gameCnv.width = screenRenderWidth;
+    gameCnv.height = screenHeight;
   }
 
-  // glShit.shaderCodes... initialization matches existing logic
-  glShit.shaderCodes.simVertCode = glShit.shaderCodes.simVertSrc.join('\n');
-  glShit.shaderCodes.simFragCode = glShit.shaderCodes.simFragSrc.join('\n');
-  glShit.shaderCodes.rendVertCode = glShit.shaderCodes.rendVertSrc.join('\n');
-  glShit.shaderCodes.rendFragCode = glShit.shaderCodes.rendFragSrc.join('\n');
-  glShit.shaderCodes.reportVertCode = glShit.shaderCodes.reportVertSrc.join('\n');
-  glShit.shaderCodes.reportFragCode = glShit.shaderCodes.reportFragSrc.join('\n');
-  glShit.shaderCodes.atomsVertCode = glShit.shaderCodes.atomsVertSrc.join('\n');
-  glShit.shaderCodes.atomsFragCode = glShit.shaderCodes.atomsFragSrc.join('\n');
-  glShit.shaderCodes.atomsCoreFragCode = glShit.shaderCodes.atomsCoreFragSrc.join('\n');
-  glShit.shaderCodes.steamVertCode = glShit.shaderCodes.steamVertSrc.join('\n');
-  glShit.shaderCodes.steamFragCode = glShit.shaderCodes.steamFragSrc.join('\n');
-  glShit.shaderCodes.bubblesVertCode = glShit.shaderCodes.bubblesVertSrc.join('\n');
-  glShit.shaderCodes.bubblesFragCode = glShit.shaderCodes.bubblesFragSrc.join('\n');
-  glShit.shaderCodes.waterVertCode = glShit.shaderCodes.waterVertSrc.join('\n');
-  glShit.shaderCodes.waterFragCode = glShit.shaderCodes.waterFragSrc.join('\n');
-  glShit.shaderCodes.explosionVertCode = glShit.shaderCodes.explosionVertSrc.join('\n');
-  glShit.shaderCodes.explosionFragCode = glShit.shaderCodes.explosionFragSrc.join('\n');
-  // Delegate initialization to helpers
-  initShadersAndGL();
-  initSimulationObjects();
-
-  // Economy objects: instantiate here so UI and per-second hooks can use them
-  if (typeof Upgrades !== 'undefined') upgrades = new Upgrades();
-  if (typeof Player !== 'undefined') player = new Player();
-  if (typeof Shop !== 'undefined') shop = new Shop();
-  if (typeof PlayerState !== 'undefined') playerState = new PlayerState();
-
-  initUiObjects();
-  eventListeners();
-
+  // Loading is now handled asynchronously before setup
 }
 
+// Asynchronous loading
+(async () => {
+  await loader.startLoading(loadingTasks, () => {
+    loading = false;
+    document.getElementById('loading-screen').style.display = 'none';
+  });
+})();
+
 function draw() {
+  if (loading) {
+
+    return;
+  }
+
   if (!paused) {
     if (typeof deltaTime !== 'undefined') renderTime += deltaTime / 1000.0;
-    
+
     // Update CPU-side state
     updateScene();
-    
+
     if (boom && boomStartTime == 0) boomStartTime = renderTime;
-    
-    energyThisFrame = 0; // Reset accumulator for next frame
   }
 
   // Core layer (steam + atom cores) on coreCanvas
   // This draws the scene using 'renderTime' (if updated in sceneHelpers)
   // and draws the UI/Pause Menu on top
   drawScene();
-}
-function mousePressed() {
-  if (ui && ui.canvas && typeof ui.canvas.handleMouseClick === 'function') {
-    ui.canvas.handleMouseClick(mouseX, mouseY);
-  }
-}
-
-function mouseDragged() {
-  if (ui && ui.canvas && typeof ui.canvas.handleMouseDrag === 'function') {
-    ui.canvas.handleMouseDrag(mouseX, mouseY);
-  }
-}
-
-function mouseReleased() {
-  if (ui && ui.canvas && typeof ui.canvas.handleMouseRelease === 'function') {
-    ui.canvas.handleMouseRelease();
-  }
-}
-
-function keyPressed() {
-  if (key === 'p' || key === 'P' || keyCode === ESCAPE) {
-    paused = !paused;
-    if (!paused) {
-        if (typeof ui !== 'undefined') ui.lastUpdateTime = performance.now();
-    }
-  }
-
-  if (settings.cheatMode) {
-    if (key === 'm' || key === 'M') {
-      if (player) player.addMoney(player.getBalance() * 0.1 + 10000);
-      console.log("Cheat: Added money");
-    }
-    // 'C' to clear/cool reactor for testing?
-    if (key === 'c' || key === 'C') {
-        uraniumAtoms.forEach(u => u.temperature = 0);
-        console.log("Cheat: Temperature reset");
-    }
-  }
 }

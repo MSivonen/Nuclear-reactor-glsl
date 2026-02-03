@@ -1,5 +1,7 @@
 PRIORITIZED TASKS — Reactor Game Development Roadmap
+Read these few lines before starting any of the stages:
 More detailed info in todo.txt. Check it always before starting a stage here.
+Always use the loader.js to load assets or compile shaders, and doing other loading tasks.
 
 1) Power output system & water flow control (DONE)
 	- Importance: 5/5  Difficulty: 3/5
@@ -44,7 +46,8 @@ More detailed info in todo.txt. Check it always before starting a stage here.
 
 5) Sound effects & minimal SFX (NOT STARTED)
 	- Importance: 2/5  Difficulty: 1/5
-	- Add Geiger tick when neutrons spawn, alarm when temperature/warning thresholds hit, steam ambience when running warm. UI feedback sounds for shop buttons. Make different sounds optional in Options and add volume sliders for each effect, and main sfx volume+toggle, music volume+toggle.
+	- Add alarm when temperature/warning thresholds hit, steam ambience when running warm. UI feedback sounds for shop buttons. Make different sounds optional in Options and add volume sliders for each effect, and main sfx volume+toggle, music volume+toggle.
+	- Check todo.txt for more details.
 	- Files: `ui.js`, new `audio.js`
 
 6) Control rods: upgrades & automation (NOT STARTED)

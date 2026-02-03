@@ -2,6 +2,7 @@ class Neutron {
     constructor() {
         this.buffer = new Float32Array(MAX_NEUTRONS_SQUARED * NEUTRON_STRIDE);
         this.currentIndex = 0;
+        this.spawnCount = 0;
     }
 
     createTexture(gl, data) {
@@ -173,6 +174,7 @@ class Neutron {
     }
 
     spawn(x, y, atomRadius) {
+        this.spawnCount++;
         // Ring-buffer index.
         this.currentIndex = (this.currentIndex + 1) % MAX_NEUTRONS_SQUARED;
 
@@ -195,4 +197,3 @@ class Neutron {
     }
 }
 
-    const neutron = new Neutron();
