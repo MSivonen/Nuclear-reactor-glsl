@@ -36,11 +36,11 @@ void main(){
 
     float alpha = clamp(glow, 0.0, 1.0) * radialFalloff;
 
-    if (vFlash > 0.5) {
+/*     if (vFlash > 0.5) {
         float flashBoost = 1.5;
         glowCol = vec3(1.0) * (glow * flashBoost);
         alpha = clamp(glow * flashBoost, 0.0, 1.0) * radialFalloff;
-    }
+    } */
 
     outColor = vec4(glowCol, alpha * 0.5);
 }

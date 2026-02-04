@@ -3,6 +3,7 @@ precision highp float;
 
 layout(location = 0) in vec2 a_quadPos;
 layout(location = 1) in vec4 a_params; // startX, speed, phase, size
+layout(location = 2) in float a_offset;
 
 uniform vec2 u_resolution;
 uniform float u_time;
@@ -14,6 +15,7 @@ void main() {
     float speed = a_params.y;
     float phase = a_params.z;
     float size = a_params.w;
+    float offset = a_offset;
 
     float buffer = 20.0; // Distance below/above screen to spawn/kill
     float loopHeight = u_resolution.y + buffer * 2.0;
@@ -24,7 +26,7 @@ void main() {
     float yOffset = phase * (loopHeight / 6.28); // Map phase 0..2PI to height approximately
     
     // Current Y in a continuous loop
-    float linearY = u_time * speed + yOffset;
+    float linearY = u_time * speed + yOffset + offset;
     
     // Modulo to wrap around
     float y = mod(linearY, loopHeight) - buffer;

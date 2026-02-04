@@ -275,6 +275,7 @@ function renderBubblesLayer() {
     if (!gl || !glShit.waterCanvas) return;
     ensureWaterLayerCleared(gl);
     if (typeof bubblesRenderer !== 'undefined') {
+        bubblesRenderer.updateSpeeds(settings.waterFlowSpeed, (typeof renderTime !== 'undefined') ? renderTime : millis() / 1000.0);
         bubblesRenderer.render(glShit.waterCanvas.width, glShit.waterCanvas.height, (typeof renderTime !== 'undefined') ? renderTime : millis() / 1000.0);
     }
 }

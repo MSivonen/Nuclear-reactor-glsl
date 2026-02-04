@@ -206,8 +206,8 @@ class AudioManager {
         // Access settings via ui.canvas.uiSettings
         if (typeof ui === 'undefined' || !ui.canvas || !ui.canvas.uiSettings) return;
 
-        // If paused, mute ambient tracks quickly
-        if (isPaused) {
+        // If paused or game over, mute ambient tracks quickly
+        if (isPaused || boom) {
             this.ambientTracks.forEach(track => {
                 track.targetVolume = 0;
                 track.update(.2); // pass 1.0 master so it fades to target 0 naturally

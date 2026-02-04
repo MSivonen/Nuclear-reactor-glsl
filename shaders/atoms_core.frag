@@ -2,7 +2,6 @@
 precision highp float;
 
 in vec4 vColor;
-in float vFlash;
 in vec2 vQuadPos;
 
 out vec4 outColor;
@@ -26,9 +25,7 @@ void main(){
     // X-direction gray -> narrow white -> gray gradient
     float centerDist=abs(p.x);// 0.0 at center, up to 1.0 at edges
     float whiteBand=.33;// narrow white band half-width
-/*     if(vFlash>.5){
-        centerColor=vec3(0.39f, 0.63f, 0.39f);
-    } */
+
     float whiteFactor=1.-smoothstep(0.,whiteBand,centerDist);
     
     vec3 baseGray=vec3(.2784,.2784,.2784);

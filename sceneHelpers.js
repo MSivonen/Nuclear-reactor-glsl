@@ -363,6 +363,7 @@ function renderBubblesLayer() {
     if (typeof bubblesRenderer !== 'undefined' && glShit.waterCanvas) {
         // We must pass SIM dimensions (width, height), not Full or "Canvas" dimensions.
         // bubblesRenderer uses these for u_resolution to scale particles 0..Width -> -1..1
+        bubblesRenderer.updateSpeeds(settings.waterFlowSpeed, (typeof renderTime !== 'undefined') ? renderTime : millis() / 1000.0);
         bubblesRenderer.render(screenSimWidth, screenHeight, (typeof renderTime !== 'undefined') ? renderTime : millis() / 1000.0);
     }
 }

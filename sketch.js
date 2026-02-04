@@ -17,7 +17,7 @@ const defaultSettings = {
   controlRodAbsorptionProbability: 0.1,
   controlRodHitProbability: 0.325,
   waterFlowSpeed: 0.3,
-  heatingRate: 1500,
+  heatingRate: 500,
   uraniumToWaterHeatTransfer: 0.1,
   heatTransferCoefficient: 0.04,
   inletTemperature: 15,
@@ -40,10 +40,6 @@ let font;
 var energyOutput = 0;
 let energyThisFrame = 0;
 var energyOutputCounter = 0; // accumulator: sum(power_kW * dt) over the second
-// let player = null;
-// let upgrades = null; // Upgrades instance
-// let shop = null;
-// let playerState = null;
 let lastMoneyPerSecond = 0;
 let paused = false;
 var renderTime = 0;

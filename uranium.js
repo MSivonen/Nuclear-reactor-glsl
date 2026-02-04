@@ -42,7 +42,7 @@ class UraniumAtom {
   hitByNeutron() {
     this.isHit = true;
     this.heat += settings.heatingRate;
-    this.flash = 10; // Flash for 10 frames
+    //this.flash = 10; // Flash for 10 frames
   }
 
   createNeutron() {
@@ -55,26 +55,29 @@ function computeUraniumColor(heat, flash) {
     return { r: 255, g: 255, b: 255, a: 255 };
   }
 
-  if (heat <= 250) {
-    const t = heat / 250;
-    const r = lerp(0, 255, t);
-    const g = lerp(40, 0, t);
-    return { r: clamp255(r), g: clamp255(g), b: 0, a: 255 };
-  }
+  const temp = Math.max(15, heat);
 
-  if (heat <= 1000) {
-    const t = (heat - 250) / 250;
-    const g = lerp(0, 255, t);
-    return { r: 255, g: clamp255(g), b: 0, a: 255 };
-  }
+  // Temperature thresholds for color transitions
+  const redStart = 150;
+  const redEnd = 500;
+  const yellowStart = 400; // Overlap with red by 100°C (redEnd - yellowStart = 100)
+  const yellowEnd = 1000;
+  const whiteStart = 900;
+  const blueRange = 500;
 
-  if (heat <= 1500) {
-    const t = (heat - 500) / 500;
-    const b = lerp(0, 255, t);
-    return { r: 255, g: 255, b: clamp255(b), a: 255 };
-  }
+  // Red channel: redStart to redEnd
+  const redRange = Math.max(1, redEnd - redStart);
+  const r = 255 * Math.min(1, Math.max(0, (temp - redStart) / redRange));
 
-  return { r: 255, g: 255, b: 255, a: 255 };
+  // Green channel: yellowStart to yellowEnd
+  const greenRange = Math.max(1, yellowEnd - yellowStart);
+  const g = 255 * Math.min(1, Math.max(0, (temp - yellowStart) / greenRange));
+
+  // Blue channel: whiteStart onwards
+  const safeBlueRange = Math.max(1, blueRange);
+  const b = 255 * Math.min(1, Math.max(0, (temp - whiteStart) / safeBlueRange));
+
+  return { r: clamp255(r), g: clamp255(g), b: Math.min(100,clamp255(b)), a: 255 };
 }
 
 function clamp255(value) {

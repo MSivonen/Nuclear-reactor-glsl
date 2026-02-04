@@ -44,15 +44,15 @@ Always use the loader.js to load assets or compile shaders, and doing other load
 	v- Local saving (IndexedDB/localStorage) with three quick slots, and explicit Save/Load in the menu.
 	- Files: `playerState.js`, `ui.js`
 
-5) Sound effects & minimal SFX (NOT STARTED)
+5) Sound effects & minimal SFX (DONE)
 	- Importance: 2/5  Difficulty: 1/5
 	- Add alarm when temperature/warning thresholds hit, steam ambience when running warm. UI feedback sounds for shop buttons. Make different sounds optional in Options and add volume sliders for each effect, and main sfx volume+toggle, music volume+toggle.
 	- Check todo.txt for more details.
 	- Files: `ui.js`, new `audio.js`
 
-6) Control rods: upgrades & automation (NOT STARTED)
+6) Control rods: upgrades (NOT STARTED)
 	- Importance: 4/5  Difficulty: 3/5
-	- Buying additional rods, linking rods UI, and simple automation/scheduling for rods.
+	- Buying additional rods
 	- Files: `controlrod.js`, `ui.js`, `sketch.js`
 
 7) Atom group/column purchase logic (NOT STARTED)
