@@ -3,12 +3,12 @@
 function initShadersAndGL() {
     // SINGLE CANVAS REFACTOR
     glShit.gameCanvas = document.getElementById("gameCanvas");
-    
+
     // Set size to match screen settings
     if (glShit.gameCanvas) {
-        glShit.gameCanvas.width = screenRenderWidth; 
+        glShit.gameCanvas.width = screenRenderWidth;
         glShit.gameCanvas.height = screenHeight;
-        
+
         // Create ONE WebGL2 context
         gl = glShit.gameCanvas.getContext("webgl2", {
             alpha: false, // Opaque canvas
@@ -23,8 +23,8 @@ function initShadersAndGL() {
     }
 
     if (!gl) {
-         console.error("WebGL2 not supported");
-         return;
+        console.error("WebGL2 not supported");
+        return;
     }
 
     // Provide this single context to all "legacy" slots so existing renderers work
@@ -52,9 +52,9 @@ function initShadersAndGL() {
     glShit.simProgram = createProgram(gl, glShit.shaderCodes.simVertCode, glShit.shaderCodes.simFragCode);
     glShit.reportProgram = createProgram(gl, glShit.shaderCodes.reportVertCode, glShit.shaderCodes.reportFragCode);
     glShit.explosionProgram = createProgram(gl, glShit.shaderCodes.explosionVertCode, glShit.shaderCodes.explosionFragCode);
-    
+
     glShit.uNeutronsLoc = gl.getUniformLocation(glShit.simProgram, "u_neutrons");
-    
+
     // Ensure neutron instance exists or create a temp helper if needed
     // But ideally neutron is instantiated in setup(). 
     // Here we are in initShadersAndGL() which runs inside loadingTasks
@@ -77,7 +77,7 @@ function initShadersAndGL() {
 
     initRenderShader(gl, glShit.shaderCodes.rendVertCode, glShit.shaderCodes.rendFragCode);
     reportSystem.init(gl);
-    
+
     // Initialize GPU instanced atom renderer (fallback to CPU if fails)
     try {
         if (typeof atomsRenderer !== 'undefined') {
@@ -125,7 +125,7 @@ function initShadersAndGL() {
     if (typeof bubblesRenderer !== 'undefined') {
         bubblesRenderer.init(
             gl,
-            5000, 
+            5000,
             glShit.shaderCodes.bubblesVertCode,
             glShit.shaderCodes.bubblesFragCode
         );
@@ -169,11 +169,12 @@ function initSimulationObjects() {
 function initUiObjects() {
     // UI + graphics helpers
     initializeControls();
-    ui.meter = new Meter(700, 500);
+    ui.powerMeter = new PowerMeter(globalScale * 730, globalScale * 530);
+    ui.tempMeter = new TempMeter(globalScale * 600, globalScale * 530);
     ui.controlSlider = new ControlRodsSlider();
     // This creates an offscreen 2D canvas now (per ui.js changes)
     ui.canvas = new UICanvas();
-    
+
     // Init the overlay shader for drawing the UI texture
     if (typeof uiOverlay !== 'undefined' && glShit.gameCanvas) {
         const gl = glShit.gameCanvas.getContext('webgl2');
@@ -187,7 +188,12 @@ function updateScene() {
     // Update neutrons in GPU
     neutron.update(glShit.simGL);
     reportSystem.process(glShit.simGL);
-    uraniumAtoms.forEach(s => s.update());
+    let totalHeat = 0;
+    uraniumAtoms.forEach(s => {
+        s.update();
+        totalHeat += s.heat;
+    });
+    window.avgTemp = uraniumAtoms.length > 0 ? totalHeat / uraniumAtoms.length : 0;
     controlRods.forEach(s => s.update());
 
     // Update water temperatures (conduction & uranium heat transfer)
@@ -215,7 +221,10 @@ function updateScene() {
         const massMoved = fractionOut * (waterCells[index].mass || 0.1); // kg moved this frame
         const c = (waterCells[index].specificHeatCapacity || 4186);
         const deltaT = T_out - inletTemp;
-        const dE = massMoved * c * deltaT; // Joules per frame
+        const effectiveDeltaT = Math.max(0, deltaT);
+        // Nonlinear reward for hotter reactor (mild exponent)
+        const heatBoost = Math.pow(effectiveDeltaT, 1.08);
+        const dE = massMoved * c * heatBoost; // Joules per frame (nonlinear)
         totalJoulesOut += dE / 1000;
     }
 
@@ -232,13 +241,14 @@ function updateScene() {
     energyOutputCounter += powerKW * dt;
     if (typeof ui.accumulatedTime === 'undefined') ui.accumulatedTime = 0;
     ui.accumulatedTime += dt;
-    ui.meter.update();
+    if (ui.powerMeter) ui.powerMeter.update();
+    if (ui.tempMeter) ui.tempMeter.update();
     oncePerSecond();
 }
 
 function drawScene() {
     const gl = glShit.waterGL; // They are all the same now
-    
+
     // 1. Clear the entire frame (Color + Depth if checking it, but we don't)
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, glShit.gameCanvas.width, glShit.gameCanvas.height);
@@ -250,7 +260,7 @@ function drawScene() {
     // We must adjust viewport for Sim layers so coordinate (0,0) in Sim matches (SHOP_WIDTH, 0) on screen.
     // GL viewport is (x, y, w, h). y=0 is bottom.
     // ui.js defines simXOffset = SHOP_WIDTH.
-    
+
     const simX = SHOP_WIDTH;
     const simW = screenSimWidth;
     const simH = screenHeight;
@@ -276,12 +286,12 @@ function drawScene() {
     renderAtomCoreLayer();
 
     // 6. Render Atom GLOWS (Additive)
-    gl.viewport(simX, 0, simW, simH); 
+    gl.viewport(simX, 0, simW, simH);
     // The original CSS used mix-blend-mode: screen. 
     // In WebGL: gl.blendFunc(gl.ONE, gl.ONE) is standard additive.
     // gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_COLOR) is Screen.
     // Let's try Additive first as it's common for glows.
-    gl.blendFunc(gl.ONE, gl.ONE); 
+    gl.blendFunc(gl.ONE, gl.ONE);
     renderAtomGlowLayer();
 
     // 7. Render Neutrons (Additive)
@@ -290,10 +300,10 @@ function drawScene() {
 
     // 8. Explosion (Alpha Blend for proper alpha)
     if (boom) {
-         gl.viewport(simX, 0, simW, simH);
-         gl.enable(gl.BLEND);
-         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-         renderExplosionLayer();
+        gl.viewport(simX, 0, simW, simH);
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+        renderExplosionLayer();
     }
 
     // 9. UI Overlay (Normal Alpha Blend)
@@ -301,7 +311,7 @@ function drawScene() {
     if (ui && ui.canvas) {
         ui.canvas.drawBorders();
         ui.canvas.drawUi();
-        
+
         // Then draw that canvas as a texture over the scene
         // UI is Full Screen (includes shop)
         if (typeof uiOverlay !== 'undefined') {
@@ -317,30 +327,30 @@ function renderExplosionLayer() {
     const gl = glShit.simGL;
     if (!gl || !glShit.explosionProgram) return;
     // ensureSimLayerCleared(gl); -> Removed
-    
+
     // Define sim dimensions (same as in drawScene)
     const simX = SHOP_WIDTH;
     const simW = screenSimWidth;
     const simH = screenHeight;
-    
+
     gl.useProgram(glShit.explosionProgram);
-    
+
     // Set uniforms
     const u_resolution = gl.getUniformLocation(glShit.explosionProgram, "u_resolution");
     gl.uniform2f(u_resolution, simW, simH);
-    
+
     const u_viewportX = gl.getUniformLocation(glShit.explosionProgram, "u_viewportX");
     gl.uniform1f(u_viewportX, simX);
-    
+
     const u_viewportY = gl.getUniformLocation(glShit.explosionProgram, "u_viewportY");
     gl.uniform1f(u_viewportY, 0);
-    
+
     const u_time = gl.getUniformLocation(glShit.explosionProgram, "u_time");
     gl.uniform1f(u_time, (typeof renderTime !== 'undefined') ? renderTime : millis() / 1000.0);
-    
+
     const u_shopWidth = gl.getUniformLocation(glShit.explosionProgram, "u_shopWidth");
     gl.uniform1f(u_shopWidth, SHOP_WIDTH);
-    
+
     const u_elapsed = gl.getUniformLocation(glShit.explosionProgram, "u_elapsed");
     let elapsed = 0;
     if (boomStartTime > 0) {
@@ -348,7 +358,7 @@ function renderExplosionLayer() {
         if (elapsed > 1.0) elapsed = 1.0;
     }
     gl.uniform1f(u_elapsed, elapsed);
-    
+
     // Draw fullscreen quad
     drawFullscreenQuad(gl);
 }

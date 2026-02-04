@@ -72,7 +72,8 @@ class UICanvas {
         this.ensureFrame();
         this.drawSideBar();
         controlRods.forEach(r => r.draw(this.ctx, this.simXOffset));
-        if (ui.meter) ui.meter.draw(this.ctx, this.simXOffset);
+        if (ui.powerMeter) ui.powerMeter.draw(this.ctx, this.simXOffset);
+        if (ui.tempMeter) ui.tempMeter.draw(this.ctx, this.simXOffset);
         if (ui.controlSlider) ui.controlSlider.draw(this.ctx, this.simXOffset);
         drawFPS(this.ctx, this.simXOffset);
         gameOver(this.ctx, this.simXOffset);

@@ -8,7 +8,7 @@ let controlRodsStartPos = -screenHeight * .9;
 const waterColor = [52, 95, 120];
 
 // Global scale factor (1.0 when height == 600)
-let globalScale = 1.0;
+let globalScale = screenHeight / 600;
 
 const defaultSettings = {
   neutronSpeed: 5, // Restored to original speed now that simulation is fixed
@@ -18,12 +18,12 @@ const defaultSettings = {
   controlRodHitProbability: 0.325,
   waterFlowSpeed: 0.3,
   heatingRate: 500,
-  uraniumToWaterHeatTransfer: 0.1,
+  uraniumToWaterHeatTransfer: 0.3,
   heatTransferCoefficient: 0.04,
   inletTemperature: 15,
   moneyExponent: 1.5,
   uraniumSize: 10,
-  neutronSize: 80,
+  neutronSize: 30,
   linkRods: false,
   cheatMode: false
 };
@@ -59,7 +59,8 @@ const ui = {
   prevTime: 0,
   framesCounted: 0,
   accumulatedTime: 0,
-  meter: null,
+  powerMeter: null,
+  tempMeter: null,
   controlSlider: null
 };
 
@@ -108,7 +109,7 @@ function updateDimensions() {
 function setup() {
   updateDimensions();
   // neutron = new Neutron(); // Now handled in loadingTasks.js to ensure it exists for GL init
-  
+
   //debug(); //DO NOT REMOVE THIS LINE
   // We use a manual HTML canvas "gameCanvas" for drawing.
   // We use p5 just for the loop and events.
@@ -138,11 +139,11 @@ function draw() {
 
     return;
   }
-  
+
   if (typeof audioManager !== 'undefined') {
-      // Pass settings and energy metric to audio mixer
-      // Use energyOutput (last second average) for smoother audio level than the accumulating counter
-      audioManager.update(deltaTime, settings, energyOutput, paused, game.boomValue);
+    // Pass settings and energy metric to audio mixer
+    // Use energyOutput (last second average) for smoother audio level than the accumulating counter
+    audioManager.update(deltaTime, settings, energyOutput, paused, game.boomValue);
   }
 
   if (!paused) {
@@ -152,8 +153,8 @@ function draw() {
     updateScene();
 
     if (boom && boomStartTime == 0) {
-        boomStartTime = renderTime;
-        if (typeof audioManager !== 'undefined') audioManager.playSfx('boom');
+      boomStartTime = renderTime;
+      if (typeof audioManager !== 'undefined') audioManager.playSfx('boom');
     }
   }
 

@@ -33,7 +33,11 @@ class UraniumAtom {
   }
 
   heatTransferToWater() {
-    const deltaT = (this.heat - this.waterCell.temperature) * settings.uraniumToWaterHeatTransfer;
+    const tempDiff = this.heat - this.waterCell.temperature;
+    const baseTransfer = tempDiff * settings.uraniumToWaterHeatTransfer;
+    // Boost transfer when temperature difference is high
+    const diffBoost = 1 + Math.min(Math.abs(tempDiff) / 500, 2);
+    const deltaT = baseTransfer * diffBoost;
     this.heat -= deltaT;
     this.waterCell.temperature += deltaT;
 

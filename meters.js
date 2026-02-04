@@ -1,13 +1,19 @@
-class Meter {
-    constructor(x, y) {
-        this.x = x * globalScale;
-        this.y = y * globalScale;
-        this.power = 0;
+
+class BaseMeter {
+    constructor(x, y, size, min, max, unit) {
+        this.x = x;
+        this.y = y;
+        this.baseSize = size;
+        this.width = size * globalScale;
+        this.height = size * globalScale;
+        
+        this.min = min;
+        this.max = max;
+        this.unit = unit;
+
+        this.value = 0;
         this.needleAngle = 0;
         this.warning = false;
-
-        this.width = 110 * globalScale;
-        this.height = 110 * globalScale;
         
         this.meterImage = this.createMeterImg();
     }
@@ -73,7 +79,11 @@ class Meter {
         
         ctx.restore();
 
-        // Draw power text
+        // Draw value text
+        this.drawValue(ctx, drawX, drawY);
+    }
+
+    drawValue(ctx, drawX, drawY) {
         ctx.save();
         ctx.fillStyle = 'gray';
         ctx.beginPath();
@@ -86,18 +96,67 @@ class Meter {
         ctx.font = `${12 * globalScale}px Arial, sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        const powerText = formatLarge(Math.round(energyOutput*1000), 'W',0);
-        ctx.fillText(powerText, drawX + this.width / 2, drawY + this.height - 70 * globalScale);
+        const text = formatLarge(Math.round(this.value), this.unit, 0);
+        ctx.fillText(text, drawX + this.width / 2, drawY + this.height - 70 * globalScale);
         ctx.restore();
     }
 
-    update() {
-        this.power = Math.max(0, energyThisFrame);
+    update(val) {
+        this.value = val;
         // Smooth transition using easing functions
-        const t = Math.min(Math.max(this.power / 1000, 0), 1);
+        const range = this.max - this.min;
+        let t = 0;
+        if(range !== 0) {
+             t = (this.value - this.min) / range;
+        }
+        
+        t = Math.min(Math.max(t, 0), 1);
         const targetAngle = 0.5 + t * (Math.PI * 2 - 1.0);
 
         const delta = targetAngle - this.needleAngle;
         this.needleAngle += delta * 0.1;
+    }
+}
+
+class PowerMeter extends BaseMeter {
+    constructor(x, y) {
+        super(x, y, 110, 0, 1000, 'W');
+    }
+
+    update() {
+        const powerVal = Math.max(0, energyThisFrame);
+        super.update(powerVal);
+    }
+
+    drawValue(ctx, drawX, drawY) {
+        ctx.save();
+        ctx.fillStyle = 'gray';
+        ctx.beginPath();
+        ctx.roundRect(drawX + this.width / 4, drawY + this.height - 80 * globalScale, this.width / 2, globalScale*17,globalScale*5);
+        ctx.fill();
+        ctx.restore();
+        ctx.save();
+
+        ctx.fillStyle = 'light-green';
+        ctx.font = `${12 * globalScale}px Arial, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        // Use energyOutput global if defined, else fallback to internal value
+        const val = (typeof energyOutput !== 'undefined') ? energyOutput * 1000 : this.value;
+        const powerText = formatLarge(Math.round(val), 'W', 0);
+        ctx.fillText(powerText, drawX + this.width / 2, drawY + this.height - 70 * globalScale);
+        ctx.restore();
+    }
+}
+
+class TempMeter extends BaseMeter {
+    constructor(x, y) {
+        super(x, y, 110, 0, 500, 'C');
+    }
+
+    update() {
+        const val = (typeof window.avgTemp !== 'undefined') ? window.avgTemp : 0;
+        super.update(val);
     }
 }
