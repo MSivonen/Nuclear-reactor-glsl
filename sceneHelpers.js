@@ -214,13 +214,15 @@ function updateScene() {
     // Treat settings.waterFlowSpeed as fraction of a cell leaving per frame (option A)
     const fractionOut = settings.waterFlowSpeed;
     const inletTemp = (typeof settings.inletTemperature !== 'undefined') ? settings.inletTemperature : 15;
+    const baselineTemp = 25;
+    const effectiveInletTemp = Math.max(inletTemp, baselineTemp);
     let totalJoulesOut = 0;
     for (let x = 0; x < topCount; x++) {
         const index = x + 0 * uraniumAtomsCountX;
         const T_out = topTemps[x];
         const massMoved = fractionOut * (waterCells[index].mass || 0.1); // kg moved this frame
         const c = (waterCells[index].specificHeatCapacity || 4186);
-        const deltaT = T_out - inletTemp;
+        const deltaT = T_out - effectiveInletTemp;
         const effectiveDeltaT = Math.max(0, deltaT);
         // Nonlinear reward for hotter reactor (mild exponent)
         const heatBoost = Math.pow(effectiveDeltaT, 1.08);
@@ -236,6 +238,14 @@ function updateScene() {
 
     // `energyThisFrame` is the game-scaled instantaneous power (kW-game units)
     energyThisFrame = powerKW;
+
+    // Calculate neutron size based on reactor energy
+    const tempPercent = (window.avgTemp || 0) / 500;
+    const powerPercent = (energyOutput || 0) / 1000;
+    const energy = (tempPercent + powerPercent) / 2;
+    const targetMultiplier = 1 - (energy * 0.67);
+    window.currentNeutronSizeMultiplier += (targetMultiplier - window.currentNeutronSizeMultiplier) * (deltaTime / 5000);
+    settings.neutronSize = defaultSettings.neutronSize * window.currentNeutronSizeMultiplier * globalScale;
 
     // Accumulate physical kW * seconds so we can compute exact per-second averages
     energyOutputCounter += powerKW * dt;

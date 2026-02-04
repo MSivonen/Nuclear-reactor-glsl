@@ -60,8 +60,45 @@ class BaseMeter {
         const drawX = offsetX + this.x - this.width / 2;
         const drawY = this.y - this.height / 2;
 
+        // Alarm glow when nearing max value
+        const range = this.max - this.min;
+        const ratio = range !== 0 ? (this.value - this.min) / range : 0;
+        const clampedRatio = Math.min(Math.max(ratio, 0), 1);
+        const alarmThreshold = 0.8;
+        let glow = 0;
+        if (clampedRatio >= alarmThreshold) {
+            const alarmT = (clampedRatio - alarmThreshold) / (1 - alarmThreshold);
+            let phase = 0;
+            if (typeof audioManager !== 'undefined' && audioManager.getAlarmPhase) {
+                phase = audioManager.getAlarmPhase();
+            }
+            const pulse = 0.5 + 0.5 * Math.sin(phase * Math.PI * 2);
+            glow = alarmT * pulse;
+
+            ctx.save();
+            ctx.globalAlpha = 0.5 * glow;
+            ctx.fillStyle = 'rgba(255, 0, 0, 0.6)';
+            ctx.shadowColor = 'rgba(255, 0, 0, 0.9)';
+            ctx.shadowBlur = this.width * 0.25;
+            ctx.beginPath();
+            ctx.arc(drawX + this.width / 2, drawY + this.height / 2, this.width * 0.55, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+
         // Draw background
         ctx.drawImage(this.meterImage, 0, 0, this.meterImage.width, this.meterImage.height, drawX, drawY, this.width, this.height);
+
+        // Tint rim when alarm is active
+        if (glow > 0) {
+            ctx.save();
+            ctx.strokeStyle = `rgba(255, 0, 0, ${0.8 * glow})`;
+            ctx.lineWidth = this.width * 0.05;
+            ctx.beginPath();
+            ctx.arc(drawX + this.width / 2, drawY + this.height / 2, this.width * 0.475, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+        }
 
         // Draw needle
         ctx.save();

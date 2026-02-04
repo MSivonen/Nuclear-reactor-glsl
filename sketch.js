@@ -17,7 +17,7 @@ const defaultSettings = {
   controlRodAbsorptionProbability: 0.1,
   controlRodHitProbability: 0.325,
   waterFlowSpeed: 0.3,
-  heatingRate: 500,
+  heatingRate: 50,
   uraniumToWaterHeatTransfer: 0.3,
   heatTransferCoefficient: 0.04,
   inletTemperature: 15,
@@ -43,6 +43,7 @@ var energyOutputCounter = 0; // accumulator: sum(power_kW * dt) over the second
 let lastMoneyPerSecond = 0;
 let paused = false;
 var renderTime = 0;
+window.currentNeutronSizeMultiplier = 1;
 
 // Loading screen variables
 let loading = true;

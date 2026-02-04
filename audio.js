@@ -72,6 +72,7 @@ class AudioManager {
         this.sounds = {};
         this.ambientTracks = [];
         this.isInitialized = false;
+        this.alarmIntensity = 0;
 
         // Configuration for all sound assets
         this.assets = [
@@ -212,6 +213,10 @@ class AudioManager {
                 track.targetVolume = 0;
                 track.update(.2); // pass 1.0 master so it fades to target 0 naturally
             });
+            this.alarmIntensity = 0;
+            if (this.sounds['alarm'] && this.sounds['alarm'].isPlaying()) {
+                this.fadeOutSfx('alarm', 0.2);
+            }
             return;
         }
 
@@ -219,6 +224,9 @@ class AudioManager {
 
         // Drive game state logic for volumes
         this.updateMixLogic(settings, currentPower, maxPowerRef);
+
+        // Alarm SFX (ramped by intensity)
+        this.updateAlarm(masterVol);
 
         // Update all tracks
         this.ambientTracks.forEach(track => track.update(masterVol));
@@ -244,13 +252,13 @@ class AudioManager {
         this.setGroupTarget('water', 'water_high', volumeScale * toneMix);
 
         // --- Steam Logic ---
-        // Scale audio by boom threshold. Max intensity when close to boom.
-        // If maxPowerRef is 1000 (1MW), we reach full steam intensity at 80% of that (800kW)
-        const limit = maxPowerRef || 1000;
-        const fadeStart = 0; 
-        const fadeEnd = limit * 0.8; // Full steam slightly before boom
+        // Scale audio by temperature. Max intensity when close to max temp.
+        // Steam starts at 100C, full intensity at 80% of max temp (400C)
+        const tempLimit = 500;
+        const fadeStart = 100; 
+        const fadeEnd = tempLimit * 0.8; // Full steam slightly before max temp
         
-        const steamIntensity = constrain(map(currentPower || 0, fadeStart, fadeEnd, 0, 1), 0, 1);
+        const steamIntensity = constrain(map(window.avgTemp || 0, fadeStart, fadeEnd, 0, 1), 0, 1);
 
         // steam_low (cool) -> steam_mid -> steam_high
         // 0.0 - 0.4: Low
@@ -279,9 +287,54 @@ class AudioManager {
         this.setGroupTarget('steam', 'steam_high', sHigh);
         this.setGroupTarget('steam', 'steam_bubbles1', sBubbles * 0.8);
 
+        // --- Alarm ---
+        const alarmLimit = maxPowerRef || 1000;
+        const powerRatio = constrain((currentPower || 0) / alarmLimit, 0, 1);
+        const tempRatio = (typeof window.avgTemp !== 'undefined') ? constrain(window.avgTemp / 500, 0, 1) : 0;
+        const alarmRatio = Math.max(powerRatio, tempRatio);
+        this.alarmIntensity = constrain(map(alarmRatio, 0.8, 1.0, 0, 1), 0, 1);
+
         // --- General Ambience ---
-        // Always on when running (and not paused)
-        this.groups['ambience'].forEach(item => item.track.targetVolume = 1.0);
+        // Scale with power output: 10% at 0 power, 100% at max power
+        const ambientIntensity = constrain(map(currentPower || 0, 0, maxPowerRef || 1000, 0.1, 1.0), 0.1, 1.0);
+        this.groups['ambience'].forEach(item => item.track.targetVolume = ambientIntensity);
+    }
+
+    updateAlarm(masterVol) {
+        const s = this.sounds['alarm'];
+        if (!s) return;
+
+        const sfxSettings = ui.canvas.uiSettings.audio.sfx;
+        const enabled = sfxSettings.enabled;
+        const baseVol = sfxSettings.vol * masterVol;
+        const intensity = this.alarmIntensity || 0;
+
+        if (!enabled || intensity <= 0) {
+            if (s.isPlaying()) {
+                this.fadeOutSfx('alarm', 0.2);
+            }
+            return;
+        }
+
+        if (!s.isPlaying()) {
+            s.setLoop(true);
+            s.playMode('sustain');
+            s.play();
+        }
+
+        const vol = constrain(baseVol * intensity, 0, 1);
+        s.setVolume(vol, 0.1);
+    }
+
+    getAlarmPhase() {
+        const s = this.sounds['alarm'];
+        if (s && s.isPlaying()) {
+            const dur = s.duration();
+            if (dur > 0) {
+                return (s.currentTime() % dur) / dur;
+            }
+        }
+        return 0;
     }
 
     setGroupTarget(group, key, target) {
