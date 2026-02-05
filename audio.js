@@ -187,15 +187,23 @@ class AudioManager {
              let sfxEnabled = true;
              let sfxVol = 1.0;
              let masterVol = 1.0;
+             let specificVol = 1.0; // For new categories
 
              if (ui && ui.canvas && ui.canvas.uiSettings) {
                  sfxEnabled = ui.canvas.uiSettings.audio.sfx.enabled;
                  sfxVol = ui.canvas.uiSettings.audio.sfx.vol;
                  masterVol = ui.canvas.uiSettings.audio.master.vol;
+                 
+                 // Handle specific categories
+                 if (key === 'boom' && ui.canvas.uiSettings.audio.explosions) {
+                     const boomSet = ui.canvas.uiSettings.audio.explosions;
+                     if (!boomSet.enabled) sfxEnabled = false;
+                     specificVol = boomSet.vol;
+                 }
              }
              
              if (sfxEnabled) {
-                const vol = sfxVol * masterVol;
+                const vol = sfxVol * specificVol * masterVol;
                 this.sounds[key].setVolume(vol);
                 this.sounds[key].play();
              }
@@ -207,17 +215,41 @@ class AudioManager {
         // Access settings via ui.canvas.uiSettings
         if (typeof ui === 'undefined' || !ui.canvas || !ui.canvas.uiSettings) return;
 
-        // If paused or game over, mute ambient tracks quickly
-        if (isPaused || boom) {
+        // If paused or game over, mute ambient tracks INSTANTLY
+        if (isPaused) {
             this.ambientTracks.forEach(track => {
                 track.targetVolume = 0;
-                track.update(.2); // pass 1.0 master so it fades to target 0 naturally
+                track.currentFadeVol = 0; // Force instant internal state
+                if (track.sound) track.sound.setVolume(0);
             });
+            
+            // Stop persistent SFX
             this.alarmIntensity = 0;
             if (this.sounds['alarm'] && this.sounds['alarm'].isPlaying()) {
-                this.fadeOutSfx('alarm', 0.2);
+                this.sounds['alarm'].stop();
+            }
+            if (this.sounds['boom'] && this.sounds['boom'].isPlaying()) {
+                this.sounds['boom'].stop();
             }
             return;
+        }
+        
+        // If BOOM (Game Over), stopping ambience is fine, but we might want the boom sound to play!
+        // The original code muted ambience on boom.
+        if (boom) {
+             this.ambientTracks.forEach(track => {
+                track.targetVolume = 0;
+                track.update(0.2);
+            });
+            // Don't return, allow alarm/boom logic potentially? 
+            // Actually original code returned. But playSfx('boom') is called in sketch.js.
+            // Let's keep existing boom behavior for now but respect pause.
+            // If boom is true, game is over.
+             this.alarmIntensity = 0;
+             if (this.sounds['alarm'] && this.sounds['alarm'].isPlaying()) {
+                this.fadeOutSfx('alarm', 0.2);
+             }
+             return;
         }
 
         const masterVol = (ui.canvas.uiSettings.audio.master && ui.canvas.uiSettings.audio.master.enabled) ? ui.canvas.uiSettings.audio.master.vol : 0;
@@ -305,12 +337,24 @@ class AudioManager {
         if (!s) return;
 
         const sfxSettings = ui.canvas.uiSettings.audio.sfx;
-        const enabled = sfxSettings.enabled;
-        const baseVol = sfxSettings.vol * masterVol;
+        // Use specific alarm settings if available
+        let alarmVolMod = 1.0;
+        let alarmEnabled = true;
+        if (ui.canvas.uiSettings.audio.alarms) {
+            alarmVolMod = ui.canvas.uiSettings.audio.alarms.vol;
+            alarmEnabled = ui.canvas.uiSettings.audio.alarms.enabled;
+        }
+
+        const enabled = sfxSettings.enabled && alarmEnabled;
+        const baseVol = sfxSettings.vol * alarmVolMod * masterVol;
         const intensity = this.alarmIntensity || 0;
 
         if (!enabled || intensity <= 0) {
             if (s.isPlaying()) {
+                // Instant stop if disabled or 0 intensity (or fallback to quick fade if preferred, user said instant stop when pausing, but here it's logic update)
+                // If intensity is 0, we can stop or fade. Existing was fade.
+                // But user wants "all audio stop instantly when pausing". This logic runs when NOT paused.
+                // So fade here is fine for gameplay dynamic changes.
                 this.fadeOutSfx('alarm', 0.2);
             }
             return;

@@ -69,7 +69,7 @@ class BaseMeter {
         if (clampedRatio >= alarmThreshold) {
             const alarmT = (clampedRatio - alarmThreshold) / (1 - alarmThreshold);
             let phase = 0;
-            if (typeof audioManager !== 'undefined' && audioManager.getAlarmPhase) {
+            if (audioManager.getAlarmPhase) {
                 phase = audioManager.getAlarmPhase();
             }
             const pulse = 0.5 + 0.5 * Math.sin(phase * Math.PI * 2);

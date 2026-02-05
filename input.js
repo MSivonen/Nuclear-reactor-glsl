@@ -1,6 +1,21 @@
+function getRelativeMouseCoords() {
+  const gameCanvas = document.getElementById('gameCanvas');
+  if (gameCanvas) {
+    const rect = gameCanvas.getBoundingClientRect();
+    const scaleX = gameCanvas.width / rect.width;
+    const scaleY = gameCanvas.height / rect.height;
+    return {
+      x: (mouseX - rect.left) * scaleX,
+      y: (mouseY - rect.top) * scaleY
+    };
+  }
+  return { x: mouseX, y: mouseY };
+}
+
 function mousePressed() {
+  const coords = getRelativeMouseCoords();
   if (ui && ui.canvas && typeof ui.canvas.handleMouseClick === 'function') {
-    ui.canvas.handleMouseClick(mouseX, mouseY);
+    ui.canvas.handleMouseClick(coords.x, coords.y);
   }
   // Resume audio context on user interaction
   if (audioManager.audioContext && audioManager.audioContext.state === 'suspended') {
@@ -9,8 +24,9 @@ function mousePressed() {
 }
 
 function mouseDragged() {
+  const coords = getRelativeMouseCoords();
   if (ui && ui.canvas && typeof ui.canvas.handleMouseDrag === 'function') {
-    ui.canvas.handleMouseDrag(mouseX, mouseY);
+    ui.canvas.handleMouseDrag(coords.x, coords.y);
   }
 }
 

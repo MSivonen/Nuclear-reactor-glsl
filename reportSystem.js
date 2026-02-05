@@ -140,6 +140,7 @@ class ReportSystem {
 
             const hitCount = glShit.reportData[idx];
             if (hitCount > 0) {
+                ui.collisionsThisSecond += hitCount;
                 for (let j = 0; j < hitCount; j++) {
                     uraniumAtoms[i].hitByNeutron();
                     // Two new neutrons are spawned.

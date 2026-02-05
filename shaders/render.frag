@@ -1,6 +1,8 @@
 #version 300 es
 precision highp float;
 
+uniform float u_alpha;
+
 out vec4 outColor;
 
 void main(){
@@ -29,6 +31,8 @@ void main(){
     
     vec3 col=vec3(core);
     col+=vec3(.2941,1.,.2)*glow;
+
+    col *= u_alpha;
     
-    outColor=vec4(col,glow+core);
+    outColor=vec4(col,(glow+core)*u_alpha);
 }

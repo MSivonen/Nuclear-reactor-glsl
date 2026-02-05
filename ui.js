@@ -47,12 +47,17 @@ class UICanvas {
                 sfx: { vol: 1.0, enabled: true },
                 steam: { vol: 1.0, enabled: true },
                 water: { vol: 1.0, enabled: true },
-                ambience: { vol: 1.0, enabled: true }
+                ambience: { vol: 1.0, enabled: true },
+                alarms: { vol: 1.0, enabled: true },
+                explosions: { vol: 1.0, enabled: true }
             },
             video: {
                 bubbles: true,
                 waterEffect: true,
-                steam: true
+                steam: true,
+                atomGlow: true,
+                // Neutrons toggle + alpha slider (reusing the vol/enabled structure)
+                neutrons: { vol: 1.0, enabled: true } 
             }
         };
     }
@@ -149,7 +154,9 @@ class UICanvas {
                     { label: 'All SFX', key: 'sfx' },
                     { label: 'Ambience', key: 'ambience' },
                     { label: 'Steam', key: 'steam' },
-                    { label: 'Water', key: 'water' }
+                    { label: 'Water', key: 'water' },
+                    { label: 'Alarms', key: 'alarms' },
+                    { label: 'Explosions', key: 'explosions' }
                 ];
                 
                 return {
@@ -171,6 +178,12 @@ class UICanvas {
                         { text: "Bubbles", type: 'checkbox', value: this.uiSettings.video.bubbles, action: () => { this.uiSettings.video.bubbles = !this.uiSettings.video.bubbles; } },
                         { text: "Water Effect", type: 'checkbox', value: this.uiSettings.video.waterEffect, action: () => { this.uiSettings.video.waterEffect = !this.uiSettings.video.waterEffect; } },
                         { text: "Steam", type: 'checkbox', value: this.uiSettings.video.steam, action: () => { this.uiSettings.video.steam = !this.uiSettings.video.steam; } },
+                        { text: "Atom Glow", type: 'checkbox', value: this.uiSettings.video.atomGlow, action: () => { this.uiSettings.video.atomGlow = !this.uiSettings.video.atomGlow; } },
+                        { 
+                            text: "Neutrons", 
+                            type: 'slider_checkbox', 
+                            settingObj: this.uiSettings.video.neutrons
+                        },
                         { text: "BACK", action: () => { this.pauseMenuState = 'SETTINGS'; } }
                     ], btnWidth)
                 };
@@ -652,7 +665,7 @@ class UICanvas {
 
                     } else {
                         // Standard Button or Simple Checkbox
-                        if (typeof audioManager !== 'undefined') audioManager.playSfx('click');
+                        audioManager.playSfx('click');
                         if (btn.action) btn.action();
                     }
                     return;
@@ -684,7 +697,7 @@ class UICanvas {
             // Modifiers
             for (const mod of elements.modifiers) {
                 if (y >= mod.y && y <= mod.y + mod.h && x >= mod.x && x <= mod.x + mod.w) {
-                    if (typeof audioManager !== 'undefined') audioManager.playSfx('click');
+                    audioManager.playSfx('click');
                     shop.setBuyAmount(mod.value);
                     return;
                 }
@@ -693,7 +706,7 @@ class UICanvas {
             // Items
             for (const item of elements.shopItems) {
                 if (y >= item.y && y <= item.y + item.h) {
-                    if (typeof audioManager !== 'undefined') audioManager.playSfx('click');
+                    audioManager.playSfx('click');
                     shop.buy(item.key);
                     return;
                 }
@@ -701,7 +714,7 @@ class UICanvas {
 
             // 3. Settings / Dev Mode
             if (y >= elements.devButton.y && y <= elements.devButton.y + elements.devButton.h) {
-                if (typeof audioManager !== 'undefined') audioManager.playSfx('click');
+                audioManager.playSfx('click');
                 settings.cheatMode = !settings.cheatMode;
                 if (settings.cheatMode && player) player.addMoney(1000000); //edit this to make everything cost 0
             }

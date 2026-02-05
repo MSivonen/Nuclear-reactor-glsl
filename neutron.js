@@ -109,6 +109,15 @@ class Neutron {
         gl.uniform2f(glShit.uRenderSimSizeLoc, screenSimWidth, screenHeight);
         gl.uniform1f(glShit.uRenderNeutronSizeLoc, settings.neutronSize);
 
+        // Pass alpha from UI settings
+        let nAlpha = 1.0;
+        if (typeof ui !== 'undefined' && !!ui.canvas && !!ui.canvas.uiSettings && !!ui.canvas.uiSettings.video && ui.canvas.uiSettings.video.neutrons) {
+            nAlpha = ui.canvas.uiSettings.video.neutrons.vol;
+        }
+        
+        const uAlphaLoc = gl.getUniformLocation(glShit.renderProgram, "u_alpha");
+        if (uAlphaLoc) gl.uniform1f(uAlphaLoc, nAlpha);
+
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, glShit.readTex);
 

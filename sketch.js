@@ -24,6 +24,7 @@ const defaultSettings = {
   moneyExponent: 1.5,
   uraniumSize: 10,
   neutronSize: 30,
+  neutronsDownSizeMaxAmount:5000,
   linkRods: false,
   cheatMode: false
 };
@@ -48,11 +49,10 @@ window.currentNeutronSizeMultiplier = 1;
 // Loading screen variables
 let loading = true;
 
+let waterSystem;
+
 
 const ui = {
-  totalNeutrons: 0,
-  decayNeutrons: 0,
-  collisionNeutrons: 0,
   lastUpdateTime: performance.now(),
   collisionsThisSecond: 0,
   fpsText: 0,
@@ -105,46 +105,33 @@ function updateDimensions() {
   settings.uraniumSize = settings.uraniumSize * globalScale;
   settings.neutronSize = settings.neutronSize * globalScale;
   settings.neutronSpeed = settings.neutronSpeed * globalScale;
+  console.log("sss")
 }
 
 function setup() {
   updateDimensions();
-  // neutron = new Neutron(); // Now handled in loadingTasks.js to ensure it exists for GL init
 
   //debug(); //DO NOT REMOVE THIS LINE
-  // We use a manual HTML canvas "gameCanvas" for drawing.
-  // We use p5 just for the loop and events.
-  noCanvas();
+  noCanvas(); //For mouse etc, do not remove
 
-  // However, we need to ensure our 'gameCanvas' is sized correctly.
   const gameCnv = document.getElementById('gameCanvas');
   if (gameCnv) {
     gameCnv.width = screenRenderWidth;
     gameCnv.height = screenHeight;
   }
-
-  // Loading is now handled asynchronously before setup
 }
 
-// Asynchronous loading
 (async () => {
   await loader.startLoading(loadingTasks, () => {
     loading = false;
     document.getElementById('loading-screen').style.display = 'none';
-    if (typeof audioManager !== 'undefined') audioManager.startAmbience();
+    audioManager.startAmbience();
   });
 })();
 
 function draw() {
   if (loading) {
-
     return;
-  }
-
-  if (typeof audioManager !== 'undefined') {
-    // Pass settings and energy metric to audio mixer
-    // Use energyOutput (last second average) for smoother audio level than the accumulating counter
-    audioManager.update(deltaTime, settings, energyOutput, paused, game.boomValue);
   }
 
   if (!paused) {
@@ -155,7 +142,7 @@ function draw() {
 
     if (boom && boomStartTime == 0) {
       boomStartTime = renderTime;
-      if (typeof audioManager !== 'undefined') audioManager.playSfx('boom');
+      audioManager.playSfx('boom');
     }
   }
 

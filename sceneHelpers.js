@@ -141,6 +141,8 @@ function initSimulationObjects() {
             waterCells.push(new Water(waterCellX + uraniumAtomsSpacingX / 2, waterCellY + uraniumAtomsSpacingY / 2));
         }
     }
+    waterSystem = new WaterSystem();
+    waterSystem.init(waterCells);
 
     // Uranium atoms and control rods
     for (let x = 0; x < uraniumAtomsCountX; x++) {
@@ -185,6 +187,8 @@ function initUiObjects() {
 
 
 function updateScene() {
+    audioManager.update(deltaTime, settings, energyOutput, paused, game.boomValue);
+
     // Update neutrons in GPU
     neutron.update(glShit.simGL);
     reportSystem.process(glShit.simGL);
@@ -196,59 +200,13 @@ function updateScene() {
     window.avgTemp = uraniumAtoms.length > 0 ? totalHeat / uraniumAtoms.length : 0;
     controlRods.forEach(s => s.update());
 
-    // Update water temperatures (conduction & uranium heat transfer)
-    Water.update();
-
-    // Capture top-row temperatures before the upward flow moves water out of the scene
-    const topCount = uraniumAtomsCountX;
-    const topTemps = new Float32Array(topCount);
-    for (let x = 0; x < topCount; x++) {
-        const index = x + 0 * uraniumAtomsCountX;
-        topTemps[x] = waterCells[index].temperature;
-    }
-
-    // Move water upwards (this will change top-row cell temperatures)
-    interpolateWaterCellsUpwards();
-
-    // Compute calorimetric energy removed by outflow at the top row this frame
-    // Treat settings.waterFlowSpeed as fraction of a cell leaving per frame (option A)
-    const fractionOut = settings.waterFlowSpeed;
-    const inletTemp = (typeof settings.inletTemperature !== 'undefined') ? settings.inletTemperature : 15;
-    const baselineTemp = 25;
-    const effectiveInletTemp = Math.max(inletTemp, baselineTemp);
-    let totalJoulesOut = 0;
-    for (let x = 0; x < topCount; x++) {
-        const index = x + 0 * uraniumAtomsCountX;
-        const T_out = topTemps[x];
-        const massMoved = fractionOut * (waterCells[index].mass || 0.1); // kg moved this frame
-        const c = (waterCells[index].specificHeatCapacity || 4186);
-        const deltaT = T_out - effectiveInletTemp;
-        const effectiveDeltaT = Math.max(0, deltaT);
-        // Nonlinear reward for hotter reactor (mild exponent)
-        const heatBoost = Math.pow(effectiveDeltaT, 1.08);
-        const dE = massMoved * c * heatBoost; // Joules per frame (nonlinear)
-        totalJoulesOut += dE / 1000;
-    }
-
-    // Convert Joules/frame -> kW (kJ/s) by dividing by frame time
-    let dt = (typeof deltaTime !== 'undefined') ? (deltaTime / 1000.0) : (1.0 / 60.0);
-    if (dt <= 0) dt = 1.0 / 60.0;
-    const powerW = totalJoulesOut / dt; // Watts
-    const powerKW = powerW / 1000.0; // physical kW
-
-    // `energyThisFrame` is the game-scaled instantaneous power (kW-game units)
-    energyThisFrame = powerKW;
-
-    // Calculate neutron size based on reactor energy
-    const tempPercent = (window.avgTemp || 0) / 500;
-    const powerPercent = (energyOutput || 0) / 1000;
-    const energy = (tempPercent + powerPercent) / 2;
-    const targetMultiplier = 1 - (energy * 0.67);
-    window.currentNeutronSizeMultiplier += (targetMultiplier - window.currentNeutronSizeMultiplier) * (deltaTime / 5000);
-    settings.neutronSize = defaultSettings.neutronSize * window.currentNeutronSizeMultiplier * globalScale;
+    // Combined water update (conduction, flow, energy)
+    energyThisFrame = waterSystem.update(deltaTime, settings);
 
     // Accumulate physical kW * seconds so we can compute exact per-second averages
-    energyOutputCounter += powerKW * dt;
+    let dt = (typeof deltaTime !== 'undefined') ? (deltaTime / 1000.0) : (1.0 / 60.0);
+    if (dt <= 0) dt = 1.0 / 60.0;
+    energyOutputCounter += energyThisFrame * dt;
     if (typeof ui.accumulatedTime === 'undefined') ui.accumulatedTime = 0;
     ui.accumulatedTime += dt;
     if (ui.powerMeter) ui.powerMeter.update();
@@ -276,37 +234,46 @@ function drawScene() {
     const simH = screenHeight;
 
     // 2. Render Water Background (Opaque)
-    gl.viewport(simX, 0, simW, simH);
-    gl.disable(gl.BLEND);
-    renderWaterLayer();
+    const vidSettings = (ui && ui.canvas && ui.canvas.uiSettings && ui.canvas.uiSettings.video) ? ui.canvas.uiSettings.video : null;
+
+    if (!vidSettings || vidSettings.waterEffect) {
+        gl.viewport(simX, 0, simW, simH);
+        gl.disable(gl.BLEND);
+        renderWaterLayer();
+    }
 
     // 3. Render Bubbles (Alpha Blend)
-    gl.viewport(simX, 0, simW, simH);
-    gl.enable(gl.BLEND);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    renderBubblesLayer(); // Pass viewport size if needed? See bubblesRenderer call below.
-
+    if (!vidSettings || vidSettings.bubbles) {
+        gl.viewport(simX, 0, simW, simH);
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+        renderBubblesLayer();
+    }
 
     // 4. Render Steam (Alpha Blend)
-    gl.viewport(simX, 0, simW, simH);
-    renderSteamLayer();
+    if (!vidSettings || vidSettings.steam) {
+        gl.viewport(simX, 0, simW, simH);
+        renderSteamLayer();
+    }
 
     // 5. Render Atom Cores (Alpha Blend - Opaque sprites)
     gl.viewport(simX, 0, simW, simH);
     renderAtomCoreLayer();
 
     // 6. Render Atom GLOWS (Additive)
-    gl.viewport(simX, 0, simW, simH);
-    // The original CSS used mix-blend-mode: screen. 
-    // In WebGL: gl.blendFunc(gl.ONE, gl.ONE) is standard additive.
-    // gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_COLOR) is Screen.
-    // Let's try Additive first as it's common for glows.
-    gl.blendFunc(gl.ONE, gl.ONE);
-    renderAtomGlowLayer();
+    if (!vidSettings || vidSettings.atomGlow) {
+        gl.viewport(simX, 0, simW, simH);
+        gl.blendFunc(gl.ONE, gl.ONE);
+        renderAtomGlowLayer();
+    }
 
-    // 7. Render Neutrons (Additive)
-    gl.viewport(simX, 0, simW, simH);
-    renderNeutronLayer();
+    // 7. Render Neutrons (Additive or Alpha blended based on shader)
+    // Neutrons setting is now an object { vol: alpha, enabled: bool }
+    const showNeutrons = (!vidSettings) || (vidSettings.neutrons && vidSettings.neutrons.enabled);
+    if (showNeutrons) {
+        gl.viewport(simX, 0, simW, simH);
+        renderNeutronLayer();
+    }
 
     // 8. Explosion (Alpha Blend for proper alpha)
     if (boom) {

@@ -45,7 +45,7 @@ const loader = {
 
     overlay.addEventListener('click', () => {
         // Resume Audio Code
-        if (typeof audioManager !== 'undefined' && audioManager.audioContext) {
+        if (audioManager.audioContext) {
              audioManager.audioContext.resume().then(() => {
                  console.log("Audio Context Resumed via Start Overlay");
              });

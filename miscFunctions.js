@@ -24,9 +24,17 @@ function oncePerSecond() {
         ui.framesCounted = 0;
         ui.prevTime = millis();
 
+        // Capture collisions before reset
+        const collisionsThisSecond = ui.collisionsThisSecond;
+
         if (typeof updateCountersHTML === 'function') updateCountersHTML();
         // Bomb check: energyOutput is in physical kW, boomValue is kW
         if (energyOutput >= game.boomValue) boom = true;
+
+        // Calculate neutron size based on collisions per second
+        const collisionFactor = Math.min(1, collisionsThisSecond / settings.neutronsDownSizeMaxAmount); // 0 at 0 collisions, 1 at 500+
+        const targetMultiplier = 1 - (collisionFactor * 0.7); // 1.0 to 0.3
+        settings.neutronSize = defaultSettings.neutronSize * targetMultiplier * globalScale;
     } else {
         ui.framesCounted++;
     }
@@ -43,9 +51,7 @@ function formatLarge(amount, unit, decimals=2) {
 
 function resetSimulation() {
     // Fade out boom if active
-    if (typeof audioManager !== 'undefined') {
-        audioManager.fadeOutSfx('boom', 2.0); // 1.0 second fade out
-    }
+    audioManager.fadeOutSfx('boom', 2.0); // 1.0 second fade out
     
     for (let atom of uraniumAtoms) {
         atom.temperature = 25;
