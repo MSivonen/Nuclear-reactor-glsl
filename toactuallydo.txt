@@ -2,6 +2,7 @@ PRIORITIZED TASKS — Reactor Game Development Roadmap
 Read these few lines before starting any of the stages:
 More detailed info in todo.txt. Check it always before starting a stage here.
 Always use the loader.js to load assets or compile shaders, and doing other loading tasks.
+When editing files, change the timestamp in index.html for cache busting.
 
 1) Power output system & water flow control (DONE)
 	- Importance: 5/5  Difficulty: 3/5
