@@ -83,23 +83,44 @@ class Shop {
         }
 
         if (countToBuy === 'MAX') {
-            const money = (typeof player !== 'undefined' && player) ? player.getBalance() : 0;
-            if (item.priceMult === 1) {
-                countToBuy = Math.floor(money / item.basePrice);
-                totalCost = countToBuy * item.basePrice;
+            const cheatMode = (typeof settings !== 'undefined' && settings && settings.cheatMode);
+
+            if (cheatMode) {
+                if (itemName === 'atom') {
+                    countToBuy = uraniumAtoms.filter(a => !a.hasAtom).length;
+                } else if (itemName === 'controlRod') {
+                    countToBuy = Math.max(0, maxRodPurchases - currentCount);
+                } else if (itemName === 'waterFlow') {
+                    countToBuy = Math.max(0, maxWaterFlowUpgrades - currentCount);
+                } else {
+                    countToBuy = 1;
+                }
+
+                if (item.priceMult === 1) {
+                    totalCost = item.basePrice * countToBuy;
+                } else {
+                    const firstCost = item.basePrice * Math.pow(item.priceMult, currentCount);
+                    totalCost = firstCost * (Math.pow(item.priceMult, countToBuy) - 1) / (item.priceMult - 1);
+                }
             } else {
-                // Geometric series inversion
-                // Cost = base * mult^current * (mult^k - 1) / (mult - 1)
-                // Solve for k
-                const term = 1 + (money * (item.priceMult - 1)) / (item.basePrice * Math.pow(item.priceMult, currentCount));
-                if (term <= 0) countToBuy = 0;
-                else countToBuy = Math.floor(Math.log(term) / Math.log(item.priceMult));
-                
-                // Recalculate precise cost
-                if (countToBuy > 0)
-                    totalCost = item.basePrice * Math.pow(item.priceMult, currentCount) * (Math.pow(item.priceMult, countToBuy) - 1) / (item.priceMult - 1);
-                else 
-                    totalCost = 0;
+                const money = (typeof player !== 'undefined' && player) ? player.getBalance() : 0;
+                if (item.priceMult === 1) {
+                    countToBuy = Math.floor(money / item.basePrice);
+                    totalCost = countToBuy * item.basePrice;
+                } else {
+                    // Geometric series inversion
+                    // Cost = base * mult^current * (mult^k - 1) / (mult - 1)
+                    // Solve for k
+                    const term = 1 + (money * (item.priceMult - 1)) / (item.basePrice * Math.pow(item.priceMult, currentCount));
+                    if (term <= 0) countToBuy = 0;
+                    else countToBuy = Math.floor(Math.log(term) / Math.log(item.priceMult));
+                    
+                    // Recalculate precise cost
+                    if (countToBuy > 0)
+                        totalCost = item.basePrice * Math.pow(item.priceMult, currentCount) * (Math.pow(item.priceMult, countToBuy) - 1) / (item.priceMult - 1);
+                    else 
+                        totalCost = 0;
+                }
             }
         } else {
             // Calculate cost for specific N

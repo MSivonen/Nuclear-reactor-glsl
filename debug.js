@@ -83,10 +83,11 @@ function updateCountersHTML() {
     if (htmlShit['energy-this-frame']) {
         const incomeVal = (typeof lastMoneyPerSecond === 'number') ? lastMoneyPerSecond : 0;
         const balanceVal = (typeof player !== 'undefined' && player && typeof player.getBalance === 'function') ? player.getBalance() : 0;
-        if (typeof formatLarge === 'function') {
-            htmlShit['energy-this-frame'].innerText = `Income: ${formatLarge(incomeVal, 'n€')}/s   Balance: ${formatLarge(balanceVal, 'n€')}`;
-        } else {
-            htmlShit['energy-this-frame'].innerText = `Income: ${incomeVal.toFixed(2)} n€/s   Balance: ${balanceVal.toFixed(2)} n€`;
+            const currencyUnit = String.fromCharCode(7745);
+            if (typeof formatLarge === 'function') {
+                htmlShit['energy-this-frame'].innerText = `Income: ${formatLarge(incomeVal, currencyUnit, 2)}/s   Balance: ${formatLarge(balanceVal, currencyUnit, 2)}`;
+            } else {
+                htmlShit['energy-this-frame'].innerText = `Income: ${Math.floor(incomeVal)}${currencyUnit}/s   Balance: ${Math.floor(balanceVal)}${currencyUnit}`;
         }
     }
 }

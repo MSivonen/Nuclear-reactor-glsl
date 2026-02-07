@@ -21,7 +21,7 @@ const loader = {
     this.updateLoadingProgress(100);
     // onComplete(); // Wait for user interaction
     
-    // Add "Click to Start" overlay
+    // Add Start overlay
     const overlay = document.createElement('div');
     overlay.id = 'start-overlay';
     overlay.style.position = 'absolute';
@@ -29,21 +29,53 @@ const loader = {
     overlay.style.left = '0';
     overlay.style.width = '100%';
     overlay.style.height = '100%';
-    overlay.style.backgroundColor = 'rgba(0,0,0,0.8)';
+    overlay.style.backgroundColor = '#000';
     overlay.style.display = 'flex';
     overlay.style.justifyContent = 'center';
     overlay.style.alignItems = 'center';
     overlay.style.color = 'white';
-    overlay.style.fontSize = '24px';
-    overlay.style.cursor = 'pointer';
     overlay.style.zIndex = '1000';
-    overlay.innerHTML = '<h1>Click anywhere to start</h1>';
+    overlay.style.fontFamily = "'UIFont1', monospace";
+
+    const splash = document.createElement('div');
+    splash.style.textAlign = 'center';
+    splash.style.padding = '20px 30px';
+    splash.style.border = '2px solid #444';
+    splash.style.background = 'rgba(10,10,10,0.95)';
+    splash.style.boxShadow = '0 0 20px rgba(0,0,0,0.8)';
+
+    const title = document.createElement('div');
+    title.innerText = "Atom's Blessing";
+    title.style.fontSize = '48px';
+    title.style.letterSpacing = '2px';
+    title.style.marginBottom = '8px';
+
+    const subtitle = document.createElement('div');
+    subtitle.innerText = "-a fission management-";
+    subtitle.style.fontSize = '20px';
+    subtitle.style.opacity = '0.8';
+    subtitle.style.marginBottom = '20px';
+
+    const startBtn = document.createElement('button');
+    startBtn.innerText = 'Start';
+    startBtn.style.padding = '12px 28px';
+    startBtn.style.fontSize = '18px';
+    startBtn.style.cursor = 'pointer';
+    startBtn.style.background = '#2a2';
+    startBtn.style.color = 'white';
+    startBtn.style.border = '1px solid #6b6';
+    startBtn.style.fontFamily = "'UIFont1', monospace";
+
+    splash.appendChild(title);
+    splash.appendChild(subtitle);
+    splash.appendChild(startBtn);
+    overlay.appendChild(splash);
     
     // Ensure it's on top of loading screen
     const container = document.getElementById('canvas-container');
     container.appendChild(overlay);
 
-    overlay.addEventListener('click', () => {
+    startBtn.addEventListener('click', () => {
         // Resume Audio Code
         if (audioManager.audioContext) {
              audioManager.audioContext.resume().then(() => {
@@ -53,6 +85,11 @@ const loader = {
              if (getAudioContext().state !== 'running') {
                  getAudioContext().resume();
              }
+        }
+        
+        // Ensure game is not paused
+        if (typeof paused !== 'undefined') {
+            paused = false;
         }
         
         container.removeChild(overlay);

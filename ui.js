@@ -1,3 +1,5 @@
+const CURRENCY_UNIT = String.fromCharCode(7745);
+
 class UICanvas {
     constructor() {
         this.width = screenRenderWidth;
@@ -6,41 +8,7 @@ class UICanvas {
         this.simXOffset = SHOP_WIDTH;
         this.lastFrame = -1;
 
-        this.canvas = document.createElement('canvas');
-        this.canvas.width = this.width;
-        this.canvas.height = this.height;
-        this.canvas.style.width = `${this.width}px`;
-        this.canvas.style.height = `${this.height}px`;
-        this.canvas.style.position = 'absolute';
-        this.canvas.style.left = '0';
-        this.canvas.style.top = '0';
-        this.canvas.style.zIndex = '1000';
-        this.canvas.style.pointerEvents = 'none';
-        this.canvas.id = "UI";
-
-        // We do NOT append to DOM anymore; this is now an offscreen buffer
-        // rendered via WebGL texture.
-        /*
-        const container = document.getElementById('canvas-container');
-        if (container) {
-            container.appendChild(this.canvas);
-        } else {
-            console.warn('Canvas container not found, appending to body');
-            document.body.appendChild(this.canvas);
-        }
-        */
-
-        this.ctx = this.canvas.getContext('2d');
-        
-        // Shop Modifiers
-        this.modifiers = [1, 5, 10, 'MAX'];
-
-        // Pause Menu State
-        this.pauseMenuState = 'MAIN';
-        this.pendingSaveSlot = null;
-        this.draggingSlider = null;
-        
-        // New Settings Structure
+        // Settings (Moved to top to ensure availability for initDOM)
         this.uiSettings = {
             audio: {
                 master: { vol: 1.0, enabled: true },
@@ -51,15 +19,61 @@ class UICanvas {
                 alarms: { vol: 1.0, enabled: true },
                 explosions: { vol: 1.0, enabled: true }
             },
-            video: {
+            video: { // Simplified checks for now
                 bubbles: true,
                 waterEffect: true,
                 steam: true,
                 atomGlow: true,
-                // Neutrons toggle + alpha slider (reusing the vol/enabled structure)
-                neutrons: { vol: 1.0, enabled: true } 
+                neutrons: { vol: 1.0, enabled: true },
+                resolution: 0 
             }
         };
+
+        // Keep the canvas for meters, FPS, and control rod visualization
+        this.canvas = document.createElement('canvas');
+        this.canvas.width = this.width;
+        this.canvas.height = this.height;
+        this.canvas.style.width = `${this.width}px`;
+        this.canvas.style.height = `${this.height}px`;
+        this.canvas.style.position = 'absolute';
+        this.canvas.style.left = '0';
+        this.canvas.style.top = '0';
+        this.canvas.style.zIndex = '15'; 
+        this.canvas.style.pointerEvents = 'none'; // IMPORTANT: Allow clicks to pass through to game
+        this.canvas.id = "UI-Canvas";
+
+        const container = document.getElementById('canvas-container');
+        if (container) {
+             if (!document.getElementById('UI-Canvas')) {
+                 container.appendChild(this.canvas);
+             }
+        }
+
+        this.ctx = this.canvas.getContext('2d');
+        
+        // Shop Modifiers
+        this.modifiers = [1, 5, 10, 'MAX'];
+        this.currentModifierIndex = 0;
+
+        // DOM Elements
+        this.sidebar = document.getElementById('ui-sidebar');
+        this.shopOverlay = document.getElementById('ui-shop-overlay');
+        this.shopItemsContainer = document.getElementById('ui-shop-items');
+        this.pauseMenu = document.getElementById('ui-pause-menu');
+        this.slotMenu = document.getElementById('ui-slot-menu');
+        this.settingsMenu = document.getElementById('ui-settings-menu');
+        this.uiLayer = document.getElementById('ui-layer');
+
+        // Check if DOM exists (it should now)
+        if (this.sidebar) {
+            this.initDOM();
+        } else {
+            console.error("UI DOM elements not found! Make sure index.html is updated.");
+        }
+        
+        // Pause Menu Logic
+        this.pauseMenuState = 'MAIN';
+        this.pendingSaveSlot = null;
     }
 
     ensureFrame() {
@@ -68,827 +82,507 @@ class UICanvas {
         this.ctx.clearRect(0, 0, this.width, this.height);
     }
 
+    // Initialize the DOM structure for Sidebar and Menus
+    initDOM() {
+        // Set Sidebar Width to match the simulation offset
+        this.sidebar.style.width = `${this.simXOffset}px`;
+
+        // Align shop overlay to the right edge of the sidebar
+        if (this.shopOverlay) {
+            const overlap = 40;
+            const leftPos = Math.max(0, this.simXOffset - overlap);
+            this.shopOverlay.style.left = `${leftPos}px`;
+        }
+
+        // --- Sidebar Content ---
+        
+        // 0. Money Stats (Restored)
+        const statsDiv = document.createElement('div');
+        statsDiv.id = 'ui-stats';
+        statsDiv.style.textAlign = 'center';
+        statsDiv.style.marginTop = '20px';
+        statsDiv.style.marginBottom = '20px';
+        statsDiv.innerHTML = `
+            <div style="font-size: 14px; color: #aaa;">REACTOR CONTROL</div>
+            <div id="stat-money" style="font-size: 24px; color: #90EE90; margin: 5px 0;">0€</div>
+            <div id="stat-income" style="font-size: 14px; color: #777;">0€/s</div>
+        `;
+        this.sidebar.appendChild(statsDiv);
+
+        // 1. Controls Area
+        const controlsDiv = document.createElement('div');
+        controlsDiv.style.background = '#444';
+        controlsDiv.style.padding = '10px';
+        controlsDiv.style.marginBottom = '20px';
+        
+        const controlsTitle = document.createElement('div');
+        controlsTitle.innerText = "CONTROLS";
+        controlsTitle.style.fontSize = '12px';
+        controlsTitle.style.marginBottom = '10px';
+        controlsDiv.appendChild(controlsTitle);
+
+        // Link Rods Toggle
+        const linkBtn = document.createElement('button');
+        linkBtn.id = 'btn-link-rods';
+        linkBtn.innerText = `Link Rods: ${settings.linkRods ? 'ON' : 'OFF'}`;
+        linkBtn.style.marginBottom = '15px';
+        linkBtn.onclick = () => {
+             settings.linkRods = !settings.linkRods;
+             linkBtn.innerText = `Link Rods: ${settings.linkRods ? 'ON' : 'OFF'}`;
+             linkBtn.style.background = settings.linkRods ? '#5cb85c' : '#d9534f';
+        };
+        controlsDiv.appendChild(linkBtn);
+        
+        // Water Flow Slider (Restored)
+        const waterDiv = document.createElement('div');
+        waterDiv.innerHTML = `<label>Water Flow</label>`;
+        const waterSlider = document.createElement('input');
+        waterSlider.type = 'range';
+        waterSlider.min = '1';
+        waterSlider.max = '100';
+        waterSlider.step = '1';
+        waterSlider.style.width = '100%';
+        const initialFlow = (typeof settings !== 'undefined') ? settings.waterFlowSpeed : 0.5;
+        waterSlider.value = Math.round(initialFlow * 100);
+        waterSlider.oninput = (e) => {
+            if (typeof settings !== 'undefined') {
+                 const raw = parseFloat(e.target.value) / 100;
+                 let min = 0;
+                 let max = 1;
+                 if (typeof player !== 'undefined' && player) {
+                     if (typeof player.waterFlowMin === 'number') min = player.waterFlowMin;
+                     if (typeof player.waterFlowMax === 'number') max = player.waterFlowMax;
+                 }
+                 const clamped = Math.max(min, Math.min(max, raw));
+                 settings.waterFlowSpeed = clamped;
+                 waterSlider.value = Math.round(clamped * 100);
+            }
+        };
+        // Keep a reference to update it visually if game updates it
+        this.waterSliderDOM = waterSlider;
+        waterDiv.appendChild(waterSlider);
+        controlsDiv.appendChild(waterDiv);
+
+        // SCRAM Button
+        const scramBtn = document.createElement('button');
+        scramBtn.id = 'btn-scram';
+        scramBtn.className = 'scram-btn';
+        scramBtn.innerText = 'SCRAM';
+        scramBtn.onclick = () => {
+            this.activateScram(scramBtn);
+        };
+        controlsDiv.appendChild(scramBtn);
+
+        this.sidebar.appendChild(controlsDiv);
+
+        // 2. Open Shop Button
+        const shopBtn = document.createElement('button');
+        shopBtn.innerText = "Open Shop";
+        shopBtn.onclick = () => {
+            this.toggleShop();
+        };
+        this.sidebar.appendChild(shopBtn);
+
+        // 3. Open Settings Button (Added to Sidebar)
+        const sideSetBtn = document.createElement('button');
+        sideSetBtn.innerText = "Settings";
+        sideSetBtn.onclick = () => {
+             // Open settings directly, ensuring game is paused if needed?
+             // Usually settings implies pausing.
+             if(typeof paused !== 'undefined' && !paused) {
+                 paused = true;
+             }
+             this.openSettingsMenu();
+             this.updateDOM();
+        };
+        this.sidebar.appendChild(sideSetBtn);
+
+        // 4. Dev Mode Button
+        const devBtn = document.createElement('button');
+        devBtn.id = 'btn-devmode';
+        devBtn.innerText = settings.cheatMode ? "DEV MODE: ON" : "DEV MODE: OFF";
+        devBtn.style.marginTop = "auto"; // Push to bottom if sidebar uses flex column
+        devBtn.onclick = () => {
+            settings.cheatMode = !settings.cheatMode;
+            devBtn.innerText = settings.cheatMode ? "DEV MODE: ON" : "DEV MODE: OFF";
+            // Check styling (green/red)
+            devBtn.style.color = settings.cheatMode ? '#5cb85c' : 'white';
+        };
+        this.sidebar.appendChild(devBtn);
+
+        // --- Shop Overlay Content ---
+        // Close button logic
+        if (document.getElementById('ui-shop-close')) {
+            document.getElementById('ui-shop-close').onclick = () => this.toggleShop();
+        }
+
+        // Buy Amount Radio Checkboxes
+        const radios = document.querySelectorAll('input[name="buyAmount"]');
+        radios.forEach(radio => {
+            radio.onchange = (e) => {
+                if(e.target.checked) {
+                    let val = e.target.value;
+                    // convert '1', '5', '10' to numbers 
+                    if (val !== 'MAX') val = parseInt(val);
+                    
+                    if (typeof shop !== 'undefined' && shop.setBuyAmount) {
+                        shop.setBuyAmount(val);
+                    }
+                    this.updateShopButtons();
+                }
+            };
+        });
+
+        // Generate Shop Items (once, then update state)
+        this.renderShopItemsDOM();
+
+        // --- Pause Menu ---
+        // Hook up existing buttons if they exist
+        const bind = (id, fn) => { const el = document.getElementById(id); if(el) el.onclick = fn; };
+        
+        bind('btn-resume', () => { paused = false; this.updateDOM(); });
+        bind('btn-save', () => { this.openSlotMenu('SAVE'); });
+        bind('btn-load', () => { this.openSlotMenu('LOAD'); });
+        bind('btn-settings', () => { this.openSettingsMenu(); });
+        
+        // Slot Menu Bindings
+        bind('btn-slot-cancel', () => { 
+             this.slotMenu.classList.add('hidden'); 
+             this.pauseMenu.classList.remove('hidden'); 
+        });
+
+        // Settings Menu Navigation
+        const views = ['settings-view-main', 'settings-view-audio', 'settings-view-video'];
+        const switchView = (id) => {
+            views.forEach(v => {
+                const el = document.getElementById(v);
+                if(el) el.classList.add('hidden');
+            });
+            const target = document.getElementById(id);
+            if(target) target.classList.remove('hidden');
+        };
+
+        bind('btn-set-audio', () => switchView('settings-view-audio'));
+        bind('btn-set-video', () => switchView('settings-view-video'));
+        
+        // Back buttons
+        bind('btn-audio-back', () => switchView('settings-view-main'));
+        bind('btn-video-back', () => switchView('settings-view-main'));
+        
+        bind('btn-settings-close', () => {
+             this.settingsMenu.classList.add('hidden');
+             this.pauseMenu.classList.remove('hidden');
+             switchView('settings-view-main');
+        });
+        
+        // Initial Settings Sync
+        this.syncSettingsDOM();
+    }
+    
+    syncSettingsDOM() {
+        // Audio Inputs
+        const audioKeys = ['master', 'sfx', 'ambience', 'steam', 'water', 'alarms', 'explosions'];
+        audioKeys.forEach(key => {
+            const slider = document.getElementById(`set-audio-${key}`);
+            const check = document.getElementById(`chk-audio-${key}`);
+            const obj = this.uiSettings.audio[key];
+            
+            if(slider && obj) {
+                slider.value = obj.vol;
+                slider.oninput = (e) => { obj.vol = parseFloat(e.target.value); };
+            }
+            if(check && obj) {
+                check.checked = obj.enabled;
+                check.onchange = (e) => { obj.enabled = e.target.checked; };
+            }
+        });
+
+        // Video Inputs
+        const bindCheck = (id, obj, key) => {
+             const el = document.getElementById(id);
+             if(el) {
+                 el.checked = obj[key];
+                 el.onchange = (e) => { obj[key] = e.target.checked; };
+             }
+        };
+        
+        bindCheck('set-video-bubbles', this.uiSettings.video, 'bubbles');
+        bindCheck('set-video-water', this.uiSettings.video, 'waterEffect');
+        bindCheck('set-video-steam', this.uiSettings.video, 'steam');
+        bindCheck('set-video-glow', this.uiSettings.video, 'atomGlow');
+        
+        const nSlider = document.getElementById('set-video-neutrons');
+        const nCheck = document.getElementById('chk-video-neutrons');
+        if(nSlider) {
+             nSlider.value = this.uiSettings.video.neutrons.vol; 
+             nSlider.oninput = (e) => { this.uiSettings.video.neutrons.vol = parseFloat(e.target.value); };
+        }
+        if(nCheck) {
+             nCheck.checked = this.uiSettings.video.neutrons.enabled;
+             nCheck.onchange = (e) => { this.uiSettings.video.neutrons.enabled = e.target.checked; };
+        }
+        
+        // Resolution Buttons
+        document.querySelectorAll('.res-btn').forEach(btn => {
+            btn.onclick = () => {
+                const resIndex = parseInt(btn.getAttribute('data-res'));
+                this.uiSettings.video.resolution = resIndex;
+                console.log("Resolution set to index: " + resIndex);
+                if(typeof window.setResolution === 'function') {
+                    window.setResolution(resIndex);
+                }
+            };
+        });
+    }
+
+    openSlotMenu(mode) {
+        this.pauseMenu.classList.add('hidden');
+        this.slotMenu.classList.remove('hidden');
+        document.getElementById('slot-menu-title').innerText = mode === 'SAVE' ? "Save Game" : "Load Game";
+        
+        const container = document.getElementById('slot-buttons');
+        container.innerHTML = ''; // Clear
+        
+        // Create 3 slots
+        for(let i=0; i<3; i++) {
+            const btn = document.createElement('button');
+            const slotInfo = (playerState && playerState.saveSlots && playerState.saveSlots[i]) ? playerState.saveSlots[i] : "Empty";
+            btn.innerText = `Slot ${i+1}: ${slotInfo}`;
+            btn.style.padding = "10px";
+            btn.style.cursor = "pointer";
+            btn.onclick = () => {
+                if (mode === 'SAVE') {
+                    if (playerState) playerState.saveGame(i);
+                    alert(`Saved to Slot ${i+1}`);
+                    // Refresh text
+                    btn.innerText = `Slot ${i+1}: ${playerState.saveSlots[i]}`;
+                } else {
+                    if (playerState) playerState.loadGame(i);
+                    paused = false;
+                    this.updateDOM(); // Hide all menus
+                }
+            };
+            container.appendChild(btn);
+        }
+    }
+    
+    openSettingsMenu() {
+        this.pauseMenu.classList.add('hidden');
+        this.settingsMenu.classList.remove('hidden');
+        this.syncSettingsDOM(); 
+    }
+
+    activateScram(btn) {
+        this.scramActive = true;
+        if (btn) {
+            btn.classList.add('scram-active');
+            btn.innerText = '!!SCRAM!!';
+        }
+
+        // Max water flow
+        if (typeof settings !== 'undefined') {
+            let maxFlow = 1;
+            if (typeof player !== 'undefined' && player && typeof player.waterFlowMax === 'number') {
+                maxFlow = player.waterFlowMax;
+            }
+            settings.waterFlowSpeed = maxFlow;
+            if (this.waterSliderDOM) {
+                this.waterSliderDOM.value = Math.round(maxFlow * 100);
+            }
+        }
+
+        // Raise all control rod targets up
+        if (typeof controlRods !== 'undefined' && controlRods && typeof clampControlRodHandleY === 'function') {
+            for (let i = 0; i < controlRods.length; i++) {
+                const rod = controlRods[i];
+                if (!rod) continue;
+                let handleY = clampControlRodHandleY(i, rod.height);
+                if (typeof ui !== 'undefined' && ui && ui.controlSlider && ui.controlSlider.handleY) {
+                    ui.controlSlider.handleY[i] = handleY;
+                }
+                rod.targetY = Math.max(0, handleY - rod.height);
+            }
+        }
+    }
+
+    renderShopItemsDOM() {
+        if (!shop || !shop.items) return;
+        
+        this.shopItemsContainer.innerHTML = ''; // Clear
+
+        Object.keys(shop.items).forEach(key => {
+            const item = shop.items[key];
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'shop-item';
+            
+            const title = document.createElement('h3');
+            title.innerText = item.name || key;
+            itemDiv.appendChild(title);
+
+            const desc = document.createElement('p');
+            desc.innerText = item.description || "No description";
+            itemDiv.appendChild(desc);
+
+            const btn = document.createElement('button');
+            btn.id = `shop-btn-${key}`;
+            btn.innerText = "Buy";
+            btn.onclick = () => {
+                // Ensure shop state is correct before buying
+                if (shop && shop.setBuyAmount) {
+                    shop.setBuyAmount(this.modifiers[this.currentModifierIndex]);
+                    shop.buy(key);
+                }
+                this.updateShopButtons(); 
+            };
+            itemDiv.appendChild(btn);
+
+            this.shopItemsContainer.appendChild(itemDiv);
+        });
+        
+        this.updateShopButtons();
+    }
+
+    updateShopButtons() {
+        if (typeof shop === 'undefined' || !this.shopOverlay || this.shopOverlay.classList.contains('hidden')) return;
+
+        // Ensure shop state is synced for accurate pricing display
+        if (shop.setBuyAmount) {
+            shop.setBuyAmount(this.modifiers[this.currentModifierIndex]);
+        }
+
+        Object.keys(shop.items).forEach(key => {
+            const btn = document.getElementById(`shop-btn-${key}`);
+            if (btn) {
+                // getPurchaseInfo uses internal shop.buyAmount
+                const info = shop.getPurchaseInfo(key); 
+                const costText = (typeof formatLarge === 'function')
+                    ? formatLarge(info.cost, CURRENCY_UNIT, 2)
+                    : `${info.cost.toFixed(2)}${CURRENCY_UNIT}`;
+
+                const isMax = shop.buyAmount === 'MAX';
+                if (isMax && info.count === 0) {
+                    btn.innerText = 'MAX';
+                    btn.style.background = '#d7b600';
+                    btn.disabled = true;
+                } else {
+                    btn.innerText = `Buy ${info.count} (${costText})`;
+                    btn.style.background = '';
+                }
+                
+                // Check affordability (assuming player money matches logic in buy())
+                // shop.buy() calls player.spend(). We need to know if we CAN afford.
+                // shop.getPurchaseInfo returns cost. check player.money >= cost.
+                if (typeof player !== 'undefined') {
+                    const cheatMode = (typeof settings !== 'undefined' && settings && settings.cheatMode);
+                    if (!(isMax && info.count === 0)) {
+                        btn.disabled = cheatMode ? false : player.balance < info.cost;
+                    }
+                }
+            }
+        });
+    }
+
+    toggleShop() {
+        this.shopOpen = !this.shopOpen;
+        if (this.shopOpen) {
+            this.shopOverlay.classList.remove('hidden');
+            this.updateShopButtons();
+        } else {
+            this.shopOverlay.classList.add('hidden');
+        }
+    }
+
+    updateDOM() {
+        // Toggle Overlay Visibility based on 'paused' state (managed globally)
+        // If not paused, hide pause/slot/settings menus
+        if (typeof paused !== 'undefined' && !paused) {
+            if(this.pauseMenu) this.pauseMenu.classList.add('hidden');
+            if(this.slotMenu) this.slotMenu.classList.add('hidden');
+            if(this.settingsMenu) this.settingsMenu.classList.add('hidden');
+        } else if (typeof paused !== 'undefined' && paused) {
+            // If just paused and no other menu is open, show main pause menu
+            const pHidden = this.pauseMenu.classList.contains('hidden');
+            const sHidden = this.slotMenu.classList.contains('hidden');
+            const settHidden = this.settingsMenu.classList.contains('hidden');
+            
+            if (pHidden && sHidden && settHidden) {
+                this.pauseMenu.classList.remove('hidden');
+            }
+        }
+        
+        // Update Money Stats
+        const mStat = document.getElementById('stat-money');
+        const iStat = document.getElementById('stat-income');
+        if (mStat && iStat && typeof player !== 'undefined') {
+             // Assuming formatLarge is global or we use simple format
+             if (typeof formatLarge === 'function') {
+                 mStat.innerText = formatLarge(player.getBalance(), CURRENCY_UNIT, 2);
+                 if (typeof lastMoneyPerSecond !== 'undefined') {
+                    iStat.innerText = `${formatLarge(lastMoneyPerSecond, CURRENCY_UNIT, 2)}/s`;
+                 }
+             } else {
+                 mStat.innerText = `${Math.floor(player.getBalance())}${CURRENCY_UNIT}`;
+             }
+        }
+        
+        // Update Water Slider Visual (if externally changed)
+        if (this.waterSliderDOM && typeof settings !== 'undefined') {
+            let min = 0;
+            let max = 1;
+            if (typeof player !== 'undefined' && player) {
+                if (typeof player.waterFlowMin === 'number') min = player.waterFlowMin;
+                if (typeof player.waterFlowMax === 'number') max = player.waterFlowMax;
+            }
+            const clamped = Math.max(min, Math.min(max, settings.waterFlowSpeed));
+            if (clamped !== settings.waterFlowSpeed) {
+                settings.waterFlowSpeed = clamped;
+            }
+
+            const targetValue = Math.round(clamped * 100);
+            if (Math.abs(parseFloat(this.waterSliderDOM.value) - targetValue) > 0.5) {
+                this.waterSliderDOM.value = targetValue;
+            }
+        }
+        
+        // Update Shop Buttons if open
+        if (this.shopOpen) {
+            this.updateShopButtons();
+        }
+    }
+
     drawBorders() {
         this.ensureFrame();
-        drawBorders(this.ctx, this.simXOffset);
+        if (typeof drawBorders === 'function') {
+           drawBorders(this.ctx, this.simXOffset);
+        }
     }
 
     drawUi() {
         this.ensureFrame();
-        this.drawSideBar();
-        controlRods.forEach(r => { if (r) r.draw(this.ctx, this.simXOffset); });
+        
+        // Update DOM state
+        this.updateDOM();
+
+        // Draw Canvas Elements (Meters, FPS, Rods are visual)
+        if (typeof controlRods !== 'undefined') {
+            controlRods.forEach(r => { if (r) r.draw(this.ctx, this.simXOffset); });
+        }
+        
         if (ui.powerMeter) ui.powerMeter.draw(this.ctx, this.simXOffset);
         if (ui.tempMeter) ui.tempMeter.draw(this.ctx, this.simXOffset);
         if (ui.controlSlider) ui.controlSlider.draw(this.ctx, this.simXOffset);
-        drawFPS(this.ctx, this.simXOffset);
-        gameOver(this.ctx, this.simXOffset);
         
-        if (paused) this.drawPauseMenu();
-    }
-
-    getMenuElements() {
-        const pScale = globalScale * 0.6;
-        const buttonHeight = 50 * pScale;
-        const buttonGap = 20 * pScale;
-        const btnWidth = 300 * pScale;
-        const cx = this.simXOffset + this.simWidth / 2;
+        if (typeof drawFPS === 'function') drawFPS(this.ctx, this.simXOffset);
+        if (typeof gameOver === 'function') gameOver(this.ctx, this.simXOffset);
         
-        // Helper to generate coordinates centered vertically
-        const generateLayout = (items, width) => {
-            const totalHeight = items.length * (buttonHeight + buttonGap) - buttonGap;
-            const startY = (this.height - totalHeight) / 2;
-            return items.map((item, index) => ({
-                ...item,
-                x: cx - width / 2,
-                y: startY + index * (buttonHeight + buttonGap),
-                w: width,
-                h: buttonHeight
-            }));
-        };
-
-        switch (this.pauseMenuState) {
-            case 'MAIN':
-                return {
-                    title: "PAUSED",
-                    buttons: generateLayout([
-                        { text: "RESUME", action: () => { paused = false; } },
-                        { text: "RESTART", action: () => { this.pauseMenuState = 'RESTART_CONFIRM'; } },
-                        { text: "SAVE GAME", action: () => { this.pauseMenuState = 'SAVE'; } },
-                        { text: "LOAD GAME", action: () => { this.pauseMenuState = 'LOAD'; } },
-                        { text: "SETTINGS", action: () => { this.pauseMenuState = 'SETTINGS'; } }
-                    ], btnWidth)
-                };
-            case 'SAVE':
-                return {
-                    title: "SAVE GAME",
-                    buttons: generateLayout([
-                        { text: `Slot 1: ${playerState ? playerState.saveSlots[0] : 'Empty'}`, action: () => { if (playerState) { if (playerState.hasSave(0)) { this.pendingSaveSlot = 0; this.pauseMenuState = 'SAVE_CONFIRM'; } else { playerState.saveGame(0); this.pauseMenuState = 'MAIN'; } } } },
-                        { text: `Slot 2: ${playerState ? playerState.saveSlots[1] : 'Empty'}`, action: () => { if (playerState) { if (playerState.hasSave(1)) { this.pendingSaveSlot = 1; this.pauseMenuState = 'SAVE_CONFIRM'; } else { playerState.saveGame(1); this.pauseMenuState = 'MAIN'; } } } },
-                        { text: `Slot 3: ${playerState ? playerState.saveSlots[2] : 'Empty'}`, action: () => { if (playerState) { if (playerState.hasSave(2)) { this.pendingSaveSlot = 2; this.pauseMenuState = 'SAVE_CONFIRM'; } else { playerState.saveGame(2); this.pauseMenuState = 'MAIN'; } } } },
-                        { text: "DELETE SAVE", action: () => { this.pauseMenuState = 'DELETE_SAVE'; } },
-                        { text: "BACK", action: () => { this.pauseMenuState = 'MAIN'; } }
-                    ], btnWidth)
-                };
-            case 'LOAD':
-                 return {
-                    title: "LOAD GAME",
-                    buttons: generateLayout([
-                        { text: `Slot 1: ${playerState ? playerState.saveSlots[0] : 'Empty'}`, action: () => { if (playerState) { playerState.loadGame(0); paused = false; } this.pauseMenuState = 'MAIN'; } },
-                        { text: `Slot 2: ${playerState ? playerState.saveSlots[1] : 'Empty'}`, action: () => { if (playerState) { playerState.loadGame(1); paused = false; } this.pauseMenuState = 'MAIN'; } },
-                        { text: `Slot 3: ${playerState ? playerState.saveSlots[2] : 'Empty'}`, action: () => { if (playerState) { playerState.loadGame(2); paused = false; } this.pauseMenuState = 'MAIN'; } },
-                        { text: "BACK", action: () => { this.pauseMenuState = 'MAIN'; } }
-                    ], btnWidth)
-                };
-            case 'SETTINGS':
-                return {
-                    title: "SETTINGS",
-                    buttons: generateLayout([
-                        { text: "AUDIO SETTINGS", action: () => { this.pauseMenuState = 'SETTINGS_AUDIO'; } },
-                        { text: "VIDEO SETTINGS", action: () => { this.pauseMenuState = 'SETTINGS_VIDEO'; } },
-                        { text: "BACK", action: () => { this.pauseMenuState = 'MAIN'; } }
-                    ], btnWidth)
-                };
-            case 'SETTINGS_AUDIO':
-                const audioKeys = [
-                    { label: 'Master Volume', key: 'master' },
-                    { label: 'All SFX', key: 'sfx' },
-                    { label: 'Ambience', key: 'ambience' },
-                    { label: 'Steam', key: 'steam' },
-                    { label: 'Water', key: 'water' },
-                    { label: 'Alarms', key: 'alarms' },
-                    { label: 'Explosions', key: 'explosions' }
-                ];
-                
-                return {
-                    title: "AUDIO SETTINGS",
-                    buttons: generateLayout([
-                        ...audioKeys.map(item => ({
-                            text: item.label,
-                            type: 'slider_checkbox',
-                            settingObj: this.uiSettings.audio[item.key]
-                        })),
-                        { text: "BACK", action: () => { this.pauseMenuState = 'SETTINGS'; } }
-                    ], btnWidth * 1.5)
-                };
-            case 'SETTINGS_VIDEO':
-                 return {
-                    title: "VIDEO SETTINGS",
-                    buttons: generateLayout([
-                        { text: "Resolution", action: () => { this.pauseMenuState = 'SETTINGS_RESOLUTION'; } },
-                        { text: "Bubbles", type: 'checkbox', value: this.uiSettings.video.bubbles, action: () => { this.uiSettings.video.bubbles = !this.uiSettings.video.bubbles; } },
-                        { text: "Water Effect", type: 'checkbox', value: this.uiSettings.video.waterEffect, action: () => { this.uiSettings.video.waterEffect = !this.uiSettings.video.waterEffect; } },
-                        { text: "Steam", type: 'checkbox', value: this.uiSettings.video.steam, action: () => { this.uiSettings.video.steam = !this.uiSettings.video.steam; } },
-                        { text: "Atom Glow", type: 'checkbox', value: this.uiSettings.video.atomGlow, action: () => { this.uiSettings.video.atomGlow = !this.uiSettings.video.atomGlow; } },
-                        { 
-                            text: "Neutrons", 
-                            type: 'slider_checkbox', 
-                            settingObj: this.uiSettings.video.neutrons
-                        },
-                        { text: "BACK", action: () => { this.pauseMenuState = 'SETTINGS'; } }
-                    ], btnWidth * 1.5)
-                };
-            case 'SETTINGS_RESOLUTION':
-                 return {
-                    title: "RESOLUTION",
-                    buttons: generateLayout([
-                        { text: "1067x600", action: () => { console.log("Set Res: 1067x600"); } },
-                        { text: "1280x720", action: () => { console.log("Set Res: 1280x720"); } },
-                        { text: "1600x900", action: () => { console.log("Set Res: 1600x900"); } },
-                        { text: "1920x1080", action: () => { console.log("Set Res: 1920x1080"); } },
-                        { text: "BACK", action: () => { this.pauseMenuState = 'SETTINGS_VIDEO'; } }
-                    ], btnWidth)
-                };
-            case 'RESTART_CONFIRM':
-                 return {
-                    title: "RESTART?",
-                    warning: "Unsaved progress will be lost!",
-                    buttons: generateLayout([
-                        { text: "YES", action: () => { if (typeof resetSimulation === 'function') resetSimulation(); paused = false; this.pauseMenuState = 'MAIN'; } },
-                        { text: "NO", action: () => { this.pauseMenuState = 'MAIN'; } }
-                    ], btnWidth)
-                };
-            case 'SAVE_CONFIRM':
-                const slotNum = this.pendingSaveSlot + 1;
-                return {
-                    title: `OVERWRITE SLOT ${slotNum}?`,
-                    warning: "Existing save will be lost!",
-                    buttons: generateLayout([
-                        { text: "YES", action: () => { if (playerState) playerState.saveGame(this.pendingSaveSlot); this.pauseMenuState = 'MAIN'; } },
-                        { text: "NO", action: () => { this.pauseMenuState = 'SAVE'; } }
-                    ], btnWidth)
-                };
-            case 'DELETE_SAVE':
-                return {
-                    title: "DELETE SAVE",
-                    buttons: generateLayout([
-                        { text: `Delete Slot 1: ${playerState ? playerState.saveSlots[0] : 'Empty'}`, action: () => { this.pendingSaveSlot = 0; this.pauseMenuState = 'DELETE_CONFIRM'; } },
-                        { text: `Delete Slot 2: ${playerState ? playerState.saveSlots[1] : 'Empty'}`, action: () => { this.pendingSaveSlot = 1; this.pauseMenuState = 'DELETE_CONFIRM'; } },
-                        { text: `Delete Slot 3: ${playerState ? playerState.saveSlots[2] : 'Empty'}`, action: () => { this.pendingSaveSlot = 2; this.pauseMenuState = 'DELETE_CONFIRM'; } },
-                        { text: "BACK", action: () => { this.pauseMenuState = 'MAIN'; } }
-                    ], btnWidth)
-                };
-            case 'DELETE_CONFIRM':
-                const delSlotNum = this.pendingSaveSlot + 1;
-                return {
-                    title: `DELETE SLOT ${delSlotNum}?`,
-                    warning: "This cannot be undone!",
-                    buttons: generateLayout([
-                        { text: "YES", action: () => { if (playerState) playerState.deleteSave(this.pendingSaveSlot); this.pauseMenuState = 'MAIN'; } },
-                        { text: "NO", action: () => { this.pauseMenuState = 'DELETE_SAVE'; } }
-                    ], btnWidth)
-                };
-            default:
-                return { title: "ERROR", buttons: [] };
-        }
+        // Legacy: we don't draw sidebar or pause menu to canvas anymore
     }
-
-    getMenuBounds(menu) {
-        const pScale = globalScale * 0.6;
-        const cx = this.simXOffset + this.simWidth / 2;
-
-        let minX = Infinity;
-        let minY = Infinity;
-        let maxX = -Infinity;
-        let maxY = -Infinity;
-
-        if (menu.buttons && menu.buttons.length > 0) {
-            menu.buttons.forEach(btn => {
-                minX = Math.min(minX, btn.x);
-                minY = Math.min(minY, btn.y);
-                maxX = Math.max(maxX, btn.x + btn.w);
-                maxY = Math.max(maxY, btn.y + btn.h);
-            });
-
-            // Title position mirrors drawPauseMenu()
-            const titleY = menu.buttons[0].y - 80 * pScale;
-            const titleTop = titleY - 40 * pScale;
-            const titleBottom = titleY + 40 * pScale;
-            minY = Math.min(minY, titleTop);
-            maxY = Math.max(maxY, titleBottom);
-
-            if (menu.warning) {
-                const warningY = titleY + 50 * pScale;
-                const warningTop = warningY - 20 * pScale;
-                const warningBottom = warningY + 20 * pScale;
-                minY = Math.min(minY, warningTop);
-                maxY = Math.max(maxY, warningBottom);
-            }
-        } else {
-            const w = 300 * pScale;
-            const h = 200 * pScale;
-            minX = cx - w / 2;
-            maxX = cx + w / 2;
-            minY = this.height / 2 - h / 2;
-            maxY = this.height / 2 + h / 2;
-        }
-
-        return { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
-    }
-
-    drawPauseMenu() {
-        const ctx = this.ctx;
-        ctx.save();
-        // Darkened background covering everything
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        ctx.fillRect(0, 0, this.width, this.height);
-
-        const menu = this.getMenuElements();
-        const pScale = globalScale * 0.6;
-        const cx = this.simXOffset + this.simWidth / 2;
-
-        // Determine Title Y position
-        // If buttons exist, place title above top button. Else center + offset.
-        let titleY;
-        if (menu.buttons.length > 0) {
-            titleY = menu.buttons[0].y - 80 * pScale;
-        } else {
-            titleY = this.height / 2 - 40 * pScale;
-        }
-
-        // Draw Title
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillStyle = 'white';
-        ctx.font = `${80 * pScale}px UIFont1, sans-serif`;
-        ctx.fillText(menu.title, cx, titleY);
-
-        // Draw Warning if present (e.g. Restart Confirm)
-        if (menu.warning) {
-             ctx.font = `${40 * pScale}px UIFont1, sans-serif`;
-             ctx.fillStyle = '#ff6666'; // Light red for warning
-             ctx.fillText(menu.warning, cx, titleY + 50 * pScale);
-        }
-
-        // Draw Buttons
-        ctx.font = `${30 * pScale}px UIFont1, sans-serif`;
-        ctx.lineWidth = 2;
-
-        menu.buttons.forEach((btn) => {
-            const { x, y, w, h, text, type, value, settingObj } = btn;
-
-            // Simple background for buttons
-            ctx.fillStyle = '#333';
-            ctx.fillRect(x, y, w, h);
-            
-            ctx.strokeStyle = 'white';
-            ctx.strokeRect(x, y, w, h);
-
-            ctx.fillStyle = 'white';
-            
-            if (type === 'checkbox') {
-                 // Align text left for checkbox rows
-                 ctx.textAlign = 'left';
-                 ctx.fillText(text, x + 20 * pScale, y + h / 2);
-                 
-                 // Draw the box on the right
-                 const boxSize = 25 * pScale;
-                 const boxX = x + w - boxSize - 20 * pScale;
-                 const boxY = y + (h - boxSize) / 2;
-                 
-                 ctx.strokeRect(boxX, boxY, boxSize, boxSize);
-                 if (value) {
-                     // Checkmark / Fill
-                     ctx.fillStyle = '#fff';
-                     ctx.fillRect(boxX + 4 * pScale, boxY + 4 * pScale, boxSize - 8 * pScale, boxSize - 8 * pScale);
-                 }
-            } else if (type === 'slider_checkbox') {
-                 // Align text left
-                 ctx.textAlign = 'left';
-                 ctx.fillText(text, x + 20 * pScale, y + h / 2);
-
-                 const boxSize = 25 * pScale;
-                 const sliderWidth = 100 * pScale * 1.5;
-                 const gap = 15 * pScale;
-
-                 // Checkbox (Rightmost)
-                 const boxX = x + w - boxSize - 20 * pScale;
-                 const boxY = y + (h - boxSize) / 2;
-                 
-                 ctx.strokeStyle = '#fff';
-                 ctx.strokeRect(boxX, boxY, boxSize, boxSize);
-                 if (settingObj.enabled) {
-                     ctx.fillStyle = '#fff';
-                     ctx.fillRect(boxX + 4 * pScale, boxY + 4 * pScale, boxSize - 8 * pScale, boxSize - 8 * pScale);
-                 }
-
-                 // Slider (Left of Checkbox)
-                 // Layout: [Text ... ] [Slider] [Box]
-                 const sliderH = 10 * pScale * (4 / 3);
-                 const sliderX = boxX - sliderWidth - gap;
-                 const sliderY = y + (h - sliderH) / 2;
-
-                 ctx.strokeRect(sliderX, sliderY, sliderWidth, sliderH);
-                 
-                 // Fill slider logic
-                 const poolVal = settingObj.vol; // 0.0 to 1.0
-                 if (poolVal > 0) {
-                     ctx.fillStyle = '#6cc460'; 
-                     ctx.fillRect(sliderX, sliderY, sliderWidth * poolVal, sliderH);
-                 }
-
-            } else {
-                ctx.textAlign = 'center';
-                ctx.fillText(text, cx, y + h / 2);
-            }
-        });
-
-        ctx.restore();
-    }
-
-    getSidebarLayout() {
-        // Sidebar configuration - easy to edit
-        const sidebarConfig = {
-            sbScale: globalScale * 2,
-            marginX: 10 * globalScale,
-            fontScale: 9 * globalScale,
-            startY: 150 * globalScale,
-            controlsH: 100 * globalScale,
-            linkToggleSize: 13 * globalScale,
-            linkToggleOffsetY: 40 * globalScale,
-            sliderWidth: 225 * globalScale,
-            sliderH: 13.33 * globalScale,
-            sliderGap: 20 * globalScale,
-            shopGap: 25 * globalScale,
-            shopLabelGap: 5 * globalScale,
-            modH: 16 * globalScale,
-            modGap: 5 * globalScale,
-            itemHeight: 22 * globalScale,
-            itemGap: 5 * globalScale,
-            settingsGap: 15 * globalScale,
-            devBtnHeight: 40 * 0.4 * globalScale
-        };
-
-        const { sbScale, marginX, fontScale, startY, controlsH, linkToggleSize, linkToggleOffsetY, sliderWidth, sliderH, sliderGap, shopGap, shopLabelGap, modH, modGap, itemHeight, itemGap, settingsGap, devBtnHeight } = sidebarConfig;
-        const contentWidth = this.simXOffset - 2 * marginX;
-        const innerPadX = 10 * globalScale;
-        
-        let currentY = startY;
-        const layout = { config: sidebarConfig, elements: {} };
-
-        // 1. Controls area
-        layout.elements.controls = {
-            x: marginX,
-            y: currentY,
-            w: contentWidth,
-            h: controlsH
-        };
-        currentY += controlsH;
-
-        // Link Rods Toggle
-        layout.elements.linkToggle = {
-            x: marginX + innerPadX,
-            y: currentY - controlsH + linkToggleOffsetY,
-            w: linkToggleSize,
-            h: linkToggleSize
-        };
-
-        // Water Flow Slider
-        layout.elements.waterSlider = {
-            x: marginX + innerPadX,
-            y: layout.elements.linkToggle.y + linkToggleSize + sliderGap,
-            w: sliderWidth,
-            h: sliderH
-        };
-
-        // Stack next items
-        currentY += shopGap;
-
-        // 2. Shop
-        layout.elements.shopLabel = {
-            x: 20 * globalScale,
-            y: currentY
-        };
-        currentY += shopLabelGap * sbScale;
-
-        // Modifiers
-        const modW = (contentWidth - (modGap * (this.modifiers.length - 1))) / this.modifiers.length;
-        layout.elements.modifiers = [];
-        for (let i = 0; i < this.modifiers.length; i++) {
-            layout.elements.modifiers.push({
-                x: marginX + i * (modW + modGap),
-                y: currentY,
-                w: modW,
-                h: modH,
-                value: this.modifiers[i]
-            });
-        }
-        currentY += modH + 10 * sbScale;
-
-        // Items
-        layout.elements.shopItems = [];
-        if (shop) {
-            const shopItems = Object.keys(shop.items);
-            for (let i = 0; i < shopItems.length; i++) {
-                layout.elements.shopItems.push({
-                    x: marginX,
-                    y: currentY,
-                    w: contentWidth,
-                    h: itemHeight,
-                    key: shopItems[i]
-                });
-                currentY += itemHeight + itemGap;
-            }
-        }
-
-        // 3. Settings
-        currentY += settingsGap;
-        layout.elements.settingsLabel = {
-            x: this.simXOffset / 2,
-            y: currentY
-        };
-        currentY += shopLabelGap * sbScale;
-
-        // Dev Mode Button
-        layout.elements.devButton = {
-            x: marginX,
-            y: currentY,
-            w: contentWidth,
-            h: devBtnHeight
-        };
-        currentY += devBtnHeight + 10 * globalScale;
-
-        // Boom Button
-        layout.elements.boomButton = {
-            x: marginX,
-            y: currentY,
-            w: contentWidth,
-            h: devBtnHeight
-        };
-        currentY += devBtnHeight + 10 * globalScale;
-
-        // Settings Button
-        layout.elements.settingsButton = {
-            x: marginX,
-            y: currentY,
-            w: contentWidth,
-            h: devBtnHeight
-        };
-
-        return layout;
-    }
-
+    
+    // Method kept for compatibility if other scripts call it
     drawSideBar() {
-        const ctx = this.ctx;
-        ctx.save();
-        ctx.fillStyle = '#222';
-        ctx.fillRect(0, 0, this.simXOffset, this.height);
-
-        // --- Standard Size (Money Stats) ---
-        ctx.fillStyle = 'white';
-        ctx.font = `${28 * globalScale}px UIFont1, sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.fillText("REACTOR CONTROL", this.simXOffset / 2, 50 * globalScale);
-
-        if (player) {
-            ctx.font = `${30 * globalScale}px UIFont1, sans-serif`;
-            ctx.fillStyle = '#90EE90';
-            ctx.fillText(`${formatLarge(player.getBalance(), 'n€')}`, this.simXOffset / 2, 100 * globalScale);
-            ctx.font = `${20 * globalScale}px UIFont1, sans-serif`;
-            ctx.fillStyle = '#aaa';
-            ctx.fillText(`${formatLarge(lastMoneyPerSecond, 'n€')}/s`, this.simXOffset / 2, 130 * globalScale);
-        }
-
-        const layout = this.getSidebarLayout();
-        const { config, elements } = layout;
-        const { sbScale, marginX, fontScale, startY, controlsH, linkToggleSize, linkToggleOffsetY, sliderWidth, sliderH, sliderGap, shopGap, shopLabelGap, modH, modGap, itemHeight, itemGap, settingsGap, devBtnHeight } = config;
-        const contentWidth = this.simXOffset - 2 * marginX;
-        const innerPadX = 10 * globalScale;
-        
-        // 1. Controls
-        ctx.fillStyle = '#444';
-        ctx.fillRect(elements.controls.x, elements.controls.y, elements.controls.w, elements.controls.h);
-        
-        ctx.fillStyle = 'white';
-        ctx.font = `${10 * globalScale}px UIFont1, sans-serif`;
-        ctx.textAlign = 'left';
-        ctx.fillText("CONTROLS", marginX + innerPadX, elements.controls.y + 45 * 0.4 * globalScale);
-
-        // Link Rods Toggle (always show)
-        ctx.fillStyle = settings.linkRods ? '#5cb85c' : '#d9534f';
-        ctx.fillRect(elements.linkToggle.x, elements.linkToggle.y, elements.linkToggle.w, elements.linkToggle.h);
-        ctx.strokeStyle = 'white';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(elements.linkToggle.x, elements.linkToggle.y, elements.linkToggle.w, elements.linkToggle.h);
-        
-        ctx.fillStyle = 'white';
-        ctx.font = `${fontScale}px UIFont1, sans-serif`;
-        // Text slightly offset from toggle
-        ctx.fillText("Link Rods", elements.linkToggle.x + linkToggleSize + 5 * globalScale, elements.linkToggle.y + linkToggleSize * 0.8);
-
-        // Water Flow Slider
-        ctx.fillStyle = 'white';
-        ctx.font = `${fontScale}px UIFont1, sans-serif`;
-        ctx.fillText("Water Flow", elements.waterSlider.x, elements.waterSlider.y - shopLabelGap * globalScale);
-
-        ctx.strokeStyle = 'white';
-        ctx.strokeRect(elements.waterSlider.x, elements.waterSlider.y, elements.waterSlider.w, elements.waterSlider.h);
-
-        const flowVal = Math.max(0, Math.min(1, settings.waterFlowSpeed));
-        if (flowVal > 0) {
-            ctx.fillStyle = '#aaa';
-            ctx.fillRect(elements.waterSlider.x, elements.waterSlider.y, elements.waterSlider.w * flowVal, elements.waterSlider.h);
-        }
-
-        // Draw min/max markers
-        const minFlow = (player && typeof player.waterFlowMin === 'number') ? player.waterFlowMin : 0.0;
-        const maxFlow = (player && typeof player.waterFlowMax === 'number') ? player.waterFlowMax : 1.0;
-
-        const drawMarker = (ratio) => {
-            const mx = elements.waterSlider.x + elements.waterSlider.w * ratio;
-            const sliderBottom = elements.waterSlider.y + elements.waterSlider.h;
-            const ms = 6 * globalScale; // Marker size
-            
-            ctx.beginPath();
-            ctx.moveTo(mx, sliderBottom);
-            ctx.lineTo(mx - ms/2, sliderBottom + ms);
-            ctx.lineTo(mx + ms/2, sliderBottom + ms);
-            ctx.closePath();
-            ctx.fillStyle = 'white';
-            ctx.fill();
-        };
-
-        drawMarker(minFlow);
-        drawMarker(maxFlow);
-
-        // Border line
-        ctx.fillStyle = 'black';
-        ctx.fillRect(this.simXOffset - (2 * globalScale), 0, 2 * globalScale, this.height);
-
-        // 2. Shop
-        ctx.fillStyle = 'white';
-        ctx.font = `${fontScale}px UIFont1, sans-serif`;
-        ctx.textAlign = 'left';
-        ctx.fillText("SHOP", elements.shopLabel.x, elements.shopLabel.y);
-
-        // Draw Shop Inlined (to support resizing)
-        if (shop) {
-             // Modifiers
-             elements.modifiers.forEach((mod) => {
-                 const isSelected = shop.buyAmount === mod.value;
-                 
-                 ctx.fillStyle = isSelected ? '#5cb85c' : '#333';
-                 ctx.strokeStyle = '#777';
-                 ctx.lineWidth = 1;
-                 ctx.fillRect(mod.x, mod.y, mod.w, mod.h);
-                 ctx.strokeRect(mod.x, mod.y, mod.w, mod.h);
-                 
-                 ctx.fillStyle = 'white';
-                 ctx.font = `${fontScale}px UIFont1, sans-serif`;
-                 ctx.textAlign = 'center';
-                 ctx.textBaseline = 'middle';
-                 ctx.fillText(mod.value, mod.x + mod.w / 2, mod.y + mod.h / 2);
-             });
-             
-             // Items
-             elements.shopItems.forEach((item) => {
-                 const buyInfo = shop.getPurchaseInfo(item.key);
-                 const canAfford = player && player.getBalance() >= buyInfo.cost && buyInfo.count > 0;
-
-                 ctx.fillStyle = canAfford ? '#333' : '#222';
-                 ctx.strokeStyle = canAfford ? '#555' : '#333';
-                 ctx.lineWidth = 1;
-                 ctx.fillRect(item.x, item.y, item.w, item.h);
-                 ctx.strokeRect(item.x, item.y, item.w, item.h);
-
-                 ctx.fillStyle = canAfford ? 'white' : '#777';
-                 ctx.font = `${fontScale}px UIFont1, sans-serif`;
-                 ctx.textAlign = 'left';
-                 ctx.textBaseline = 'middle';
-                 ctx.fillText(shop.items[item.key].name, item.x + 5 * globalScale, item.y + item.h / 2);
-
-                 ctx.textAlign = 'right';
-                 ctx.font = `${fontScale}px UIFont1, sans-serif`;
-                 ctx.fillStyle = canAfford ? '#ffd700' : '#886600';
-                 
-                 let priceText = formatLarge(buyInfo.cost, 'n€');
-                 ctx.fillText(priceText, item.x + item.w - 5 * globalScale, item.y + item.h / 2);
-             });
-        }
-
-        // 3. Settings & Dev Mode
-        ctx.textAlign = 'center';
-
-        ctx.fillStyle = settings.cheatMode ? '#5cb85c' : '#d9534f';
-        ctx.fillRect(elements.devButton.x, elements.devButton.y, elements.devButton.w, elements.devButton.h);
-        
-        ctx.fillStyle = 'white';
-        ctx.font = `${fontScale}px UIFont1, sans-serif`;
-        ctx.textBaseline = 'middle';
-        ctx.fillText(settings.cheatMode ? "DEV MODE ON" : "DEV MODE", this.simXOffset / 2, elements.devButton.y + elements.devButton.h / 2);
-
-        // Boom Button
-        ctx.fillStyle = boom ? '#ff4500' : '#8b0000';
-        ctx.fillRect(elements.boomButton.x, elements.boomButton.y, elements.boomButton.w, elements.boomButton.h);
-        
-        ctx.fillStyle = 'white';
-        ctx.fillText("BOOM!", this.simXOffset / 2, elements.boomButton.y + elements.boomButton.h / 2);
-
-        // Settings Button
-        ctx.fillStyle = '#444';
-        ctx.fillRect(elements.settingsButton.x, elements.settingsButton.y, elements.settingsButton.w, elements.settingsButton.h);
-        
-        ctx.fillStyle = 'white';
-        ctx.fillText("MENU", this.simXOffset / 2, elements.settingsButton.y + elements.settingsButton.h / 2);
-        
-        ctx.restore();
     }
-
-    handleMouseClick(x, y) {
-        // 1. If paused, only handle pause menu clicks (Resized)
-        if (paused) {
-            const menu = this.getMenuElements();
-            const pScale = globalScale * 0.6;
-            
-            for (const btn of menu.buttons) {
-                if (x >= btn.x && x <= btn.x + btn.w && y >= btn.y && y <= btn.y + btn.h) {
-                    
-                    if (btn.type === 'slider_checkbox') {
-                         const h = btn.h;
-                         const w = btn.w;
-                         const boxSize = 25 * pScale;
-                         const sliderWidth = 100 * pScale * 1.5;
-                         const gap = 15 * pScale;
-                         const sliderH = 10 * pScale * (4 / 3);
-
-                         const boxX = btn.x + w - boxSize - 20 * pScale;
-                         const sliderX = boxX - sliderWidth - gap;
-                         const sliderY = btn.y + (h - sliderH) / 2;
-
-                         // Check Slider Click
-                         if (x >= sliderX && x <= sliderX + sliderWidth && y >= sliderY && y <= sliderY + sliderH) {
-                              const newVol = (x - sliderX) / sliderWidth;
-                              btn.settingObj.vol = Math.max(0, Math.min(1, newVol));
-                              return;
-                         }
-
-                         // Check Checkbox Click (using a slightly wider hit area for comfort)
-                         if (x >= boxX) {
-                              audioManager.playSfx('click');
-                              btn.settingObj.enabled = !btn.settingObj.enabled;
-                              return;
-                         }
-
-                    } else {
-                        // Standard Button or Checkbox
-                        audioManager.playSfx('click');
-                        if (btn.action) btn.action();
-                    }
-                    return;
-                }
-            }
-
-            const bounds = this.getMenuBounds(menu);
-            const insideMenu = (x >= bounds.x && x <= bounds.x + bounds.w && y >= bounds.y && y <= bounds.y + bounds.h);
-            if (!insideMenu) {
-                paused = false;
-            }
-            return;
-        }
-
-        if (x < this.simXOffset) {
-            const layout = this.getSidebarLayout();
-            const { config, elements } = layout;
-            const { sbScale, marginX, fontScale, startY, controlsH, linkToggleSize, linkToggleOffsetY, sliderWidth, sliderH, sliderGap, shopGap, shopLabelGap, modH, modGap, itemHeight, itemGap, settingsGap, devBtnHeight } = config;
-            // 1. Controls
-            // Link Rods
-            if (x >= elements.linkToggle.x && x <= elements.linkToggle.x + elements.linkToggle.w && 
-                y >= elements.linkToggle.y && y <= elements.linkToggle.y + elements.linkToggle.h) {
-                audioManager.playSfx('click');
-                settings.linkRods = !settings.linkRods;
-                return;
-            }
-
-            // Water Flow Slider
-            if (y >= elements.waterSlider.y && y <= elements.waterSlider.y + elements.waterSlider.h && x >= elements.waterSlider.x && x <= elements.waterSlider.x + elements.waterSlider.w) {
-                        const ratio = (x - elements.waterSlider.x) / elements.waterSlider.w;
-                const newVal = Math.max(0, Math.min(1, ratio));
-                const minFlow = (player && typeof player.waterFlowMin === 'number') ? player.waterFlowMin : 0.0;
-                const maxFlow = (player && typeof player.waterFlowMax === 'number') ? player.waterFlowMax : 1.0;
-                settings.waterFlowSpeed = Math.max(minFlow, Math.min(maxFlow, newVal));
-                return;
-            }
-
-            // 2. Shop
-            // Modifiers
-            for (const mod of elements.modifiers) {
-                if (y >= mod.y && y <= mod.y + mod.h && x >= mod.x && x <= mod.x + mod.w) {
-                    audioManager.playSfx('click');
-                    shop.setBuyAmount(mod.value);
-                    return;
-                }
-            }
-
-            // Items
-            for (const item of elements.shopItems) {
-                if (y >= item.y && y <= item.y + item.h) {
-                    const buyInfo = shop.getPurchaseInfo(item.key);
-                    const canAfford = player && (player.getBalance() >= buyInfo.cost || settings.cheatMode) && buyInfo.count > 0;
-                    
-                    if (canAfford) {
-                        audioManager.playSfx('click');
-                        shop.buy(item.key);
-                    } else {
-                        audioManager.playSfx('click_fail');
-                    }
-                    return;
-                }
-            }
-
-            // 3. Settings / Dev Mode
-            if (y >= elements.devButton.y && y <= elements.devButton.y + elements.devButton.h) {
-                audioManager.playSfx('click');
-                settings.cheatMode = !settings.cheatMode;
-            }
-
-            if (y >= elements.boomButton.y && y <= elements.boomButton.y + elements.boomButton.h) {
-                audioManager.playSfx('click');
-                boom = !boom;
-            }
-
-            if (y >= elements.settingsButton.y && y <= elements.settingsButton.y + elements.settingsButton.h) {
-                audioManager.playSfx('click');
-                paused = true;
-                this.pauseMenuState = 'MAIN';
-            }
-        }
-    }
-
-    handleMouseDrag(x, y) {
-        // Handle dragging for sliders
-        if (this.draggingSlider) {
-            // Continue dragging the active slider, ignore y position
-            if (this.draggingSlider.type === 'water') {
-                const layout = this.getSidebarLayout();
-                const { elements } = layout;
-                const sliderX = elements.waterSlider.x;
-                const sliderW = elements.waterSlider.w;
-                const ratio = (x - sliderX) / sliderW;
-                const newVal = Math.max(0, Math.min(1, ratio));
-                const minFlow = (player && typeof player.waterFlowMin === 'number') ? player.waterFlowMin : 0.0;
-                const maxFlow = (player && typeof player.waterFlowMax === 'number') ? player.waterFlowMax : 1.0;
-                settings.waterFlowSpeed = Math.max(minFlow, Math.min(maxFlow, newVal));
-            } else if (this.draggingSlider.type === 'audio') {
-                const btn = this.draggingSlider.button;
-                const pScale = globalScale * 0.6;
-                const w = btn.w;
-                const boxSize = 25 * pScale;
-                const sliderWidth = 100 * pScale * 1.5;
-                const gap = 15 * pScale;
-                const boxX = btn.x + w - boxSize - 20 * pScale;
-                const sliderX = boxX - sliderWidth - gap;
-                const newVol = (x - sliderX) / sliderWidth;
-                btn.settingObj.vol = Math.max(0, Math.min(1, newVol));
-            }
-            return;
-        }
-
-        // Check if starting drag on a slider
-        if (paused) {
-            // For pause menu sliders
-            const menu = this.getMenuElements();
-            const pScale = globalScale * 0.6;
-            
-            for (const btn of menu.buttons) {
-                if (btn.type === 'slider_checkbox') {
-                    const h = btn.h;
-                    const w = btn.w;
-                    const boxSize = 25 * pScale;
-                    const sliderWidth = 100 * pScale * 1.5;
-                    const gap = 15 * pScale;
-                    const sliderH = 10 * pScale * (4 / 3);
-                    const boxX = btn.x + w - boxSize - 20 * pScale;
-                    const sliderX = boxX - sliderWidth - gap;
-                    const sliderY = btn.y + (h - sliderH) / 2;
-                    // Check if starting drag on slider
-                    if (x >= sliderX && x <= sliderX + sliderWidth && y >= sliderY && y <= sliderY + sliderH) {
-                        this.draggingSlider = { type: 'audio', button: btn };
-                        const newVol = (x - sliderX) / sliderWidth;
-                        btn.settingObj.vol = Math.max(0, Math.min(1, newVol));
-                        return;
-                    }
-                }
-            }
-        } else {
-            // For sidebar sliders
-            if (x < this.simXOffset) {
-                const layout = this.getSidebarLayout();
-                const { elements } = layout;
-                // Water Flow Slider
-                if (y >= elements.waterSlider.y && y <= elements.waterSlider.y + elements.waterSlider.h && x >= elements.waterSlider.x && x <= elements.waterSlider.x + elements.waterSlider.w) {
-                    this.draggingSlider = { type: 'water' };
-                    const ratio = (x - elements.waterSlider.x) / elements.waterSlider.w;
-                    const newVal = Math.max(0, Math.min(1, ratio));
-                    const minFlow = (player && typeof player.waterFlowMin === 'number') ? player.waterFlowMin : 0.0;
-                    const maxFlow = (player && typeof player.waterFlowMax === 'number') ? player.waterFlowMax : 1.0;
-                    settings.waterFlowSpeed = Math.max(minFlow, Math.min(maxFlow, newVal));
-                    return;
-                }
-            }
-        }
-    }
-
-    handleMouseRelease() {
-        this.draggingSlider = null;
+    
+    drawPauseMenu() {
     }
 }
 

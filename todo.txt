@@ -40,7 +40,7 @@ v    -Max water flow rate
 
 === Economy: === 
 v    -"Money" is scaled by the amount of energy produced
-    -Game money unit is a nuclear euro, eg "Neuro", plural "Neuri", symbol "n€" //this is bad, think of something else.
+    -Game money unit is a Mass Flow Euro, eg "MF€", symbol is m with a dot on it "&#7745"
     -Need to think of an increasing price ramp
     -New atom group should be relatively expensive
 
