@@ -33,7 +33,7 @@ void main() {
 
     // Jiggle X
     // Jiggle depends on time and unique phase
-    float jiggle = sin(u_time * 3.0 + phase) * 5.0;
+    float jiggle = sin(u_time * 3.0 + phase) * 1.0;
     float x = startX + jiggle;
 
     vec2 screenPos = vec2(x, y);

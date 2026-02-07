@@ -1,22 +1,19 @@
 class AmbientTrack {
     constructor(soundFile, baseVolume = 1.0, basePitch = 1.0, volVar = 0.0, pitchVar = 0.0, rate = 0.01) {
         this.sound = soundFile;
-        this.baseVolume = (typeof baseVolume === 'number' && Number.isFinite(baseVolume)) ? baseVolume : 1.0; // 0.0 to 1.0
+        this.baseVolume = (typeof baseVolume === 'number' && Number.isFinite(baseVolume)) ? baseVolume : 1.0;
         this.basePitch = (typeof basePitch === 'number' && Number.isFinite(basePitch)) ? basePitch : 1.0;
-        this.volVariation = (typeof volVar === 'number' && Number.isFinite(volVar)) ? volVar : 0.0; // Percentage (e.g., 0.3 for 30%)
+        this.volVariation = (typeof volVar === 'number' && Number.isFinite(volVar)) ? volVar : 0.0;
         this.pitchVariation = (typeof pitchVar === 'number' && Number.isFinite(pitchVar)) ? pitchVar : 0.0;
         this.noiseOffset = Math.random() * 1000;
-        this.rate = (typeof rate === 'number' && Number.isFinite(rate)) ? rate : 0.01; // Speed of variation
-        this.targetVolume = 0.0; // For fading in/out via game logic
+        this.rate = (typeof rate === 'number' && Number.isFinite(rate)) ? rate : 0.01;
+        this.targetVolume = 0.0;
         this.currentFadeVol = 0.0;
         
-        // Settings/Category multiplier (pointer to settings object)
         this.categorySettings = null; 
 
-        if (this.sound) {
-            this.sound.setLoop(true);
-            this.sound.playMode('sustain');
-        }
+        this.sound.setLoop(true);
+        this.sound.playMode('sustain');
     }
 
     setCategory(settingsObj) {
@@ -24,40 +21,30 @@ class AmbientTrack {
     }
 
     play() {
-        if (this.sound && !this.sound.isPlaying()) {
+        if (!this.sound.isPlaying()) {
             this.sound.loop();
             this.sound.setVolume(0);
         }
     }
 
     stop() {
-        if (this.sound) {
-            this.sound.stop();
-        }
+        this.sound.stop();
     }
 
     update(masterVol) {
-        if (!this.sound || !this.sound.isPlaying()) return;
+        if (!this.sound.isPlaying()) return;
 
-        // Smooth fade to target
         this.currentFadeVol = lerp(this.currentFadeVol, this.targetVolume, 0.05);
 
-        // Calculate "breathing" variation using Perlin noise
         this.noiseOffset += this.rate;
-        const n = noise(this.noiseOffset); // 0 to 1
+        const n = noise(this.noiseOffset);
         
-        // Variation centered around 0 (-1 to 1) * magnitude
         const volVar = (n * 2 - 1) * this.volVariation; 
         const pitchVar = (noise(this.noiseOffset + 500) * 2 - 1) * this.pitchVariation;
 
-        // Category volume (e.g., Water slider)
         const catVol = this.categorySettings ? (this.categorySettings.enabled ? this.categorySettings.vol : 0) : 1.0;
 
-        // Final calculation
-        // Base * Fade * Category * Master * Variation
-        // Variation applies to the base "level", keeping it somewhat organic
         let finalVol = this.baseVolume * (1.0 + volVar) * this.currentFadeVol * catVol * masterVol;
-        // Protect against NaN / non-finite values coming from bad inputs
         if (!Number.isFinite(finalVol)) {
             finalVol = 0;
         } else {
@@ -67,7 +54,7 @@ class AmbientTrack {
         let finalPitch = this.basePitch * (1.0 + pitchVar);
         if (!Number.isFinite(finalPitch)) finalPitch = this.basePitch;
 
-        this.sound.setVolume(finalVol, 0.1); // 0.1s ramp for smoothness
+        this.sound.setVolume(finalVol, 0.1);
         this.sound.rate(finalPitch);
     }
 }
@@ -88,6 +75,7 @@ class AudioManager {
             { key: 'boom', path: 'assets/Sounds/boom.mp3', type: 'sfx' },
             { key: 'click', path: 'assets/Sounds/click.mp3', type: 'sfx' },
             { key: 'click_fail', path: 'assets/Sounds/click_fail.mp3', type: 'sfx' },
+            { key: 'scram', path: 'assets/Sounds/scram.mp3', type: 'sfx' },
             
             // Ambience (Hums) - Group: 'ambience'
             { key: 'hum_electric', path: 'assets/Sounds/electric-hum-141075.mp3', type: 'ambient', group: 'ambience', vol: 0.2, pitch: 1.0, vVar: 1, pVar: 0.25 },
@@ -144,9 +132,8 @@ class AudioManager {
     }
 
     setupTracks(uiSettings) {
-        // Initialize AmbientTracks after loading
         this.assets.forEach(asset => {
-            if (asset.type === 'ambient' && this.sounds[asset.key]) {
+            if (asset.type === 'ambient') {
                 const track = new AmbientTrack(
                     this.sounds[asset.key],
                     asset.vol,
@@ -155,15 +142,12 @@ class AudioManager {
                     asset.pVar
                 );
                 
-                // Link to UI settings based on group
-                // uiSettings should have: master, sfx, ambience, steam, water
                 if (asset.group === 'ambience') track.setCategory(uiSettings.ambience);
                 if (asset.group === 'steam') track.setCategory(uiSettings.steam);
                 if (asset.group === 'water') track.setCategory(uiSettings.water);
 
                 this.ambientTracks.push(track);
                 
-                // Add to quick lookup group
                 if (this.groups[asset.group]) {
                     this.groups[asset.group].push({ key: asset.key, track: track });
                 }
@@ -180,66 +164,51 @@ class AudioManager {
     }
 
     fadeOutSfx(key, duration) {
-        if (this.sounds[key] && this.sounds[key].isPlaying()) {
+        if (this.sounds[key].isPlaying()) {
             this.sounds[key].setVolume(0, duration);
             setTimeout(() => {
                 this.sounds[key].stop();
-                // Restore volume for next play (will be set by playSfx anyway but good practice)
             }, duration * 1000); 
         }
     }
 
     playSfx(key) {
-        // If the game is paused, do not play SFX (EXCEPT CLICKS)
         if (this.prevPaused && key !== 'click' && key !== 'click_fail') return;
 
-        if (this.sounds[key]) {
-             // Fallback default volumes if UI is not ready yet
-             let sfxEnabled = true;
-             let sfxVol = 1.0;
-             let masterVol = 1.0;
-             let specificVol = 1.0; // For new categories
+        let sfxEnabled = true;
+        let sfxVol = ui.canvas.uiSettings.audio.sfx.vol;
+        let masterVol = ui.canvas.uiSettings.audio.master.vol;
+        let specificVol = 1.0;
 
-             if (ui && ui.canvas && ui.canvas.uiSettings) {
-                 sfxEnabled = ui.canvas.uiSettings.audio.sfx.enabled;
-                 sfxVol = ui.canvas.uiSettings.audio.sfx.vol;
-                 masterVol = ui.canvas.uiSettings.audio.master.vol;
-                 
-                 // Handle specific categories
-                 if (key === 'boom' && ui.canvas.uiSettings.audio.explosions) {
-                     const boomSet = ui.canvas.uiSettings.audio.explosions;
-                     if (!boomSet.enabled) sfxEnabled = false;
-                     specificVol = boomSet.vol;
-                 }
-             }
-             
-             if (sfxEnabled) {
-                const vol = sfxVol * specificVol * masterVol;
-                this.sounds[key].setVolume(vol);
-                this.sounds[key].play();
-             }
+        if (key === 'boom') {
+            const boomSet = ui.canvas.uiSettings.audio.explosions;
+            if (!boomSet.enabled) sfxEnabled = false;
+            specificVol = boomSet.vol;
+        }
+        
+        if (sfxEnabled) {
+            const vol = sfxVol * specificVol * masterVol;
+            this.sounds[key].setVolume(vol);
+            this.sounds[key].play();
         }
     }
 
     // Main update loop
     update(dt, settings, currentPower, isPaused, maxPowerRef) {
-        // Access settings via ui.canvas.uiSettings
-        if (typeof ui === 'undefined' || !ui.canvas || !ui.canvas.uiSettings) return;
-
-        // If paused, stop all ambient and persistent SFX immediately (no fades)
+        
         if (isPaused) {
             this.ambientTracks.forEach(track => {
                 track.targetVolume = 0;
                 track.currentFadeVol = 0; // Force instant internal state
-                if (track.sound && track.sound.isPlaying()) track.sound.stop();
+                if (track.sound.isPlaying()) track.sound.stop();
             });
 
             // Stop persistent SFX
             this.alarmIntensity = 0;
-            if (this.sounds['alarm'] && this.sounds['alarm'].isPlaying()) {
+            if (this.sounds['alarm'].isPlaying()) {
                 this.sounds['alarm'].stop();
             }
-            if (this.sounds['boom'] && this.sounds['boom'].isPlaying()) {
+            if (this.sounds['boom'].isPlaying()) {
                 this.sounds['boom'].stop();
             }
             this.prevPaused = true;
@@ -247,7 +216,7 @@ class AudioManager {
         } else if (this.prevPaused && !isPaused) {
             // Transitioning from paused -> unpaused: restart ambience tracks
             this.ambientTracks.forEach(track => {
-                if (track.sound && !track.sound.isPlaying()) track.play();
+                if (!track.sound.isPlaying()) track.play();
             });
             this.prevPaused = false;
         }
@@ -264,13 +233,13 @@ class AudioManager {
             // Let's keep existing boom behavior for now but respect pause.
             // If boom is true, game is over.
              this.alarmIntensity = 0;
-             if (this.sounds['alarm'] && this.sounds['alarm'].isPlaying()) {
+               if (this.sounds['alarm'].isPlaying()) {
                 this.fadeOutSfx('alarm', 0.2);
              }
              return;
         }
 
-        const masterVol = (ui.canvas.uiSettings.audio.master && ui.canvas.uiSettings.audio.master.enabled) ? ui.canvas.uiSettings.audio.master.vol : 0;
+           const masterVol = ui.canvas.uiSettings.audio.master.enabled ? ui.canvas.uiSettings.audio.master.vol : 0;
 
         // Drive game state logic for volumes
         this.updateMixLogic(settings, currentPower, maxPowerRef);
@@ -287,7 +256,7 @@ class AudioManager {
         // --- Water Logic ---
         // water_low -> water_high blender
         // flowSpeed is usually 0.3 to 1.5 or so based on default settings, but can go higher
-        const flow = settings ? Math.abs(settings.waterFlowSpeed) : 0.3;
+        const flow = Math.abs(settings.waterFlowSpeed);
         
         // Volume scaling: 0 flow = 0 volume. 
         // Start hearing it at 0.1, Max volume at flow >= 3.0
@@ -340,7 +309,7 @@ class AudioManager {
         // --- Alarm ---
         const alarmLimit = maxPowerRef || 1000;
         const powerRatio = constrain((currentPower || 0) / alarmLimit, 0, 1);
-        const tempRatio = (typeof window.avgTemp !== 'undefined') ? constrain(window.avgTemp / 500, 0, 1) : 0;
+        const tempRatio = constrain(window.avgTemp / 500, 0, 1);
         const alarmRatio = Math.max(powerRatio, tempRatio);
         this.alarmIntensity = constrain(map(alarmRatio, 0.8, 1.0, 0, 1), 0, 1);
 
@@ -352,7 +321,6 @@ class AudioManager {
 
     setGroupTarget(groupName, key, target) {
         const group = this.groups[groupName];
-        if (!group) return;
         const t = (typeof target === 'number') ? constrain(target, 0, 1) : 0;
         for (let i = 0; i < group.length; i++) {
             const item = group[i];
@@ -365,16 +333,13 @@ class AudioManager {
 
     updateAlarm(masterVol) {
         const s = this.sounds['alarm'];
-        if (!s) return;
 
         const sfxSettings = ui.canvas.uiSettings.audio.sfx;
         // Use specific alarm settings if available
         let alarmVolMod = 1.0;
         let alarmEnabled = true;
-        if (ui.canvas.uiSettings.audio.alarms) {
-            alarmVolMod = ui.canvas.uiSettings.audio.alarms.vol;
-            alarmEnabled = ui.canvas.uiSettings.audio.alarms.enabled;
-        }
+        alarmVolMod = ui.canvas.uiSettings.audio.alarms.vol;
+        alarmEnabled = ui.canvas.uiSettings.audio.alarms.enabled;
 
         const enabled = sfxSettings.enabled && alarmEnabled;
         const baseVol = sfxSettings.vol * alarmVolMod * masterVol;
@@ -403,7 +368,7 @@ class AudioManager {
 
     getAlarmPhase() {
         const s = this.sounds['alarm'];
-        if (s && s.isPlaying()) {
+        if (s.isPlaying()) {
             const dur = s.duration();
             if (dur > 0) {
                 return (s.currentTime() % dur) / dur;
@@ -413,27 +378,23 @@ class AudioManager {
     }
 
     stopAlarm() {
-        if (this.sounds['alarm']) {
-            this.sounds['alarm'].stop();
-        }
+        this.sounds['alarm'].stop();
     }
 
     stopSfx(key) {
-        if (this.sounds[key]) {
-            this.sounds[key].stop();
-        }
+        this.sounds[key].stop();
     }
 
     stopAllImmediate() {
         this.ambientTracks.forEach(track => {
             track.targetVolume = 0;
             track.currentFadeVol = 0;
-            if (track.sound) track.sound.stop();
+            track.sound.stop();
         });
 
         Object.keys(this.sounds).forEach(key => {
             const s = this.sounds[key];
-            if (s && s.isPlaying && s.isPlaying()) s.stop();
+            if (s.isPlaying()) s.stop();
         });
 
         this.alarmIntensity = 0;

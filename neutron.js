@@ -31,8 +31,6 @@ class Neutron {
     }
 
     update(gl) {
-        // Critical: Disable blending for GPGPU simulation step!
-        // With a shared context, previous render passes (like UI) leave blending enabled.
         gl.disable(gl.BLEND);
         
         gl.bindFramebuffer(gl.FRAMEBUFFER, glShit.writeFBO);
@@ -42,26 +40,15 @@ class Neutron {
 
         gl.useProgram(glShit.simProgram);
 
-        // Pass per-rod Y positions (bottom threshold) to the shader.
-        // Prefer handle positions from the UI slider if available (handles hold bottom Y).
         const rodCount = controlRods.length;
         const rodYs = new Float32Array(rodCount || 1);
         for (let i = 0; i < rodCount; i++) {
-            if (controlRods[i]) {
-                if (typeof ui !== 'undefined' && ui.controlSlider && ui.controlSlider.handleY && typeof ui.controlSlider.handleY[i] === 'number') {
-                    rodYs[i] = ui.controlSlider.handleY[i];
-                } else {
-                    // Fallback: use rod bottom (top y + height)
-                    rodYs[i] = controlRods[i].y + controlRods[i].height;
-                }
-            } else {
-                rodYs[i] = -1.0;
-            }
+            rodYs[i] = ui.controlSlider.handleY[i];
         }
         const uRodsLoc = gl.getUniformLocation(glShit.simProgram, "u_controlRods");
-        if (uRodsLoc) gl.uniform1fv(uRodsLoc, rodYs);
+        gl.uniform1fv(uRodsLoc, rodYs);
         const uRodCountLoc = gl.getUniformLocation(glShit.simProgram, "u_controlRodCount");
-        if (uRodCountLoc) gl.uniform1i(uRodCountLoc, rodCount);
+        gl.uniform1i(uRodCountLoc, rodCount);
 
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, glShit.readTex);
@@ -75,7 +62,6 @@ class Neutron {
         gl.uniform1f(gl.getUniformLocation(glShit.simProgram, "u_simHeight"), screenHeight);
         gl.uniform1f(gl.getUniformLocation(glShit.simProgram, "u_atomSpacingX"), uraniumAtomsSpacingX);
         gl.uniform1f(gl.getUniformLocation(glShit.simProgram, "u_atomSpacingY"), uraniumAtomsSpacingY);
-        // settings.uraniumSize is diameter, pass radius (approx 5 at base)
         gl.uniform1f(gl.getUniformLocation(glShit.simProgram, "u_atomRadius"), settings.uraniumSize / 2.0);
         gl.uniform1f(gl.getUniformLocation(glShit.simProgram, "u_globalScale"), globalScale);
 
@@ -92,10 +78,7 @@ class Neutron {
     }
 
     draw(gl, { clear = true } = {}) {
-        // We do NOT clear or set Viewport here anymore (handled in sceneHelpers/drawScene)
-        // unless we really need to bind FBO null explicitly (which we do, but viewport is external)
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        // gl.viewport(...) -> REMOVED because we set the viewport for the SIMULATION area in drawScene
 
         if (clear) {
             gl.clearColor(0, 0, 0, 1);
@@ -104,23 +87,16 @@ class Neutron {
 
         gl.useProgram(glShit.renderProgram);
         gl.enable(gl.BLEND);
-        // Screen-like blending: 1 - (1 - S) * (1 - D)
         gl.blendFuncSeparate(gl.ONE, gl.ONE_MINUS_SRC_COLOR, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 
         gl.uniform1i(glShit.uRenderTexSizeLoc, MAX_NEUTRONS);
-        // Res is screenSimWidth/Height for the shader logic to map pos -> Clip
         gl.uniform2f(glShit.uRenderResLoc, screenSimWidth, screenHeight);
         gl.uniform2f(glShit.uRenderSimSizeLoc, screenSimWidth, screenHeight);
         gl.uniform1f(glShit.uRenderNeutronSizeLoc, settings.neutronSize);
 
-        // Pass alpha from UI settings
-        let nAlpha = 1.0;
-        if (typeof ui !== 'undefined' && !!ui.canvas && !!ui.canvas.uiSettings && !!ui.canvas.uiSettings.video && ui.canvas.uiSettings.video.neutrons) {
-            nAlpha = ui.canvas.uiSettings.video.neutrons.vol;
-        }
-        
+        let nAlpha = ui.canvas.uiSettings.video.neutrons.vol;
         const uAlphaLoc = gl.getUniformLocation(glShit.renderProgram, "u_alpha");
-        if (uAlphaLoc) gl.uniform1f(uAlphaLoc, nAlpha);
+        gl.uniform1f(uAlphaLoc, nAlpha);
 
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, glShit.readTex);
@@ -148,12 +124,10 @@ class Neutron {
     }
 
     updateInTexture(gl, index, x, y, vx, vy) {
-        // Ensure we write to the current input texture.
         gl.bindTexture(gl.TEXTURE_2D, glShit.readTex);
 
         const data = new Float32Array([x, y, vx, vy]);
 
-        // Convert linear index (0...MAX^2) to 2D texture coordinates.
         const texX = index % MAX_NEUTRONS;
         const texY = Math.floor(index / MAX_NEUTRONS);
 
@@ -188,14 +162,12 @@ class Neutron {
 
     spawn(x, y, atomRadius) {
         this.spawnCount++;
-        // Ring-buffer index.
         this.currentIndex = (this.currentIndex + 1) % MAX_NEUTRONS_SQUARED;
 
         const angle = Math.random() * Math.PI * 2;
         const vx = Math.cos(angle) * settings.neutronSpeed;
         const vy = Math.sin(angle) * settings.neutronSpeed;
 
-        // Spawn just outside the atom.
         const spawnOffset = atomRadius * 2;
         const finalX = x + Math.cos(angle) * spawnOffset;
         const finalY = y + Math.sin(angle) * spawnOffset;

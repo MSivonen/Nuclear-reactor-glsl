@@ -27,7 +27,6 @@ class BaseMeter {
 
         ctx.translate(d / 2, d / 2);
 
-        // Background circles
         ctx.fillStyle = 'rgb(150, 150, 150)';
         ctx.beginPath();
         ctx.arc(0, 0, d / 2, 0, Math.PI * 2);
@@ -38,7 +37,6 @@ class BaseMeter {
         ctx.arc(0, 0, d * 0.9 / 2, 0, Math.PI * 2);
         ctx.fill();
 
-        // Ticks
         for (let i = 0; i < 11; i++) {
             let angle = 0.5 + (i / 10) * (Math.PI * 2 - 1.0);
             
@@ -56,11 +54,9 @@ class BaseMeter {
     }
 
     draw(ctx, offsetX) {
-        // Position relative to sim area
         const drawX = offsetX + this.x - this.width / 2;
         const drawY = this.y - this.height / 2;
 
-        // Alarm glow when nearing max value
         const range = this.max - this.min;
         const ratio = range !== 0 ? (this.value - this.min) / range : 0;
         const clampedRatio = Math.min(Math.max(ratio, 0), 1);
@@ -68,10 +64,7 @@ class BaseMeter {
         let glow = 0;
         if (clampedRatio >= alarmThreshold) {
             const alarmT = (clampedRatio - alarmThreshold) / (1 - alarmThreshold);
-            let phase = 0;
-            if (audioManager.getAlarmPhase) {
-                phase = audioManager.getAlarmPhase();
-            }
+            let phase = audioManager.getAlarmPhase();
             const pulse = 0.5 + 0.5 * Math.sin(phase * Math.PI * 2);
             glow = alarmT * pulse;
 
@@ -86,10 +79,8 @@ class BaseMeter {
             ctx.restore();
         }
 
-        // Draw background
         ctx.drawImage(this.meterImage, 0, 0, this.meterImage.width, this.meterImage.height, drawX, drawY, this.width, this.height);
 
-        // Tint rim when alarm is active
         if (glow > 0) {
             ctx.save();
             ctx.strokeStyle = `rgba(255, 0, 0, ${0.8 * glow})`;
@@ -100,7 +91,6 @@ class BaseMeter {
             ctx.restore();
         }
 
-        // Draw needle
         ctx.save();
         ctx.translate(drawX + this.width / 2, drawY + this.height / 2);
         ctx.rotate(this.needleAngle);
@@ -108,7 +98,6 @@ class BaseMeter {
         const needleWidth = 3 * globalScale;
         ctx.fillStyle = 'black';
         
-        // Needle rect
         ctx.beginPath();
 
         ctx.rect(-needleWidth / 2, 0, needleWidth, globalScale*45);
@@ -116,7 +105,6 @@ class BaseMeter {
         
         ctx.restore();
 
-        // Draw value text
         this.drawValue(ctx, drawX, drawY);
     }
 
@@ -140,7 +128,6 @@ class BaseMeter {
 
     update(val) {
         this.value = val;
-        // Smooth transition using easing functions
         const range = this.max - this.min;
         let t = 0;
         if(range !== 0) {
@@ -179,8 +166,7 @@ class PowerMeter extends BaseMeter {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         
-        // Use energyOutput global if defined, else fallback to internal value
-        const val = (typeof energyOutput !== 'undefined') ? energyOutput * 1000 : this.value;
+        const val = energyOutput * 1000;
         const powerText = formatLarge(Math.round(val), 'W', 0);
         ctx.fillText(powerText, drawX + this.width / 2, drawY + this.height - 70 * globalScale);
         ctx.restore();
@@ -193,7 +179,10 @@ class TempMeter extends BaseMeter {
     }
 
     update() {
-        const val = (typeof window.avgTemp !== 'undefined') ? window.avgTemp : 0;
+        let val = 0;
+        let sum = 0;
+        for (let c of waterSystem.waterCells) sum += (c.temperature || 0);
+        val = sum / waterSystem.waterCells.length;
         super.update(val);
     }
 }

@@ -7,18 +7,20 @@ class PlayerState {
     saveGame(slotIndex) {
         if (slotIndex < 0 || slotIndex > 2) return false;
 
+        const GAME_VERSION = '0.12';
+
         const saveData = {
             timestamp: new Date().toISOString(),
-            player: player ? player.serialize() : null,
-            shop: shop ? shop.serialize() : null,
-            settings: settings ? { ...settings } : null,
-            uiSettings: (ui && ui.canvas) ? ui.canvas.uiSettings : null,
-            version: '1.0'
+            player: player.serialize(),
+            shop: shop.serialize(),
+            settings: { ...settings },
+            uiSettings: ui.canvas.uiSettings,
+            version: GAME_VERSION
         };
 
         try {
             localStorage.setItem(`nuclearReactor_save_${slotIndex}`, JSON.stringify(saveData));
-            this.saveSlots[slotIndex] = new Date().toLocaleString();
+            this.saveSlots[slotIndex] = `${new Date().toLocaleString()} (v${GAME_VERSION})`;
             this.saveSlotsToStorage();
             return true;
         } catch (e) {
@@ -36,30 +38,13 @@ class PlayerState {
 
             const saveData = JSON.parse(saveDataStr);
 
-            // Load player data
-            if (saveData.player && player) {
-                player.deserialize(saveData.player);
-            }
+            player.deserialize(saveData.player);
+            shop.deserialize(saveData.shop);
+            Object.assign(settings, saveData.settings);
+            ui.canvas.uiSettings = saveData.uiSettings;
 
-            // Load shop data
-            if (saveData.shop && shop) {
-                shop.deserialize(saveData.shop);
-            }
-
-            // Load settings
-            if (saveData.settings) {
-                Object.assign(settings, saveData.settings);
-            }
-
-            // Load UI settings
-            if (saveData.uiSettings && ui && ui.canvas) {
-                ui.canvas.uiSettings = saveData.uiSettings;
-            }
-
-            // Reset simulation
-            if (typeof resetSimulation === 'function') {
-                resetSimulation();
-            }
+            resetSimulation();
+            initializePlayerAtomGroups(player);
 
             return true;
         } catch (e) {
@@ -80,6 +65,7 @@ class PlayerState {
             const saveData = JSON.parse(saveDataStr);
             return {
                 timestamp: saveData.timestamp,
+                version: saveData.version,
                 hasData: true
             };
         } catch (e) {

@@ -3,12 +3,13 @@ class Player {
         this.balance = 0;
         this.incomePerSecond = 0;
         this.ownedColumns = [];
+        this.ownedGroups = [];
+        this.groupAtomCounts = [];
         this.rodCount = 1;
         this.upgrades = {};
         this.settings = {};
 
-        // Water flow upgrade tuning (tweakable)
-        this.waterFlowStart = 0.15;
+        this.waterFlowStart = 0.05;
         this.waterFlowMinLimit = 0.01;
         this.waterFlowMaxLimit = 1.0;
         this.waterFlowUpgradeMax = 20;
@@ -23,10 +24,8 @@ class Player {
 
     addMoney(amount) {
         let finalAmount = amount;
-        if (typeof upgrades !== 'undefined' && upgrades && typeof upgrades.multiply === 'function') {
-            finalAmount = upgrades.multiply(finalAmount);
-        }
-        if (typeof finalAmount === 'number' && !isNaN(finalAmount)) {
+        finalAmount = upgrades.multiply(finalAmount);
+        if (Number.isFinite(finalAmount)) {
             this.balance += finalAmount;
             this.incomePerSecond = finalAmount;
         }
@@ -56,6 +55,8 @@ class Player {
         return {
             balance: this.balance,
             ownedColumns: this.ownedColumns,
+            ownedGroups: this.ownedGroups,
+            groupAtomCounts: this.groupAtomCounts,
             rodCount: this.rodCount,
             upgrades: this.upgrades,
             waterFlowStart: this.waterFlowStart,
@@ -70,17 +71,17 @@ class Player {
         if (!obj) return;
         this.balance = obj.balance || 0;
         this.ownedColumns = obj.ownedColumns || [];
+        this.ownedGroups = obj.ownedGroups || [];
+        this.groupAtomCounts = obj.groupAtomCounts || [];
         this.rodCount = obj.rodCount || 1;
         this.upgrades = obj.upgrades || {};
-        this.waterFlowStart = (typeof obj.waterFlowStart === 'number') ? obj.waterFlowStart : 0.15;
-        this.waterFlowMinLimit = (typeof obj.waterFlowMinLimit === 'number') ? obj.waterFlowMinLimit : 0.01;
-        this.waterFlowMaxLimit = (typeof obj.waterFlowMaxLimit === 'number') ? obj.waterFlowMaxLimit : 1.0;
-        this.waterFlowUpgradeMax = (typeof obj.waterFlowUpgradeMax === 'number') ? obj.waterFlowUpgradeMax : 20;
-        this.waterFlowUpgradeCount = (typeof obj.waterFlowUpgradeCount === 'number') ? obj.waterFlowUpgradeCount : (this.upgrades.waterFlow || 0);
+        this.waterFlowStart = obj.waterFlowStart ?? 0.15;
+        this.waterFlowMinLimit = obj.waterFlowMinLimit ?? 0.01;
+        this.waterFlowMaxLimit = obj.waterFlowMaxLimit ?? 1.0;
+        this.waterFlowUpgradeMax = obj.waterFlowUpgradeMax ?? 20;
+        this.waterFlowUpgradeCount = obj.waterFlowUpgradeCount ?? (this.upgrades.waterFlow || 0);
         this.upgrades.waterFlow = this.waterFlowUpgradeCount;
         this.updateWaterFlowLimits();
     }
 }
-
-// Expose to global scope for script-based loading order
 window.Player = Player;

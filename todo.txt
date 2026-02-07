@@ -21,7 +21,7 @@ v    -Game starts in start screen
 v    -one control rod, the center one
 
 === Max upgrades are: === 
-    -six columns of atom groups, each group has 6x30 atoms (total 36x30)
+    -six atom groups, each group has 6x30 atoms (total 36x30)
 v    -five control rods
 
 === Shop: === 
@@ -29,7 +29,7 @@ v    -five control rods
 v        -ctrl+click to buy 5
 v        -shift+click to buy 10
 v    -Control rods. Same logic, centermost first.
-    -Can the stuff be bought whenever or does the reactor need to be shut down first? / to be decided later
+     -Can the stuff be bought whenever or does the reactor need to be shut down first? / to be decided later
 v    -Max water flow rate
 
 === UI elements that will be revealed in time: ===
@@ -40,9 +40,9 @@ v    -Max water flow rate
 
 === Economy: === 
 v    -"Money" is scaled by the amount of energy produced
-    -Game money unit is a Mass Flow Euro, eg "MF€", symbol is m with a dot on it "&#7745"
-    -Need to think of an increasing price ramp
-    -New atom group should be relatively expensive
+v    -Game money unit is a Mass Flow Euro, symbol is m with a dot on it "&#7745"
+v    -Need to think of an increasing price ramp
+     -New atom group should be relatively expensive
 
 === Gameplay features to add: ===
 v    -!!!!!Save/load game locally!!!!!
@@ -71,6 +71,8 @@ v        -Prettier boom animation
     -Degrading atoms that need replacing? MAYBE later...
         -Automatic healing of atoms when they're cooled a lot?
         -And/or buy atom healing?
+    -Move uranium groups up/down?
+
 
 === Sound: ===
 v    -Minimal sfx
@@ -110,7 +112,7 @@ v        -Options
 v            -Turn visual-only graphics layers on/off
         -Tutorial on/off
     -Meter rework to make it's scale scale with more powerful reactor or max power reached? Must be tested.
-    -Force widescreen aspect ratio (1.78:1). Move the simulation canvases to the right to make room for ui elements on the left.
+v   -Force widescreen aspect ratio (1.78:1). Move the simulation canvases to the right to make room for ui elements on the left.
     -Add stats and graphs
         -One of the last things to do
 
@@ -124,3 +126,8 @@ v            -Turn visual-only graphics layers on/off
         -Tutorial window size
             -Or make it dynamic size?
         -Tutorial window position
+
+
+=== Bugs/Fixes ===
+v-Scram button should be dark red normally and change to bright blinking red when active.
+v-Start button is on top of the lower startup screen border. Move it up, where the loading bar was.

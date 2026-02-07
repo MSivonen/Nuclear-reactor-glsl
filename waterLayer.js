@@ -1,6 +1,3 @@
-// waterLayer.js
-// Renders a fullscreen water shader pass into the existing WebGL context.
-
 class WaterLayer {
     constructor() {
         this.gl = null;
@@ -13,18 +10,11 @@ class WaterLayer {
     }
 
     init(simGL, vsSourceExternal, fsSourceExternal) {
-        if (!simGL) return;
-        if (!vsSourceExternal || !fsSourceExternal) {
-            console.error('waterLayer.init requires vertex and fragment shader source strings');
-            return;
-        }
         this.gl = simGL;
         this.program = createProgram(this.gl, vsSourceExternal, fsSourceExternal);
         
-        // Load background texture
         this.texture = this.loadTexture('assets/brickwall.jpg');
 
-        // Fullscreen quad (two triangles)
         const quad = new Float32Array([
             -1, -1, 1, -1, -1, 1,
             -1, 1, 1, -1, 1, 1
@@ -51,7 +41,6 @@ class WaterLayer {
         const texture = gl.createTexture();
         gl.bindTexture(gl.TEXTURE_2D, texture);
     
-        // Put a single pixel in the texture so we can use it immediately.
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE,
                       new Uint8Array([0, 0, 255, 255]));
     
@@ -60,7 +49,6 @@ class WaterLayer {
             gl.bindTexture(gl.TEXTURE_2D, texture);
             gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
             
-            // Assume WebGL2, generate mips if possible, set parameters
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
@@ -71,28 +59,15 @@ class WaterLayer {
     }
 
     render(timeSeconds) {
-        if (!this.gl || !this.program) return;
         this.gl.useProgram(this.program);
         this.gl.bindVertexArray(this.vao);
         this.gl.disable(this.gl.DEPTH_TEST);
-        // this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height); // Controlled externally
+        this.gl.uniform2f(this.uResolutionLoc, screenSimWidth, screenHeight);
+        this.gl.uniform1f(this.uTimeLoc, timeSeconds);
         
-        // Pass SimWidth not CanvasWidth for resolution, because we are rendering to a viewport that is only SimWidth wide
-        // And the shader likely uses u_res to correct aspect ratio or UVs.
-        // Actually, if we use viewport, gl_FragCoord is in window space.
-        // If shader uses gl_FragCoord / u_resolution, it expects 0..1 range.
-        // If viewport is offset, gl_FragCoord.x is offset. 
-        // We should probably pass the Viewport Size here, not full canvas size.
-        // But since we can't easily access the viewport rect, let's assume the sceneHelper sets it up.
-        // The original code passed canvas.width which was SimWidth.
-        if (this.uResolutionLoc) this.gl.uniform2f(this.uResolutionLoc, screenSimWidth, screenHeight);
-        if (this.uTimeLoc) this.gl.uniform1f(this.uTimeLoc, timeSeconds || 0.0);
-        
-        if (this.texture && this.uTextureLoc) {
-            this.gl.activeTexture(this.gl.TEXTURE0);
-            this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture);
-            this.gl.uniform1i(this.uTextureLoc, 0);
-        }
+        this.gl.activeTexture(this.gl.TEXTURE0);
+        this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture);
+        this.gl.uniform1i(this.uTextureLoc, 0);
 
         this.gl.drawArrays(this.gl.TRIANGLES, 0, 6);
         this.gl.bindVertexArray(null);

@@ -2,13 +2,11 @@ const CURRENCY_UNIT = String.fromCharCode(7745);
 
 class UICanvas {
     constructor() {
-        this.width = screenRenderWidth;
+        this.width = screenWidth;
         this.height = screenHeight;
         this.simWidth = screenSimWidth;
         this.simXOffset = SHOP_WIDTH;
         this.lastFrame = -1;
-
-        // Settings (Moved to top to ensure availability for initDOM)
         this.uiSettings = {
             audio: {
                 master: { vol: 1.0, enabled: true },
@@ -29,7 +27,6 @@ class UICanvas {
             }
         };
 
-        // Keep the canvas for meters, FPS, and control rod visualization
         this.canvas = document.createElement('canvas');
         this.canvas.width = this.width;
         this.canvas.height = this.height;
@@ -39,23 +36,18 @@ class UICanvas {
         this.canvas.style.left = '0';
         this.canvas.style.top = '0';
         this.canvas.style.zIndex = '15'; 
-        this.canvas.style.pointerEvents = 'none'; // IMPORTANT: Allow clicks to pass through to game
+        this.canvas.style.pointerEvents = 'none';
         this.canvas.id = "UI-Canvas";
 
         const container = document.getElementById('canvas-container');
-        if (container) {
-             if (!document.getElementById('UI-Canvas')) {
-                 container.appendChild(this.canvas);
-             }
-        }
+        container.appendChild(this.canvas);
 
         this.ctx = this.canvas.getContext('2d');
         
-        // Shop Modifiers
         this.modifiers = [1, 5, 10, 'MAX'];
         this.currentModifierIndex = 0;
+        this.modifierKeyState = { shift: false, ctrl: false };
 
-        // DOM Elements
         this.sidebar = document.getElementById('ui-sidebar');
         this.shopOverlay = document.getElementById('ui-shop-overlay');
         this.shopItemsContainer = document.getElementById('ui-shop-items');
@@ -64,14 +56,8 @@ class UICanvas {
         this.settingsMenu = document.getElementById('ui-settings-menu');
         this.uiLayer = document.getElementById('ui-layer');
 
-        // Check if DOM exists (it should now)
-        if (this.sidebar) {
-            this.initDOM();
-        } else {
-            console.error("UI DOM elements not found! Make sure index.html is updated.");
-        }
-        
-        // Pause Menu Logic
+        this.initDOM();
+
         this.pauseMenuState = 'MAIN';
         this.pendingSaveSlot = null;
     }
@@ -82,21 +68,24 @@ class UICanvas {
         this.ctx.clearRect(0, 0, this.width, this.height);
     }
 
-    // Initialize the DOM structure for Sidebar and Menus
     initDOM() {
-        // Set Sidebar Width to match the simulation offset
+        const playUiClick = (success = true) => {
+            audioManager.playSfx(success ? 'click' : 'click_fail');
+        };
+
+        const bindButtonSound = (btn) => {
+            btn.addEventListener('click', () => {
+                const disabled = btn.dataset.disabled === 'true' || btn.disabled;
+                playUiClick(!disabled);
+            });
+        };
+
         this.sidebar.style.width = `${this.simXOffset}px`;
 
-        // Align shop overlay to the right edge of the sidebar
-        if (this.shopOverlay) {
-            const overlap = 40;
-            const leftPos = Math.max(0, this.simXOffset - overlap);
-            this.shopOverlay.style.left = `${leftPos}px`;
-        }
+        const overlap = 140;
+        const leftPos = Math.max(0, this.simXOffset - overlap);
+        this.shopOverlay.style.left = `${leftPos}px`;
 
-        // --- Sidebar Content ---
-        
-        // 0. Money Stats (Restored)
         const statsDiv = document.createElement('div');
         statsDiv.id = 'ui-stats';
         statsDiv.style.textAlign = 'center';
@@ -109,7 +98,6 @@ class UICanvas {
         `;
         this.sidebar.appendChild(statsDiv);
 
-        // 1. Controls Area
         const controlsDiv = document.createElement('div');
         controlsDiv.style.background = '#444';
         controlsDiv.style.padding = '10px';
@@ -121,7 +109,6 @@ class UICanvas {
         controlsTitle.style.marginBottom = '10px';
         controlsDiv.appendChild(controlsTitle);
 
-        // Link Rods Toggle
         const linkBtn = document.createElement('button');
         linkBtn.id = 'btn-link-rods';
         linkBtn.innerText = `Link Rods: ${settings.linkRods ? 'ON' : 'OFF'}`;
@@ -131,9 +118,9 @@ class UICanvas {
              linkBtn.innerText = `Link Rods: ${settings.linkRods ? 'ON' : 'OFF'}`;
              linkBtn.style.background = settings.linkRods ? '#5cb85c' : '#d9534f';
         };
+           bindButtonSound(linkBtn);
         controlsDiv.appendChild(linkBtn);
         
-        // Water Flow Slider (Restored)
         const waterDiv = document.createElement('div');
         waterDiv.innerHTML = `<label>Water Flow</label>`;
         const waterSlider = document.createElement('input');
@@ -142,28 +129,24 @@ class UICanvas {
         waterSlider.max = '100';
         waterSlider.step = '1';
         waterSlider.style.width = '100%';
-        const initialFlow = (typeof settings !== 'undefined') ? settings.waterFlowSpeed : 0.5;
+        const initialFlow = settings.waterFlowSpeed;
         waterSlider.value = Math.round(initialFlow * 100);
         waterSlider.oninput = (e) => {
-            if (typeof settings !== 'undefined') {
-                 const raw = parseFloat(e.target.value) / 100;
-                 let min = 0;
-                 let max = 1;
-                 if (typeof player !== 'undefined' && player) {
-                     if (typeof player.waterFlowMin === 'number') min = player.waterFlowMin;
-                     if (typeof player.waterFlowMax === 'number') max = player.waterFlowMax;
-                 }
-                 const clamped = Math.max(min, Math.min(max, raw));
-                 settings.waterFlowSpeed = clamped;
-                 waterSlider.value = Math.round(clamped * 100);
+            if (this.scramActive) {
+                this.waterSliderDOM.value = Math.round(settings.waterFlowSpeed * 100);
+                return;
             }
+            const raw = parseFloat(e.target.value) / 100;
+            const min = player.waterFlowMin;
+            const max = player.waterFlowMax;
+            const clamped = Math.max(min, Math.min(max, raw));
+            settings.waterFlowSpeed = clamped;
+            waterSlider.value = Math.round(clamped * 100);
         };
-        // Keep a reference to update it visually if game updates it
         this.waterSliderDOM = waterSlider;
         waterDiv.appendChild(waterSlider);
         controlsDiv.appendChild(waterDiv);
 
-        // SCRAM Button
         const scramBtn = document.createElement('button');
         scramBtn.id = 'btn-scram';
         scramBtn.className = 'scram-btn';
@@ -171,33 +154,31 @@ class UICanvas {
         scramBtn.onclick = () => {
             this.activateScram(scramBtn);
         };
+        bindButtonSound(scramBtn);
         controlsDiv.appendChild(scramBtn);
 
         this.sidebar.appendChild(controlsDiv);
 
-        // 2. Open Shop Button
         const shopBtn = document.createElement('button');
         shopBtn.innerText = "Open Shop";
         shopBtn.onclick = () => {
             this.toggleShop();
         };
+        bindButtonSound(shopBtn);
         this.sidebar.appendChild(shopBtn);
 
-        // 3. Open Settings Button (Added to Sidebar)
         const sideSetBtn = document.createElement('button');
-        sideSetBtn.innerText = "Settings";
+        sideSetBtn.innerText = "Menu";
         sideSetBtn.onclick = () => {
-             // Open settings directly, ensuring game is paused if needed?
-             // Usually settings implies pausing.
-             if(typeof paused !== 'undefined' && !paused) {
-                 paused = true;
-             }
-             this.openSettingsMenu();
-             this.updateDOM();
+            paused = true;
+            this.pauseMenu.classList.remove('hidden');
+            this.settingsMenu.classList.add('hidden');
+            this.slotMenu.classList.add('hidden');
+            this.updateDOM();
         };
+        bindButtonSound(sideSetBtn);
         this.sidebar.appendChild(sideSetBtn);
 
-        // 4. Dev Mode Button
         const devBtn = document.createElement('button');
         devBtn.id = 'btn-devmode';
         devBtn.innerText = settings.cheatMode ? "DEV MODE: ON" : "DEV MODE: OFF";
@@ -205,67 +186,82 @@ class UICanvas {
         devBtn.onclick = () => {
             settings.cheatMode = !settings.cheatMode;
             devBtn.innerText = settings.cheatMode ? "DEV MODE: ON" : "DEV MODE: OFF";
-            // Check styling (green/red)
             devBtn.style.color = settings.cheatMode ? '#5cb85c' : 'white';
         };
+        bindButtonSound(devBtn);
         this.sidebar.appendChild(devBtn);
 
-        // --- Shop Overlay Content ---
-        // Close button logic
-        if (document.getElementById('ui-shop-close')) {
-            document.getElementById('ui-shop-close').onclick = () => this.toggleShop();
-        }
+        document.getElementById('ui-shop-close').onclick = () => this.toggleShop();
+        bindButtonSound(document.getElementById('ui-shop-close'));
 
-        // Buy Amount Radio Checkboxes
         const radios = document.querySelectorAll('input[name="buyAmount"]');
         radios.forEach(radio => {
             radio.onchange = (e) => {
                 if(e.target.checked) {
                     let val = e.target.value;
-                    // convert '1', '5', '10' to numbers 
                     if (val !== 'MAX') val = parseInt(val);
-                    
-                    if (typeof shop !== 'undefined' && shop.setBuyAmount) {
-                        shop.setBuyAmount(val);
-                    }
-                    this.updateShopButtons();
+                    this.setBuyAmount(val);
                 }
             };
         });
 
-        // Generate Shop Items (once, then update state)
-        this.renderShopItemsDOM();
+        const amountControls = document.getElementById('shop-amount-controls');
+        const groupControls = document.createElement('div');
+        groupControls.id = 'shop-group-controls';
+        groupControls.style.marginBottom = '15px';
+        groupControls.style.display = 'flex';
+        groupControls.style.flexDirection = 'column';
+        groupControls.style.gap = '6px';
 
-        // --- Pause Menu ---
-        // Hook up existing buttons if they exist
-        const bind = (id, fn) => { const el = document.getElementById(id); if(el) el.onclick = fn; };
+        const groupLabel = document.createElement('span');
+        groupLabel.innerText = 'Uranium Group:';
+        groupControls.appendChild(groupLabel);
+
+        const groupRadios = document.createElement('div');
+        groupRadios.id = 'ui-atom-group-radios';
+        groupRadios.style.display = 'flex';
+        groupRadios.style.flexWrap = 'wrap';
+        groupRadios.style.gap = '8px';
+        groupControls.appendChild(groupRadios);
+
+        amountControls.insertAdjacentElement('afterend', groupControls);
+        this.atomGroupRadiosContainer = groupRadios;
+
+        const onKeyChange = (e) => {
+            if (e.key !== 'Shift' && e.key !== 'Control') return;
+            this.modifierKeyState.shift = e.shiftKey;
+            this.modifierKeyState.ctrl = e.ctrlKey;
+            this.applyModifierKeys();
+        };
+        document.addEventListener('keydown', onKeyChange);
+        document.addEventListener('keyup', onKeyChange);
+
+        this.renderShopItemsDOM();
+        this.setBuyAmount(shop.buyAmount);
+
+        const bind = (id, fn) => { const el = document.getElementById(id); el.onclick = fn; };
         
         bind('btn-resume', () => { paused = false; this.updateDOM(); });
         bind('btn-save', () => { this.openSlotMenu('SAVE'); });
         bind('btn-load', () => { this.openSlotMenu('LOAD'); });
         bind('btn-settings', () => { this.openSettingsMenu(); });
+        ['btn-resume','btn-save','btn-load','btn-settings'].forEach(id => bindButtonSound(document.getElementById(id)));
         
-        // Slot Menu Bindings
         bind('btn-slot-cancel', () => { 
-             this.slotMenu.classList.add('hidden'); 
-             this.pauseMenu.classList.remove('hidden'); 
+            this.slotMenu.classList.add('hidden'); 
+            this.pauseMenu.classList.remove('hidden'); 
         });
+        bindButtonSound(document.getElementById('btn-slot-cancel'));
 
-        // Settings Menu Navigation
         const views = ['settings-view-main', 'settings-view-audio', 'settings-view-video'];
         const switchView = (id) => {
-            views.forEach(v => {
-                const el = document.getElementById(v);
-                if(el) el.classList.add('hidden');
-            });
-            const target = document.getElementById(id);
-            if(target) target.classList.remove('hidden');
+            views.forEach(v => document.getElementById(v).classList.add('hidden'));
+            document.getElementById(id).classList.remove('hidden');
         };
 
         bind('btn-set-audio', () => switchView('settings-view-audio'));
         bind('btn-set-video', () => switchView('settings-view-video'));
         
-        // Back buttons
         bind('btn-audio-back', () => switchView('settings-view-main'));
         bind('btn-video-back', () => switchView('settings-view-main'));
         
@@ -274,36 +270,62 @@ class UICanvas {
              this.pauseMenu.classList.remove('hidden');
              switchView('settings-view-main');
         });
-        
-        // Initial Settings Sync
+          ['btn-set-audio','btn-set-video','btn-audio-back','btn-video-back','btn-settings-close'].forEach(id => bindButtonSound(document.getElementById(id)));
+
         this.syncSettingsDOM();
+    }
+
+    isScramComplete() {
+        for (let i = 0; i < controlRods.length; i++) {
+            const rod = controlRods[i];
+            const topY = -rod.height;
+            if (Math.abs(rod.y - topY) > 1 || Math.abs(rod.targetY - topY) > 1) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    setBuyAmount(amount) {
+        const idx = this.modifiers.indexOf(amount);
+        if (idx >= 0) this.currentModifierIndex = idx;
+        shop.setBuyAmount(amount);
+        this.syncBuyAmountRadios(amount);
+        this.updateShopButtons();
+    }
+
+    syncBuyAmountRadios(amount) {
+        const radios = document.querySelectorAll('input[name="buyAmount"]');
+        radios.forEach(r => {
+            const val = (r.value === 'MAX') ? 'MAX' : parseInt(r.value);
+            r.checked = val === amount;
+        });
+    }
+
+    applyModifierKeys() {
+        let amount = 1;
+        if (this.modifierKeyState.shift && this.modifierKeyState.ctrl) amount = 'MAX';
+        else if (this.modifierKeyState.ctrl) amount = 10;
+        else if (this.modifierKeyState.shift) amount = 5;
+        this.setBuyAmount(amount);
     }
     
     syncSettingsDOM() {
-        // Audio Inputs
         const audioKeys = ['master', 'sfx', 'ambience', 'steam', 'water', 'alarms', 'explosions'];
         audioKeys.forEach(key => {
             const slider = document.getElementById(`set-audio-${key}`);
             const check = document.getElementById(`chk-audio-${key}`);
             const obj = this.uiSettings.audio[key];
-            
-            if(slider && obj) {
-                slider.value = obj.vol;
-                slider.oninput = (e) => { obj.vol = parseFloat(e.target.value); };
-            }
-            if(check && obj) {
-                check.checked = obj.enabled;
-                check.onchange = (e) => { obj.enabled = e.target.checked; };
-            }
+            slider.value = obj.vol;
+            slider.oninput = (e) => { obj.vol = parseFloat(e.target.value); };
+            check.checked = obj.enabled;
+            check.onchange = (e) => { obj.enabled = e.target.checked; };
         });
 
-        // Video Inputs
         const bindCheck = (id, obj, key) => {
-             const el = document.getElementById(id);
-             if(el) {
-                 el.checked = obj[key];
-                 el.onchange = (e) => { obj[key] = e.target.checked; };
-             }
+            const el = document.getElementById(id);
+            el.checked = obj[key];
+            el.onchange = (e) => { obj[key] = e.target.checked; };
         };
         
         bindCheck('set-video-bubbles', this.uiSettings.video, 'bubbles');
@@ -313,24 +335,17 @@ class UICanvas {
         
         const nSlider = document.getElementById('set-video-neutrons');
         const nCheck = document.getElementById('chk-video-neutrons');
-        if(nSlider) {
-             nSlider.value = this.uiSettings.video.neutrons.vol; 
-             nSlider.oninput = (e) => { this.uiSettings.video.neutrons.vol = parseFloat(e.target.value); };
-        }
-        if(nCheck) {
-             nCheck.checked = this.uiSettings.video.neutrons.enabled;
-             nCheck.onchange = (e) => { this.uiSettings.video.neutrons.enabled = e.target.checked; };
-        }
-        
-        // Resolution Buttons
+        nSlider.value = this.uiSettings.video.neutrons.vol; 
+        nSlider.oninput = (e) => { this.uiSettings.video.neutrons.vol = parseFloat(e.target.value); };
+        nCheck.checked = this.uiSettings.video.neutrons.enabled;
+        nCheck.onchange = (e) => { this.uiSettings.video.neutrons.enabled = e.target.checked; };
+
         document.querySelectorAll('.res-btn').forEach(btn => {
             btn.onclick = () => {
                 const resIndex = parseInt(btn.getAttribute('data-res'));
                 this.uiSettings.video.resolution = resIndex;
                 console.log("Resolution set to index: " + resIndex);
-                if(typeof window.setResolution === 'function') {
-                    window.setResolution(resIndex);
-                }
+                window.setResolution(resIndex);
             };
         });
     }
@@ -346,20 +361,24 @@ class UICanvas {
         // Create 3 slots
         for(let i=0; i<3; i++) {
             const btn = document.createElement('button');
-            const slotInfo = (playerState && playerState.saveSlots && playerState.saveSlots[i]) ? playerState.saveSlots[i] : "Empty";
+            let slotInfo = (playerState && playerState.saveSlots && playerState.saveSlots[i]) ? playerState.saveSlots[i] : "Empty";
+            const info = playerState.getSaveInfo(i);
+            if (info && info.version && slotInfo !== 'Empty' && !slotInfo.includes(`v${info.version}`)) {
+                slotInfo = `${slotInfo} (v${info.version})`;
+            }
             btn.innerText = `Slot ${i+1}: ${slotInfo}`;
             btn.style.padding = "10px";
             btn.style.cursor = "pointer";
             btn.onclick = () => {
+                audioManager.playSfx('click');
                 if (mode === 'SAVE') {
-                    if (playerState) playerState.saveGame(i);
+                    playerState.saveGame(i);
                     alert(`Saved to Slot ${i+1}`);
-                    // Refresh text
                     btn.innerText = `Slot ${i+1}: ${playerState.saveSlots[i]}`;
                 } else {
-                    if (playerState) playerState.loadGame(i);
+                    playerState.loadGame(i);
                     paused = false;
-                    this.updateDOM(); // Hide all menus
+                    this.updateDOM();
                 }
             };
             container.appendChild(btn);
@@ -373,41 +392,51 @@ class UICanvas {
     }
 
     activateScram(btn) {
+        if (this.scramActive) {
+            // Deactivate only when rods are fully up
+            if (this.isScramComplete()) {
+                this.scramActive = false;
+                if (btn) {
+                    btn.classList.remove('scram-active');
+                    btn.innerText = 'SCRAM';
+                }
+                audioManager.fadeOutSfx('scram', 1);
+            }
+            return;
+        }
+
         this.scramActive = true;
         if (btn) {
             btn.classList.add('scram-active');
             btn.innerText = '!!SCRAM!!';
         }
 
-        // Max water flow
-        if (typeof settings !== 'undefined') {
-            let maxFlow = 1;
-            if (typeof player !== 'undefined' && player && typeof player.waterFlowMax === 'number') {
-                maxFlow = player.waterFlowMax;
+        try {
+            const sfxEnabled = ui.canvas.uiSettings.audio.sfx.enabled;
+            const sfxVol = ui.canvas.uiSettings.audio.sfx.vol;
+            const masterVol = ui.canvas.uiSettings.audio.master.vol;
+            if (sfxEnabled) {
+                const vol = sfxVol * masterVol;
+                audioManager.sounds['scram'].setVolume(vol);
+                audioManager.sounds['scram'].loop();
             }
-            settings.waterFlowSpeed = maxFlow;
-            if (this.waterSliderDOM) {
-                this.waterSliderDOM.value = Math.round(maxFlow * 100);
-            }
+        } catch (e) {
+            audioManager.playSfx('scram');
         }
 
-        // Raise all control rod targets up
-        if (typeof controlRods !== 'undefined' && controlRods && typeof clampControlRodHandleY === 'function') {
-            for (let i = 0; i < controlRods.length; i++) {
-                const rod = controlRods[i];
-                if (!rod) continue;
-                let handleY = clampControlRodHandleY(i, rod.height);
-                if (typeof ui !== 'undefined' && ui && ui.controlSlider && ui.controlSlider.handleY) {
-                    ui.controlSlider.handleY[i] = handleY;
-                }
-                rod.targetY = Math.max(0, handleY - rod.height);
-            }
+        const maxFlow = player.waterFlowMax;
+        settings.waterFlowSpeed = maxFlow;
+        this.waterSliderDOM.value = Math.round(maxFlow * 100);
+
+        for (let i = 0; i < controlRods.length; i++) {
+            const rod = controlRods[i];
+            const handleY = clampControlRodHandleY(i, 0);
+            ui.controlSlider.handleY[i] = handleY;
+            rod.targetY = handleY - rod.height;
         }
     }
 
     renderShopItemsDOM() {
-        if (!shop || !shop.items) return;
-        
         this.shopItemsContainer.innerHTML = ''; // Clear
 
         Object.keys(shop.items).forEach(key => {
@@ -416,10 +445,12 @@ class UICanvas {
             itemDiv.className = 'shop-item';
             
             const title = document.createElement('h3');
+            title.id = `shop-title-${key}`;
             title.innerText = item.name || key;
             itemDiv.appendChild(title);
 
             const desc = document.createElement('p');
+            desc.id = `shop-desc-${key}`;
             desc.innerText = item.description || "No description";
             itemDiv.appendChild(desc);
 
@@ -427,13 +458,19 @@ class UICanvas {
             btn.id = `shop-btn-${key}`;
             btn.innerText = "Buy";
             btn.onclick = () => {
-                // Ensure shop state is correct before buying
-                if (shop && shop.setBuyAmount) {
-                    shop.setBuyAmount(this.modifiers[this.currentModifierIndex]);
-                    shop.buy(key);
+                if (btn.dataset.disabled === 'true') {
+                    audioManager.playSfx('click_fail');
+                    return;
                 }
+                shop.setBuyAmount(this.modifiers[this.currentModifierIndex]);
+                shop.buy(key);
                 this.updateShopButtons(); 
             };
+            btn.addEventListener('click', () => {
+                if (btn.dataset.disabled !== 'true') {
+                    audioManager.playSfx('click');
+                }
+            });
             itemDiv.appendChild(btn);
 
             this.shopItemsContainer.appendChild(itemDiv);
@@ -443,41 +480,135 @@ class UICanvas {
     }
 
     updateShopButtons() {
-        if (typeof shop === 'undefined' || !this.shopOverlay || this.shopOverlay.classList.contains('hidden')) return;
+        if (this.shopOverlay.classList.contains('hidden')) return;
 
-        // Ensure shop state is synced for accurate pricing display
-        if (shop.setBuyAmount) {
-            shop.setBuyAmount(this.modifiers[this.currentModifierIndex]);
+        shop.setBuyAmount(this.modifiers[this.currentModifierIndex]);
+
+        if (this.atomGroupRadiosContainer) {
+            const maxGroups = getAtomGroupCount();
+            const owned = new Set(player.ownedGroups);
+            this.atomGroupRadiosContainer.innerHTML = '';
+
+            for (let i = 0; i < maxGroups; i++) {
+                const label = document.createElement('label');
+                label.style.display = 'flex';
+                label.style.alignItems = 'center';
+                label.style.gap = '4px';
+
+                const input = document.createElement('input');
+                input.type = 'radio';
+                input.name = 'atomGroupRadio';
+                input.value = i;
+                input.onchange = (e) => {
+                    shop.setTargetAtomGroup(e.target.value);
+                    this.updateShopButtons();
+                };
+
+                const text = document.createElement('span');
+                const ownedText = owned.has(i) ? 'Owned' : 'Locked';
+                text.innerText = `Group ${i + 1} (${ownedText})`;
+
+                label.appendChild(input);
+                label.appendChild(text);
+                this.atomGroupRadiosContainer.appendChild(label);
+            }
+
+            if (owned.size > 0 && !owned.has(shop.targetAtomGroupIndex)) {
+                const firstOwned = player.ownedGroups[0];
+                shop.setTargetAtomGroup(firstOwned);
+            }
+            const selected = this.atomGroupRadiosContainer.querySelector(`input[value="${shop.targetAtomGroupIndex}"]`);
+            selected.checked = true;
         }
 
         Object.keys(shop.items).forEach(key => {
             const btn = document.getElementById(`shop-btn-${key}`);
+            const title = document.getElementById(`shop-title-${key}`);
+            const desc = document.getElementById(`shop-desc-${key}`);
             if (btn) {
                 // getPurchaseInfo uses internal shop.buyAmount
                 const info = shop.getPurchaseInfo(key); 
-                const costText = (typeof formatLarge === 'function')
-                    ? formatLarge(info.cost, CURRENCY_UNIT, 2)
-                    : `${info.cost.toFixed(2)}${CURRENCY_UNIT}`;
+                const costText = formatLarge(info.cost, CURRENCY_UNIT, 2);
 
                 const isMax = shop.buyAmount === 'MAX';
-                if (isMax && info.count === 0) {
-                    btn.innerText = 'MAX';
+                let isMaxed = false;
+                if (key === 'waterFlow') {
+                    const current = player.waterFlowUpgradeCount;
+                    const max = player.waterFlowUpgradeMax;
+                    isMaxed = current >= max && max > 0;
+                } else if (key === 'controlRod') {
+                    const current = controlRodPurchaseCount;
+                    const max = getMaxControlRodPurchases();
+                    isMaxed = current >= max && max > 0;
+                } else if (key === 'group') {
+                    const current = player.ownedGroups.length;
+                    const max = getAtomGroupCount();
+                    isMaxed = current >= max && max > 0;
+                } else if (key === 'atom') {
+                    const groupIndex = shop.targetAtomGroupIndex;
+                    const owned = player.ownedGroups.includes(groupIndex);
+                    const available = getGroupAvailableSlots(groupIndex);
+                    isMaxed = owned && available <= 0;
+                }
+
+                if (info.count === 0 && isMaxed) {
+                    const name = (shop.items[key] && shop.items[key].name) ? shop.items[key].name : key;
+                    btn.innerText = `${name} MAX`;
                     btn.style.background = '#d7b600';
-                    btn.disabled = true;
+                    btn.style.color = '#111';
+                    btn.dataset.disabled = 'true';
+                    btn.classList.add('btn-disabled');
+                } else if (info.count === 0) {
+                    btn.innerText = 'Unavailable';
+                    btn.style.background = '';
+                    btn.style.color = '';
+                    btn.dataset.disabled = 'true';
+                    btn.classList.add('btn-disabled');
                 } else {
                     btn.innerText = `Buy ${info.count} (${costText})`;
                     btn.style.background = '';
+                    btn.style.color = '';
+                    btn.dataset.disabled = 'false';
+                    btn.classList.remove('btn-disabled');
                 }
                 
-                // Check affordability (assuming player money matches logic in buy())
-                // shop.buy() calls player.spend(). We need to know if we CAN afford.
-                // shop.getPurchaseInfo returns cost. check player.money >= cost.
-                if (typeof player !== 'undefined') {
-                    const cheatMode = (typeof settings !== 'undefined' && settings && settings.cheatMode);
-                    if (!(isMax && info.count === 0)) {
-                        btn.disabled = cheatMode ? false : player.balance < info.cost;
+                const cheatMode = settings.cheatMode;
+                if (!(isMax && info.count === 0) && info.count > 0) {
+                    const canAfford = cheatMode ? true : player.balance >= info.cost;
+                    if (!canAfford) {
+                        btn.dataset.disabled = 'true';
+                        btn.classList.add('btn-disabled');
                     }
                 }
+            }
+
+            if (title) {
+                if (key === 'waterFlow') {
+                    const current = player.waterFlowUpgradeCount;
+                    const max = player.waterFlowUpgradeMax;
+                    title.innerText = `Water flow ${current}/${max}`;
+                } else if (key === 'controlRod') {
+                    const current = controlRodPurchaseCount;
+                    const max = getMaxControlRodPurchases();
+                    title.innerText = `Control Rod ${current}/${max}`;
+                } else if (key === 'group') {
+                    const current = player.ownedGroups.length;
+                    const max = getAtomGroupCount();
+                    title.innerText = `Uranium Group ${current}/${max}`;
+                } else if (key === 'atom') {
+                    const groupIndex = shop.targetAtomGroupIndex;
+                    const current = getGroupAtomCount(groupIndex);
+                    const max = getGroupCapacity(groupIndex);
+                    title.innerText = `Uranium ${current}/${max}`;
+                } else {
+                    title.innerText = shop.items[key].name || key;
+                }
+            }
+
+            if (desc && key === 'atom') {
+                const groupIndex = shop.targetAtomGroupIndex;
+                const owned = player.ownedGroups.includes(groupIndex);
+                desc.innerText = owned ? `Target group: ${groupIndex + 1}` : `Target group: ${groupIndex + 1} (Locked)`;
             }
         });
     }
@@ -493,14 +624,20 @@ class UICanvas {
     }
 
     updateDOM() {
-        // Toggle Overlay Visibility based on 'paused' state (managed globally)
-        // If not paused, hide pause/slot/settings menus
-        if (typeof paused !== 'undefined' && !paused) {
-            if(this.pauseMenu) this.pauseMenu.classList.add('hidden');
-            if(this.slotMenu) this.slotMenu.classList.add('hidden');
-            if(this.settingsMenu) this.settingsMenu.classList.add('hidden');
-        } else if (typeof paused !== 'undefined' && paused) {
-            // If just paused and no other menu is open, show main pause menu
+        if (this.scramActive && this.isScramComplete()) {
+            this.scramActive = false;
+            const scramBtn = document.getElementById('btn-scram');
+            if (scramBtn) {
+                scramBtn.classList.remove('scram-active');
+                scramBtn.innerText = 'SCRAM';
+            }
+            audioManager.fadeOutSfx('scram', 1);
+        }
+        if (!paused) {
+            this.pauseMenu.classList.add('hidden');
+            this.slotMenu.classList.add('hidden');
+            this.settingsMenu.classList.add('hidden');
+        } else {
             const pHidden = this.pauseMenu.classList.contains('hidden');
             const sHidden = this.slotMenu.classList.contains('hidden');
             const settHidden = this.settingsMenu.classList.contains('hidden');
@@ -510,41 +647,23 @@ class UICanvas {
             }
         }
         
-        // Update Money Stats
         const mStat = document.getElementById('stat-money');
         const iStat = document.getElementById('stat-income');
-        if (mStat && iStat && typeof player !== 'undefined') {
-             // Assuming formatLarge is global or we use simple format
-             if (typeof formatLarge === 'function') {
-                 mStat.innerText = formatLarge(player.getBalance(), CURRENCY_UNIT, 2);
-                 if (typeof lastMoneyPerSecond !== 'undefined') {
-                    iStat.innerText = `${formatLarge(lastMoneyPerSecond, CURRENCY_UNIT, 2)}/s`;
-                 }
-             } else {
-                 mStat.innerText = `${Math.floor(player.getBalance())}${CURRENCY_UNIT}`;
-             }
-        }
+        mStat.innerText = formatLarge(player.getBalance(), CURRENCY_UNIT, 2);
+        iStat.innerText = `${formatLarge(lastMoneyPerSecond, CURRENCY_UNIT, 2)}/s`;
         
-        // Update Water Slider Visual (if externally changed)
-        if (this.waterSliderDOM && typeof settings !== 'undefined') {
-            let min = 0;
-            let max = 1;
-            if (typeof player !== 'undefined' && player) {
-                if (typeof player.waterFlowMin === 'number') min = player.waterFlowMin;
-                if (typeof player.waterFlowMax === 'number') max = player.waterFlowMax;
-            }
-            const clamped = Math.max(min, Math.min(max, settings.waterFlowSpeed));
-            if (clamped !== settings.waterFlowSpeed) {
-                settings.waterFlowSpeed = clamped;
-            }
+        const min = player.waterFlowMin;
+        const max = player.waterFlowMax;
+        const clamped = Math.max(min, Math.min(max, settings.waterFlowSpeed));
+        if (clamped !== settings.waterFlowSpeed) {
+            settings.waterFlowSpeed = clamped;
+        }
 
-            const targetValue = Math.round(clamped * 100);
-            if (Math.abs(parseFloat(this.waterSliderDOM.value) - targetValue) > 0.5) {
-                this.waterSliderDOM.value = targetValue;
-            }
+        const targetValue = Math.round(clamped * 100);
+        if (Math.abs(parseFloat(this.waterSliderDOM.value) - targetValue) > 0.5) {
+            this.waterSliderDOM.value = targetValue;
         }
         
-        // Update Shop Buttons if open
         if (this.shopOpen) {
             this.updateShopButtons();
         }
@@ -552,9 +671,7 @@ class UICanvas {
 
     drawBorders() {
         this.ensureFrame();
-        if (typeof drawBorders === 'function') {
-           drawBorders(this.ctx, this.simXOffset);
-        }
+        drawBorders(this.ctx, this.simXOffset);
     }
 
     drawUi() {
@@ -563,26 +680,23 @@ class UICanvas {
         // Update DOM state
         this.updateDOM();
 
-        // Draw Canvas Elements (Meters, FPS, Rods are visual)
-        if (typeof controlRods !== 'undefined') {
-            controlRods.forEach(r => { if (r) r.draw(this.ctx, this.simXOffset); });
-        }
+        controlRods.forEach(r => r.draw(this.ctx, this.simXOffset));
         
-        if (ui.powerMeter) ui.powerMeter.draw(this.ctx, this.simXOffset);
-        if (ui.tempMeter) ui.tempMeter.draw(this.ctx, this.simXOffset);
-        if (ui.controlSlider) ui.controlSlider.draw(this.ctx, this.simXOffset);
+        ui.powerMeter.draw(this.ctx, this.simXOffset);
+        ui.tempMeter.draw(this.ctx, this.simXOffset);
+        ui.controlSlider.draw(this.ctx, this.simXOffset);
         
-        if (typeof drawFPS === 'function') drawFPS(this.ctx, this.simXOffset);
-        if (typeof gameOver === 'function') gameOver(this.ctx, this.simXOffset);
-        
-        // Legacy: we don't draw sidebar or pause menu to canvas anymore
+        drawFPS(this.ctx, this.simXOffset);
+        gameOver(this.ctx, this.simXOffset);
     }
-    
-    // Method kept for compatibility if other scripts call it
-    drawSideBar() {
+
+    handleMouseClick() {
     }
-    
-    drawPauseMenu() {
+
+    handleMouseDrag() {
+    }
+
+    handleMouseRelease() {
     }
 }
 

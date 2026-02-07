@@ -1,13 +1,8 @@
-// === Screen constants ===
 let screenHeight = 600;
 let screenWidth = Math.floor(screenHeight * 1.7778);
 let screenSimWidth = Math.floor(screenHeight * (4 / 3));
 let SHOP_WIDTH = screenWidth - screenSimWidth;
 let controlRodsStartPos = -screenHeight * .9;
-
-const waterColor = [52, 95, 120];
-
-// Global scale factor (1.0 when height == 600)
 let globalScale = screenHeight / 600;
 
 const defaultSettings = {
@@ -20,7 +15,7 @@ const defaultSettings = {
   heatingRate: 50,
   uraniumToWaterHeatTransfer: 0.3,
   heatTransferCoefficient: 0.04,
-  inletTemperature: 15,
+  inletTemperature: 25,
   moneyExponent: 1.5,
   uraniumSize: 10,
   neutronSize: 30,
@@ -30,7 +25,6 @@ const defaultSettings = {
 };
 let settings = { ...defaultSettings };
 
-// === Runtime state ===
 let uraniumAtoms = [];
 let controlRods = [];
 let controlRodSlotXs = [];
@@ -40,16 +34,12 @@ let waterCells = [];
 let grid;
 var boom = false;
 var boomStartTime = 0;
-let font;
 var energyOutput = 0;
 let energyThisFrame = 0;
-var energyOutputCounter = 0; // accumulator: sum(power_kW * dt) over the second
+var energyOutputCounter = 0;
 let lastMoneyPerSecond = 0;
 let paused = false;
 var renderTime = 0;
-window.currentNeutronSizeMultiplier = 1;
-
-// Loading screen variables
 let loading = true;
 
 let waterSystem;
@@ -68,13 +58,10 @@ const ui = {
   controlSlider: null
 };
 
-//game variables
 const game = {
-  // threshold in physical kW (1 MW = 1000 kW)
   boomValue: 1000
 }
 
-//scene variables
 const uraniumAtomsCountX = 41;
 const uraniumAtomsCountY = 30;
 let uraniumAtomsSpacingX;
@@ -85,17 +72,12 @@ let controlRodHeight;
 const NEUTRON_STRIDE = 4;
 const MAX_NEUTRONS = 512;
 const MAX_NEUTRONS_SQUARED = MAX_NEUTRONS * MAX_NEUTRONS;
-// let neutron;
-
-
 function updateDimensions() {
-  // Use manual `screenWidth` and `screenHeight` values set at top of file.
   screenWidth = Math.floor(screenHeight * 1.7778);
   screenSimWidth = Math.floor(screenHeight * (4 / 3));
   SHOP_WIDTH = screenWidth - screenSimWidth;
   screenRenderWidth = screenWidth;
 
-  // update the single global scale value (base height = 600 => scale 1)
   globalScale = screenHeight / 600;
 
   uraniumAtomsSpacingX = screenSimWidth / uraniumAtomsCountX;
@@ -108,20 +90,16 @@ function updateDimensions() {
   settings.uraniumSize = settings.uraniumSize * globalScale;
   settings.neutronSize = settings.neutronSize * globalScale;
   settings.neutronSpeed = settings.neutronSpeed * globalScale;
-  console.log("sss")
 }
 
 function setup() {
   updateDimensions();
 
-  //debug(); //DO NOT REMOVE THIS LINE
   noCanvas(); //For mouse etc, do not remove
 
   const gameCnv = document.getElementById('gameCanvas');
-  if (gameCnv) {
-    gameCnv.width = screenRenderWidth;
-    gameCnv.height = screenHeight;
-  }
+  gameCnv.width = screenRenderWidth;
+  gameCnv.height = screenHeight;
 }
 
 (async () => {
@@ -138,7 +116,7 @@ function draw() {
   }
 
   if (!paused) {
-    if (typeof deltaTime !== 'undefined') renderTime += deltaTime / 1000.0;
+    renderTime += deltaTime / 1000.0;
 
     // Update CPU-side state
     updateScene();
@@ -149,12 +127,7 @@ function draw() {
     }
   }
 
-  // Update audio (pass paused state)
-  // Ensure audio manager is updated every frame (so it can stop audio when paused)
   audioManager.update(deltaTime, settings, energyOutput, paused, game.boomValue);
 
-  // Core layer (steam + atom cores) on coreCanvas
-  // This draws the scene using 'renderTime' (if updated in sceneHelpers)
-  // and draws the UI/Pause Menu on top
   drawScene();
 }

@@ -83,7 +83,7 @@ void main() {
 
     // Caustics calculations
     float aspect = u_resolution.x / u_resolution.y;
-    vec2 p = uv * UVScale * 35.0; // Scaled down 1.5x (smaller features = higher frequency)
+    vec2 p = uv * UVScale * 15.0; // Scaled down 1.5x (smaller features = higher frequency)
     p.x *= aspect;
     
     vec4 fbm = (FBM(vec3(p, u_time * Speed + 20.0))) * 0.29;
@@ -94,20 +94,20 @@ void main() {
     
     // Wave shadows: Darken the background where the wave pattern is low
     // We remap the noise value to get deeper blacks
-    float shadow = smoothstep(0.05, 0.9, fbm.x); 
-    
+    float shadow = smoothstep(0.05, 0.2, fbm.x); 
+
     // Apply tint and shadows to background
     // Dark spots go black (0.0 multiplier)
-    vec3 waterColor = vec3(0.56f, 0.71f, 0.79f);
+    vec3 waterColor = vec3(0.65f);
     vec3 bgCol = bg.rgb * (0.0 + 0.2 * shadow); 
     vec3 finalColor = mix(bgCol, waterColor, 0.1); // General blue tint
     
     // Caustic highlights
     // "Transparency to the full exposure" -> Reduce the additive intensity so it's not a solid block of white
-    vec3 highlightColor = mix(waterColor, vec3(1.0, 1.0, 1.0), smoothstep(0., .5, causticMask));
+    vec3 highlightColor = mix(waterColor, vec3(0.5451, 0.6549, 0.8549), smoothstep(.001, .106, causticMask));
     
     // Add caustics, but less intense to allow some "transparency" feel
-    finalColor += highlightColor * causticMask * 1.;
+    finalColor += highlightColor * causticMask * .21;
 
-    outColor = vec4(finalColor, 1.0);
+    outColor = vec4(finalColor, 1.);
 }

@@ -35,19 +35,16 @@ class ControlRodsSlider {
     constructor() {
         this.x = 15;
         this.y = controlRodsStartPos;
-        this.handleY = []; // per-rod handle (bottom Y) in simulation coords
-        this.draggingIndex = -1; // -1 = none
+        this.handleY = [];
+        this.draggingIndex = -1;
         this.ensureHandleLength();
     }
 
     ensureHandleLength() {
-        if (typeof controlRods === 'undefined' || !controlRods) return;
-
         const prev = this.handleY || [];
         this.handleY = new Array(controlRods.length).fill(null);
         for (let i = 0; i < controlRods.length; i++) {
             const rod = controlRods[i];
-            if (!rod) continue;
             const prevVal = prev[i];
             const rawHandle = (typeof prevVal === 'number') ? prevVal : (rod.y + rod.height);
             const clampedHandle = clampControlRodHandleY(i, rawHandle);
@@ -64,14 +61,15 @@ class ControlRodsSlider {
 
         ctx.save();
 
-        // Input handling: start drag if pressed and not already dragging
+        const scramActive = ui.canvas.scramActive;
+        if (scramActive && this.draggingIndex !== -1) {
+            this.draggingIndex = -1;
+        }
+
         if (mouseIsPressed && this.draggingIndex === -1) {
-            if (typeof paused !== 'undefined' && paused) {
-                // Do not allow grabbing when paused
-            } else {
+            if (!paused && !scramActive) {
                 for (let i = 0; i < controlRods.length; i++) {
                     const rod = controlRods[i];
-                    if (!rod) continue;
                     const handleX = rod.x + rod.width / 2;
                     const handleY = (typeof this.handleY[i] === 'number') ? this.handleY[i] : (rod.y + rod.height);
                     const dx = simMousePos.x - handleX;
@@ -85,38 +83,33 @@ class ControlRodsSlider {
             }
         }
 
-        // While dragging, move handle instantly with mouse and set rod target accordingly
         if (this.draggingIndex !== -1 && mouseIsPressed) {
+            if (scramActive) {
+                this.draggingIndex = -1;
+                ctx.restore();
+                return;
+            }
             const i = this.draggingIndex;
-            // Clamp handle to simulation vertical bounds
             const newY = simMousePos.y;
-            // If 'link-rods' is checked in settings, move all handles to same Y
             const linked = settings.linkRods;
 
             if (linked) {
                 for (let j = 0; j < this.handleY.length; j++) {
-                    if (!controlRods[j]) continue;
                     this.handleY[j] = clampControlRodHandleY(j, newY);
-                    if (controlRods[j]) controlRods[j].targetY = this.handleY[j] - controlRods[j].height;
+                    controlRods[j].targetY = this.handleY[j] - controlRods[j].height;
                 }
             } else {
-                if (controlRods[i]) {
-                    this.handleY[i] = clampControlRodHandleY(i, newY);
-                    // Set rod's target to follow (top = bottom - height)
-                    controlRods[i].targetY = this.handleY[i] - controlRods[i].height;
-                }
+                this.handleY[i] = clampControlRodHandleY(i, newY);
+                controlRods[i].targetY = this.handleY[i] - controlRods[i].height;
             }
         }
 
-        // Release
         if (!mouseIsPressed && this.draggingIndex !== -1) {
             this.draggingIndex = -1;
         }
 
-        // Draw handles (below rods)
         for (let i = 0; i < controlRods.length; i++) {
             const rod = controlRods[i];
-            if (!rod) continue;
             const drawX = offsetX + rod.x + rod.width / 2;
             const drawY = (typeof this.handleY[i] === 'number') ? this.handleY[i] : (rod.y + rod.height);
 
@@ -143,7 +136,7 @@ function getControlRodCenterIndex() {
 function getControlRodMaxPercent(index) {
     const centerIndex = getControlRodCenterIndex();
     if (index === centerIndex) return 1.0;
-    const level = (controlRodUpgradeLevels && controlRodUpgradeLevels[index]) ? controlRodUpgradeLevels[index] : 0;
+    const level = controlRodUpgradeLevels[index] || 0;
     return Math.min(CONTROL_ROD_SIDE_CAP, CONTROL_ROD_SIDE_BASE + level * CONTROL_ROD_STEP);
 }
 
@@ -172,30 +165,24 @@ function applyControlRodPurchase() {
     controlRodUpgradeLevels[rodIndex] = (controlRodUpgradeLevels[rodIndex] || 0) + 1;
     controlRodPurchaseCount++;
 
-    if (typeof player !== 'undefined' && player) player.rodCount = controlRodPurchaseCount;
-
-    if (typeof ui !== 'undefined' && ui && ui.controlSlider) {
-        ui.controlSlider.ensureHandleLength();
-    }
+    player.rodCount = controlRodPurchaseCount;
+    ui.controlSlider.ensureHandleLength();
 
     return true;
 }
 
 function initControlRodUpgrades() {
     controlRodUpgradeLevels = new Array(controlRodCount).fill(0);
-    controlRodPurchaseCount = (typeof player !== 'undefined' && player && typeof player.rodCount === 'number') ? player.rodCount : 0;
+    controlRodPurchaseCount = player.rodCount;
     for (let i = 0; i < controlRodPurchaseCount; i++) {
         const seqIndex = i % CONTROL_ROD_UPGRADE_SEQUENCE.length;
         const rodIndex = CONTROL_ROD_UPGRADE_SEQUENCE[seqIndex];
         controlRodUpgradeLevels[rodIndex] = (controlRodUpgradeLevels[rodIndex] || 0) + 1;
     }
 
-    if (typeof ui !== 'undefined' && ui && ui.controlSlider) {
-        ui.controlSlider.ensureHandleLength();
-    }
+    ui.controlSlider.ensureHandleLength();
 }
 
-// Expose helpers
 window.applyControlRodPurchase = applyControlRodPurchase;
 window.initControlRodUpgrades = initControlRodUpgrades;
 window.getMaxControlRodPurchases = getMaxControlRodPurchases;

@@ -25,26 +25,22 @@ class ReportSystem {
         gl.uniform1i(uTexSizeLoc, MAX_NEUTRONS);
 
         glShit.reportData = new Uint8Array(uraniumAtomsCountX * uraniumAtomsCountY * 4);
-        // Try to create two PIXEL_PACK_BUFFERs (PBOs) for asynchronous readback.
-        if (typeof WebGL2RenderingContext !== 'undefined' && gl instanceof WebGL2RenderingContext && typeof gl.getBufferSubData === 'function') {
-            const pboSize = glShit.reportData.byteLength;
-            glShit.reportPBOs = [gl.createBuffer(), gl.createBuffer()];
-            for (let b of glShit.reportPBOs) {
-                gl.bindBuffer(gl.PIXEL_PACK_BUFFER, b);
-                gl.bufferData(gl.PIXEL_PACK_BUFFER, pboSize, gl.STREAM_READ);
-            }
-            gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
-            glShit.reportPBOIndex = 0;
-            glShit.reportPBOSize = pboSize;
-            glShit.reportPBOSyncs = [null, null];
-            glShit.reportPBOPrimed = false;
+        const pboSize = glShit.reportData.byteLength;
+        glShit.reportPBOs = [gl.createBuffer(), gl.createBuffer()];
+        for (let b of glShit.reportPBOs) {
+            gl.bindBuffer(gl.PIXEL_PACK_BUFFER, b);
+            gl.bufferData(gl.PIXEL_PACK_BUFFER, pboSize, gl.STREAM_READ);
         }
+        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+        glShit.reportPBOIndex = 0;
+        glShit.reportPBOSize = pboSize;
+        glShit.reportPBOSyncs = [null, null];
+        glShit.reportPBOPrimed = false;
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     }
 
     process(gl) {
-        // 1. Draw hits into the report texture (GPU internal).
         gl.bindFramebuffer(gl.FRAMEBUFFER, glShit.reportFBO);
         gl.viewport(0, 0, uraniumAtomsCountX, uraniumAtomsCountY);
         gl.disable(gl.BLEND);
@@ -54,10 +50,9 @@ class ReportSystem {
 
         gl.useProgram(glShit.reportProgram);
         gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, glShit.readTex); // Read neutron state.
+        gl.bindTexture(gl.TEXTURE_2D, glShit.readTex);
         gl.uniform1i(gl.getUniformLocation(glShit.reportProgram, "u_neutrons"), 0);
         gl.uniform1i(gl.getUniformLocation(glShit.reportProgram, "u_textureSize"), MAX_NEUTRONS);
-        // Additive blending: multiple neutrons hitting the same atom increase the count.
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.ONE, gl.ONE);
 
@@ -67,75 +62,45 @@ class ReportSystem {
 
         gl.disable(gl.BLEND);
 
-        // 2. Read back the report texture into CPU memory.
-        // If WebGL2 PBOs are available we use double-buffered PIXEL_PACK_BUFFERs
-        // to reduce GPU/CPU sync stalls. Otherwise fall back to readPixels.
-        if (glShit.reportPBOs && typeof gl.getBufferSubData === 'function') {
-            const w = uraniumAtomsCountX;
-            const h = uraniumAtomsCountY;
+        const w = uraniumAtomsCountX;
+        const h = uraniumAtomsCountY;
 
-            // Write into the current PBO (orphan first to avoid stalls).
-            const writePBOIndex = glShit.reportPBOIndex;
-            const writePBO = glShit.reportPBOs[writePBOIndex];
-            gl.bindBuffer(gl.PIXEL_PACK_BUFFER, writePBO);
-            gl.bufferData(gl.PIXEL_PACK_BUFFER, glShit.reportPBOSize, gl.STREAM_READ);
-            gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, 0);
+        const writePBOIndex = glShit.reportPBOIndex;
+        const writePBO = glShit.reportPBOs[writePBOIndex];
+        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, writePBO);
+        gl.bufferData(gl.PIXEL_PACK_BUFFER, glShit.reportPBOSize, gl.STREAM_READ);
+        gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, 0);
 
-            // Insert a fence so we can later check whether this PBO is ready.
-            if (gl.fenceSync && gl.flush) {
-                try {
-                    gl.flush();
-                    const sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
-                    if (glShit.reportPBOSyncs[writePBOIndex]) {
-                        try { gl.deleteSync(glShit.reportPBOSyncs[writePBOIndex]); } catch (e) { }
-                    }
-                    glShit.reportPBOSyncs[writePBOIndex] = sync;
-                } catch (e) {
-                    console.warn('fenceSync failed', e);
-                }
+        gl.flush();
+        const sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+        if (glShit.reportPBOSyncs[writePBOIndex]) {
+            gl.deleteSync(glShit.reportPBOSyncs[writePBOIndex]);
+        }
+        glShit.reportPBOSyncs[writePBOIndex] = sync;
+
+        const readPBOIndex = (writePBOIndex + 1) % 2;
+        const readPBO = glShit.reportPBOs[readPBOIndex];
+        const readSync = glShit.reportPBOSyncs[readPBOIndex];
+
+        if (readSync) {
+            const status = gl.clientWaitSync(readSync, 0, 0);
+            if (status === gl.ALREADY_SIGNALED || status === gl.CONDITION_SATISFIED) {
+                gl.bindBuffer(gl.PIXEL_PACK_BUFFER, readPBO);
+                gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, glShit.reportData);
+                gl.deleteSync(readSync);
+                glShit.reportPBOSyncs[readPBOIndex] = null;
             }
-
-            // Try to read back data from the previous PBO (if any) into reportData,
-            // but only if its fence has signaled. Do NOT fall back to blocking reads.
-            const readPBOIndex = (writePBOIndex + 1) % 2;
-            const readPBO = glShit.reportPBOs[readPBOIndex];
-            const sync = glShit.reportPBOSyncs ? glShit.reportPBOSyncs[readPBOIndex] : null;
-
-            if (sync && gl.clientWaitSync) {
-                try {
-                    const status = gl.clientWaitSync(sync, 0, 0);
-                    if (status === gl.ALREADY_SIGNALED || status === gl.CONDITION_SATISFIED) {
-                        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, readPBO);
-                        try {
-                            gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, glShit.reportData);
-                        } catch (e) {
-                            console.warn('getBufferSubData failed', e);
-                        }
-                        try { gl.deleteSync(sync); } catch (e) { }
-                        glShit.reportPBOSyncs[readPBOIndex] = null;
-                    }
-                } catch (e) {
-                }
-            }
-
-            gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
-            glShit.reportPBOIndex = (writePBOIndex + 1) % 2;
-            gl.viewport(0, 0, glShit.simCanvas.width, glShit.simCanvas.height);
-        } else {
-            // Fallback: blocking readPixels
-            gl.readPixels(0, 0, uraniumAtomsCountX, uraniumAtomsCountY, gl.RGBA, gl.UNSIGNED_BYTE, glShit.reportData);
-            gl.viewport(0, 0, glShit.simCanvas.width, glShit.simCanvas.height);
         }
 
-        // 3. React to hits on the CPU.
+        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+        glShit.reportPBOIndex = (writePBOIndex + 1) % 2;
+        gl.viewport(0, 0, glShit.simCanvas.width, glShit.simCanvas.height);
+
         for (let i = 0; i < uraniumAtoms.length; i++) {
+            if (!uraniumAtoms[i].hasAtom) continue;
             const gridIndex = uraniumAtoms[i].index;
             const x = gridIndex % uraniumAtomsCountX;
             const y = Math.floor(gridIndex / uraniumAtomsCountX);
-
-            // report.vert maps atom row y -> same row in the report texture,
-            // and readPixels fills the buffer bottom-to-top, so the buffer row
-            // corresponding to the atom is simply y. No additional flip needed.
             const idx = (y * uraniumAtomsCountX + x) * 4;
 
             const hitCount = glShit.reportData[idx];

@@ -1,6 +1,3 @@
-// loadingTasks.js - Loading tasks for the application
-
-// Helper to create shader loading tasks
 function createShaderLoadTask(name, path, srcKey, codeKey) {
   return {
     name: `Loading ${name}`,
@@ -13,7 +10,6 @@ function createShaderLoadTask(name, path, srcKey, codeKey) {
   };
 }
 
-// Loading tasks array
 const loadingTasks = [
   createShaderLoadTask("simulation vertex shader", 'shaders/sim.vert', 'simVertSrc', 'simVertCode'),
   createShaderLoadTask("simulation fragment shader", 'shaders/sim.frag', 'simFragSrc', 'simFragCode'),
@@ -35,11 +31,7 @@ const loadingTasks = [
   {
       name: "Pre-Initializing Neutron System",
       func: () => {
-          if (typeof Neutron !== 'undefined') {
-              window.neutron = new Neutron();
-          } else {
-              console.error("Neutron class not loaded!");
-          }
+        window.neutron = new Neutron();
       }
   },
   {
@@ -55,15 +47,20 @@ const loadingTasks = [
     func: () => {
       upgrades = new Upgrades();
       player = new Player();
-      if (typeof player.updateWaterFlowLimits === 'function') player.updateWaterFlowLimits();
+      player.updateWaterFlowLimits();
       settings.waterFlowSpeed = player.waterFlowStart;
       shop = new Shop();
+      initializePlayerAtomGroups(player);
       playerState = new PlayerState();
     }
   },
   {
     name: "Initializing UI objects",
     func: () => initUiObjects()
+  },
+  {
+    name: "Initializing control rod upgrades",
+    func: () => initControlRodUpgrades()
   },
   {
     name: "Setting up event listeners",
@@ -80,11 +77,7 @@ const loadingTasks = [
   {
     name: "Configuring audio tracks",
     func: async () => {
-        if (ui && ui.canvas && ui.canvas.uiSettings) {
-             audioManager.setupTracks(ui.canvas.uiSettings.audio);
-        } else {
-            console.error("UI Settings not ready for Audio setup");
-        }
+      audioManager.setupTracks(ui.canvas.uiSettings.audio);
     }
   }
 ];

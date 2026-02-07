@@ -2,12 +2,12 @@ class Shop {
     constructor() {
         this.items = {
             atom: {
-                name: "Add Atom",
+                name: "Uranium",
                 basePrice: 5,
                 priceMult: 1.01
             },
             group: {
-                name: "Add Group",
+                name: "Uranium Group",
                 basePrice: 5000,
                 priceMult: 10
             },
@@ -17,12 +17,13 @@ class Shop {
                 priceMult: 1.3
             },
             waterFlow: {
-                name: "Flow Limit",
+                name: "Water Flow",
                 basePrice: 100,
                 priceMult: 1.5
             }
         };
-        this.buyAmount = 1; // 1, 5, 10, 'MAX'
+        this.buyAmount = 1;
+        this.targetAtomGroupIndex = 0;
     }
 
     setBuyAmount(amount) {
@@ -31,48 +32,40 @@ class Shop {
         }
     }
 
+    setTargetAtomGroup(index) {
+        const maxGroups = getAtomGroupCount();
+        const parsed = parseInt(index);
+        if (!isNaN(parsed) && parsed >= 0 && parsed < maxGroups) {
+            this.targetAtomGroupIndex = parsed;
+        }
+    }
+
     getItemCount(itemName) {
          switch (itemName) {
             case 'atom':
-                return uraniumAtoms.filter(a => a.hasAtom).length;
+                return getTotalAtomCount();
             case 'group':
-                return (typeof player !== 'undefined' && player && player.ownedGroups) ? player.ownedGroups.length : 0;
+                return player.ownedGroups.length;
             case 'controlRod':
-                return (typeof controlRodPurchaseCount !== 'undefined') ? controlRodPurchaseCount : 0;
+                return controlRodPurchaseCount;
             case 'waterFlow':
-                return (typeof player !== 'undefined' && player && typeof player.waterFlowUpgradeCount === 'number') ? player.waterFlowUpgradeCount : 0;
+                return player.waterFlowUpgradeCount;
             default:
                 return 0;
         }
     }
 
-    // Returns object { count: number, cost: number } for a proposed purchase
     getPurchaseInfo(itemName) {
         const item = this.items[itemName];
         if (!item) return { count: 0, cost: 0 };
 
         const currentCount = this.getItemCount(itemName);
         let countToBuy = this.buyAmount;
-        
-        // Constraint: Bulk buying only for atoms (as requested)
-        if (itemName !== 'atom' && countToBuy !== 1 && countToBuy !== 'MAX') {
-             // If user wants "only for atoms", we should probably fallback to 1 for others.
-             // However, 'MAX' might be useful for waterFlow?
-             // User said "amounts only for atoms, 1/5/10/max". 
-             // I'll interpret this strictly: Non-atoms always buy 1 at a time unless MAX is standard? 
-             // Let's stick to 1 for safety on groups/rods.
-             countToBuy = 1;
-        }
 
         let totalCost = 0;
 
-        const maxRodPurchases = (itemName === 'controlRod' && typeof getMaxControlRodPurchases === 'function')
-            ? getMaxControlRodPurchases()
-            : 0;
-
-        const maxWaterFlowUpgrades = (itemName === 'waterFlow' && player && typeof player.waterFlowUpgradeMax === 'number')
-            ? player.waterFlowUpgradeMax
-            : 0;
+        const maxRodPurchases = (itemName === 'controlRod') ? getMaxControlRodPurchases() : 0;
+        const maxWaterFlowUpgrades = (itemName === 'waterFlow') ? player.waterFlowUpgradeMax : 0;
 
         if (itemName === 'controlRod' && currentCount >= maxRodPurchases) {
             return { count: 0, cost: 0 };
@@ -82,16 +75,32 @@ class Shop {
             return { count: 0, cost: 0 };
         }
 
+        if (itemName === 'group') {
+            const maxGroups = getAtomGroupCount();
+            if (currentCount >= maxGroups) return { count: 0, cost: 0 };
+        }
+
+        if (itemName === 'atom') {
+            const groupIndex = this.targetAtomGroupIndex;
+            const available = getGroupAvailableSlots(groupIndex);
+            const owned = player.ownedGroups.includes(groupIndex);
+            if (!owned || available <= 0) return { count: 0, cost: 0 };
+        }
+
         if (countToBuy === 'MAX') {
-            const cheatMode = (typeof settings !== 'undefined' && settings && settings.cheatMode);
+            const cheatMode = settings.cheatMode;
 
             if (cheatMode) {
                 if (itemName === 'atom') {
-                    countToBuy = uraniumAtoms.filter(a => !a.hasAtom).length;
+                    const groupIndex = this.targetAtomGroupIndex;
+                    countToBuy = getGroupAvailableSlots(groupIndex);
                 } else if (itemName === 'controlRod') {
                     countToBuy = Math.max(0, maxRodPurchases - currentCount);
                 } else if (itemName === 'waterFlow') {
                     countToBuy = Math.max(0, maxWaterFlowUpgrades - currentCount);
+                } else if (itemName === 'group') {
+                    const maxGroups = getAtomGroupCount();
+                    countToBuy = Math.max(0, maxGroups - currentCount);
                 } else {
                     countToBuy = 1;
                 }
@@ -103,7 +112,7 @@ class Shop {
                     totalCost = firstCost * (Math.pow(item.priceMult, countToBuy) - 1) / (item.priceMult - 1);
                 }
             } else {
-                const money = (typeof player !== 'undefined' && player) ? player.getBalance() : 0;
+                const money = player.getBalance();
                 if (item.priceMult === 1) {
                     countToBuy = Math.floor(money / item.basePrice);
                     totalCost = countToBuy * item.basePrice;
@@ -132,7 +141,21 @@ class Shop {
             }
         }
 
-        // Clamp rod purchases to max purchases and recalc cost if needed
+        if (itemName === 'atom') {
+            const groupIndex = this.targetAtomGroupIndex;
+            const maxBuy = getGroupAvailableSlots(groupIndex);
+            if (countToBuy > maxBuy) {
+                countToBuy = maxBuy;
+                if (countToBuy <= 0) return { count: 0, cost: 0 };
+                if (item.priceMult === 1) {
+                    totalCost = item.basePrice * countToBuy;
+                } else {
+                    const firstCost = item.basePrice * Math.pow(item.priceMult, currentCount);
+                    totalCost = firstCost * (Math.pow(item.priceMult, countToBuy) - 1) / (item.priceMult - 1);
+                }
+            }
+        }
+
         if (itemName === 'controlRod') {
             const maxBuy = Math.max(0, maxRodPurchases - currentCount);
             if (countToBuy > maxBuy) {
@@ -148,7 +171,6 @@ class Shop {
             }
         }
 
-        // Clamp water flow purchases to max upgrades and recalc cost if needed
         if (itemName === 'waterFlow') {
             const maxBuy = Math.max(0, maxWaterFlowUpgrades - currentCount);
             if (countToBuy > maxBuy) {
@@ -164,14 +186,28 @@ class Shop {
             }
         }
 
-        // Safety for insane numbers or zero
+        if (itemName === 'group') {
+            const maxGroups = getAtomGroupCount();
+            const maxBuy = Math.max(0, maxGroups - currentCount);
+            if (countToBuy > maxBuy) {
+                countToBuy = maxBuy;
+                if (countToBuy <= 0) return { count: 0, cost: 0 };
+
+                if (item.priceMult === 1) {
+                    totalCost = item.basePrice * countToBuy;
+                } else {
+                    const firstCost = item.basePrice * Math.pow(item.priceMult, currentCount);
+                    totalCost = firstCost * (Math.pow(item.priceMult, countToBuy) - 1) / (item.priceMult - 1);
+                }
+            }
+        }
+
         if (countToBuy < 0) countToBuy = 0;
         if (totalCost < 0) totalCost = 0;
 
         return { count: countToBuy, cost: totalCost };
     }
 
-    // Backward compatibility if needed, or used for display of single unit
     getPrice(itemName) { 
         return this.getPurchaseInfo(itemName).cost;
     }
@@ -180,7 +216,7 @@ class Shop {
         const info = this.getPurchaseInfo(itemName);
         if (info.count <= 0) return false;
 
-        if (typeof player !== 'undefined' && player && (settings.cheatMode || player.spend(info.cost))) {
+        if (settings.cheatMode || player.spend(info.cost)) {
             console.log(`Bought ${info.count} ${itemName}(s) for ${info.cost}`);
             
             for(let i = 0; i < info.count; i++) {
@@ -194,24 +230,23 @@ class Shop {
     applyItemEffect(itemName) {
         switch (itemName) {
             case 'atom':
-                // Find first available atom that isn't active
-                let atom = uraniumAtoms.find(a => !a.hasAtom);
-                if (atom) atom.hasAtom = true;
+                addAtomsToGroup(this.targetAtomGroupIndex, 1);
                 break;
             case 'group':
-                // Logic for buying a group placeholder
+                const nextGroup = getNextUnlockableGroup();
+                if (nextGroup !== null) {
+                    unlockAtomGroup(nextGroup);
+                }
                 break;
             case 'controlRod':
-                if (typeof applyControlRodPurchase === 'function') applyControlRodPurchase();
+                applyControlRodPurchase();
                 break;
             case 'waterFlow':
-                if (player && typeof player.waterFlowUpgradeCount === 'number') {
-                    if (player.waterFlowUpgradeCount < player.waterFlowUpgradeMax) {
-                        player.waterFlowUpgradeCount += 1;
-                        player.upgrades.waterFlow = player.waterFlowUpgradeCount;
-                        if (typeof player.updateWaterFlowLimits === 'function') player.updateWaterFlowLimits();
-                        settings.waterFlowSpeed = Math.max(player.waterFlowMin, Math.min(player.waterFlowMax, settings.waterFlowSpeed));
-                    }
+                if (player.waterFlowUpgradeCount < player.waterFlowUpgradeMax) {
+                    player.waterFlowUpgradeCount += 1;
+                    player.upgrades.waterFlow = player.waterFlowUpgradeCount;
+                    player.updateWaterFlowLimits();
+                    settings.waterFlowSpeed = Math.max(player.waterFlowMin, Math.min(player.waterFlowMax, settings.waterFlowSpeed));
                 }
                 break;
         }
@@ -219,13 +254,15 @@ class Shop {
 
     serialize() {
         return {
-            buyAmount: this.buyAmount
+            buyAmount: this.buyAmount,
+            targetAtomGroupIndex: this.targetAtomGroupIndex
         };
     }
 
     deserialize(obj) {
         if (!obj) return;
         this.buyAmount = obj.buyAmount || 1;
+        this.targetAtomGroupIndex = obj.targetAtomGroupIndex ?? 0;
     }
 }
 window.Shop = Shop;

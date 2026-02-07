@@ -14,39 +14,32 @@ function getRelativeMouseCoords() {
 
 function mousePressed() {
   const coords = getRelativeMouseCoords();
-  if (ui && ui.canvas && typeof ui.canvas.handleMouseClick === 'function') {
-    ui.canvas.handleMouseClick(coords.x, coords.y);
-  }
-  // Resume audio context on user interaction
-  if (audioManager.audioContext && audioManager.audioContext.state === 'suspended') {
+  ui.canvas.handleMouseClick(coords.x, coords.y);
+  if (audioManager.audioContext.state === 'suspended') {
     audioManager.audioContext.resume();
   }
 }
 
 function mouseDragged() {
   const coords = getRelativeMouseCoords();
-  if (ui && ui.canvas && typeof ui.canvas.handleMouseDrag === 'function') {
-    ui.canvas.handleMouseDrag(coords.x, coords.y);
-  }
+  ui.canvas.handleMouseDrag(coords.x, coords.y);
 }
 
 function mouseReleased() {
-  if (ui && ui.canvas && typeof ui.canvas.handleMouseRelease === 'function') {
-    ui.canvas.handleMouseRelease();
-  }
+  ui.canvas.handleMouseRelease();
 }
 
 function keyPressed() {
   if (key === 'p' || key === 'P' || keyCode === ESCAPE) {
     paused = !paused;
     if (!paused) {
-      if (typeof ui !== 'undefined') ui.lastUpdateTime = performance.now();
+      ui.lastUpdateTime = performance.now();
     }
   }
 
   if (settings.cheatMode) {
     if (key === 'm' || key === 'M') {
-      if (player) player.addMoney(player.getBalance() * 0.1 + 10000);
+      player.addMoney(player.getBalance() * 0.1 + 10000);
       console.log("Cheat: Added money");
     }
     // 'C' to clear/cool reactor for testing?

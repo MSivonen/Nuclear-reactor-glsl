@@ -58,13 +58,14 @@ When editing files, change the timestamp in index.html for cache busting.
 
 7) Atom group/column purchase logic (NOT STARTED)
 	- Importance: 4/5  Difficulty: 2/5
-	- Implement centermost-first filling rules, bulk-buy (ctrl/shift), and UI feedback for available slots. Expose water flow control once 5 water upgrades purchased (valve UI).
+	- Implement centermost-first filling rules, bulk-buy (ctrl/shift), and UI feedback for available slots.
 	- Files: `uranium.js`, `sketch.js`, `ui.js`, `water.js`
 
 8) Water upgrades, bubbles interaction & visual feedback (DONE)
 	- Importance: 3/5  Difficulty: 2/5
 	- Max water speed upgrades, bubble speed tied to flow, and stronger heat transport tweaks.
 	- Files: `water.js`, `bubblesRenderer.js`, `ui.js`
+!	- Expose water flow control once a water upgrade is purchased (valve UI).
 
 9) Failure mechanics: melting, explosions & prestige hooks (NOT STARTED)
 	- Importance: 3/5  Difficulty: 4/5
@@ -78,6 +79,5 @@ When editing files, change the timestamp in index.html for cache busting.
 11) Make all the menu items work
 
 
-Notes on first task: I'll replace the placeholder energy formula with a calorimetric approach: compute mass flow from water speed and cross-section, multiply by specific heat (configurable), and the temperature delta of water cells as they exit the simulation. That produces a physically meaningful energy per-frame convertible to in-game currency.
 
 
