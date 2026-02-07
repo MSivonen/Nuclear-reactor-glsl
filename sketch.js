@@ -1,4 +1,4 @@
-let screenHeight = 600;
+let screenHeight = 900;
 let screenWidth = Math.floor(screenHeight * 1.7778);
 let screenSimWidth = Math.floor(screenHeight * (4 / 3));
 let SHOP_WIDTH = screenWidth - screenSimWidth;
@@ -14,7 +14,7 @@ const defaultSettings = {
   waterFlowSpeed: 0.15,
   heatingRate: 50,
   uraniumToWaterHeatTransfer: 0.3,
-  heatTransferCoefficient: 0.04,
+  heatTransferCoefficient: 0.14,
   inletTemperature: 25,
   moneyExponent: 1.5,
   uraniumSize: 10,
@@ -43,6 +43,8 @@ var renderTime = 0;
 let loading = true;
 
 let waterSystem;
+let plutonium;
+let californium;
 
 
 const ui = {
@@ -87,9 +89,13 @@ function updateDimensions() {
   controlRodHeight = 600 * globalScale;
   controlRodsStartPos = -screenHeight * 0.9;
 
-  settings.uraniumSize = settings.uraniumSize * globalScale;
-  settings.neutronSize = settings.neutronSize * globalScale;
-  settings.neutronSpeed = settings.neutronSpeed * globalScale;
+  settings.uraniumSize = defaultSettings.uraniumSize * globalScale;
+  settings.neutronSize = defaultSettings.neutronSize * globalScale;
+  settings.neutronSpeed = defaultSettings.neutronSpeed * globalScale;
+
+  if (plutonium) plutonium.updateDimensions();
+
+  if (californium) californium.updateDimensions();
 }
 
 function setup() {
@@ -100,6 +106,11 @@ function setup() {
   const gameCnv = document.getElementById('gameCanvas');
   gameCnv.width = screenRenderWidth;
   gameCnv.height = screenHeight;
+
+  plutonium = new Plutonium();
+  californium = new Californium();
+  californium.updateDimensions();
+  plutonium.updateDimensions();
 }
 
 (async () => {

@@ -33,10 +33,11 @@ class ControlRod {
 
 class ControlRodsSlider {
     constructor() {
-        this.x = 15;
+        this.x = 15 * globalScale;
         this.y = controlRodsStartPos;
         this.handleY = [];
         this.draggingIndex = -1;
+
         this.ensureHandleLength();
     }
 
@@ -74,9 +75,10 @@ class ControlRodsSlider {
                     const handleY = (typeof this.handleY[i] === 'number') ? this.handleY[i] : (rod.y + rod.height);
                     const dx = simMousePos.x - handleX;
                     const dy = simMousePos.y - handleY;
-                    if (Math.sqrt(dx * dx + dy * dy) <= HANDLE_RADIUS + 4) { //grab the balls
+                    if (Math.sqrt(dx * dx + dy * dy) <= HANDLE_RADIUS + 4 * globalScale) { //grab the balls
                     //if (-dx <= HANDLE_RADIUS && dx <= HANDLE_RADIUS) {//grab anywhere in y direction
                         this.draggingIndex = i;
+
                         break;
                     }
                 }

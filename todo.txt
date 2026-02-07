@@ -129,5 +129,6 @@ v   -Force widescreen aspect ratio (1.78:1). Move the simulation canvases to the
 
 
 === Bugs/Fixes ===
-v-Scram button should be dark red normally and change to bright blinking red when active.
-v-Start button is on top of the lower startup screen border. Move it up, where the loading bar was.
+-If I drag plutonium to a control rod handle or vice versa, they both get dragged.
+-Plutonium goes behind meters. Make it unable to go there? Idk, something needs to be done...
+-Neutrons are hitting empty atom slots

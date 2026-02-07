@@ -185,6 +185,12 @@ class AudioManager {
             if (!boomSet.enabled) sfxEnabled = false;
             specificVol = boomSet.vol;
         }
+
+        if (key === 'scram') {
+            const scramSet = ui.canvas.uiSettings.audio.scram;
+            if (!scramSet.enabled) sfxEnabled = false;
+            specificVol = scramSet.vol;
+        }
         
         if (sfxEnabled) {
             const vol = sfxVol * specificVol * masterVol;

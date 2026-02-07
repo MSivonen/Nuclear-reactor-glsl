@@ -147,6 +147,8 @@ function updateScene() {
     });
     window.avgTemp = uraniumAtoms.length > 0 ? totalHeat / uraniumAtoms.length : 0;
     controlRods.forEach(rod => rod.update());
+    if (plutonium) plutonium.update();
+    if (californium) californium.update();
 
     energyThisFrame = waterSystem.update(deltaTime, settings);
 

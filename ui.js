@@ -15,7 +15,8 @@ class UICanvas {
                 water: { vol: 1.0, enabled: true },
                 ambience: { vol: 1.0, enabled: true },
                 alarms: { vol: 1.0, enabled: true },
-                explosions: { vol: 1.0, enabled: true }
+                explosions: { vol: 1.0, enabled: true },
+                scram: { vol: 1.0, enabled: true }
             },
             video: { // Simplified checks for now
                 bubbles: true,
@@ -311,15 +312,50 @@ class UICanvas {
     }
     
     syncSettingsDOM() {
-        const audioKeys = ['master', 'sfx', 'ambience', 'steam', 'water', 'alarms', 'explosions'];
+        const audioKeys = ['master', 'sfx', 'ambience', 'steam', 'water', 'alarms', 'explosions', 'scram'];
         audioKeys.forEach(key => {
             const slider = document.getElementById(`set-audio-${key}`);
             const check = document.getElementById(`chk-audio-${key}`);
             const obj = this.uiSettings.audio[key];
             slider.value = obj.vol;
-            slider.oninput = (e) => { obj.vol = parseFloat(e.target.value); };
+            slider.oninput = (e) => { 
+                obj.vol = parseFloat(e.target.value);
+                if (key === 'scram' && this.scramActive && audioManager.sounds['scram'] && audioManager.sounds['scram'].isPlaying()) {
+                    const sfxEnabled = this.uiSettings.audio.sfx.enabled;
+                    const sfxVol = this.uiSettings.audio.sfx.vol;
+                    const masterVol = this.uiSettings.audio.master.enabled ? this.uiSettings.audio.master.vol : 0;
+                    const scramSet = this.uiSettings.audio.scram;
+                    if (sfxEnabled && scramSet.enabled) {
+                        const vol = sfxVol * scramSet.vol * masterVol;
+                        audioManager.sounds['scram'].setVolume(vol);
+                    }
+                } else if ((key === 'master' || key === 'sfx') && this.scramActive && audioManager.sounds['scram'] && audioManager.sounds['scram'].isPlaying()) {
+                    const sfxEnabled = this.uiSettings.audio.sfx.enabled;
+                    const sfxVol = this.uiSettings.audio.sfx.vol;
+                    const masterVol = this.uiSettings.audio.master.enabled ? this.uiSettings.audio.master.vol : 0;
+                    const scramSet = this.uiSettings.audio.scram;
+                    if (sfxEnabled && scramSet.enabled) {
+                        const vol = sfxVol * scramSet.vol * masterVol;
+                        audioManager.sounds['scram'].setVolume(vol);
+                    }
+                }
+            };
             check.checked = obj.enabled;
-            check.onchange = (e) => { obj.enabled = e.target.checked; };
+            check.onchange = (e) => { 
+                obj.enabled = e.target.checked;
+                if ((key === 'scram' || key === 'master' || key === 'sfx') && this.scramActive && audioManager.sounds['scram'] && audioManager.sounds['scram'].isPlaying()) {
+                    const sfxEnabled = this.uiSettings.audio.sfx.enabled;
+                    const masterVol = this.uiSettings.audio.master.enabled ? this.uiSettings.audio.master.vol : 0;
+                    const scramSet = this.uiSettings.audio.scram;
+                    if (sfxEnabled && scramSet.enabled && this.uiSettings.audio.master.enabled) {
+                        const sfxVol = this.uiSettings.audio.sfx.vol;
+                        const vol = sfxVol * scramSet.vol * masterVol;
+                        audioManager.sounds['scram'].setVolume(vol);
+                    } else {
+                        audioManager.sounds['scram'].setVolume(0);
+                    }
+                }
+            };
         });
 
         const bindCheck = (id, obj, key) => {
@@ -415,8 +451,9 @@ class UICanvas {
             const sfxEnabled = ui.canvas.uiSettings.audio.sfx.enabled;
             const sfxVol = ui.canvas.uiSettings.audio.sfx.vol;
             const masterVol = ui.canvas.uiSettings.audio.master.vol;
-            if (sfxEnabled) {
-                const vol = sfxVol * masterVol;
+            const scramSet = ui.canvas.uiSettings.audio.scram;
+            if (sfxEnabled && scramSet.enabled) {
+                const vol = sfxVol * scramSet.vol * masterVol;
                 audioManager.sounds['scram'].setVolume(vol);
                 audioManager.sounds['scram'].loop();
             }
@@ -681,7 +718,10 @@ class UICanvas {
         this.updateDOM();
 
         controlRods.forEach(r => r.draw(this.ctx, this.simXOffset));
-        
+
+        if (plutonium) plutonium.draw(this.ctx, this.simXOffset);
+        if (californium) californium.draw(this.ctx, this.simXOffset);
+
         ui.powerMeter.draw(this.ctx, this.simXOffset);
         ui.tempMeter.draw(this.ctx, this.simXOffset);
         ui.controlSlider.draw(this.ctx, this.simXOffset);

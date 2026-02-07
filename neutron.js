@@ -160,11 +160,11 @@ class Neutron {
         gl.bindTexture(gl.TEXTURE_2D, null);
     }
 
-    spawn(x, y, atomRadius) {
+    spawn(x, y, atomRadius, direction=Math.random() * Math.PI * 2) {
         this.spawnCount++;
         this.currentIndex = (this.currentIndex + 1) % MAX_NEUTRONS_SQUARED;
 
-        const angle = Math.random() * Math.PI * 2;
+        const angle = direction;
         const vx = Math.cos(angle) * settings.neutronSpeed;
         const vy = Math.sin(angle) * settings.neutronSpeed;
 

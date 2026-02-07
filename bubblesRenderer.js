@@ -31,8 +31,8 @@ class BubblesRenderer {
             this.instanceData[idx + 0] = Math.random() * screenSimWidth;
             
             // size: "small" -> 2..22
-            const minSize = 2;
-            const maxSize = 22;
+            const minSize = 2 * globalScale;
+            const maxSize = 22 * globalScale;
             const size = minSize + Math.random() * (maxSize - minSize);
             this.instanceData[idx + 3] = size;
 
@@ -40,10 +40,11 @@ class BubblesRenderer {
             this.instanceData[idx + 2] = Math.random() * Math.PI * 2;
 
             // speed: map from size so bigger bubbles are faster (100..400)
-            const minSpeed = 100;
-            const maxSpeed = 300;
+            const minSpeed = 100 * globalScale;
+            const maxSpeed = 300 * globalScale;
             const t = (size - minSize) / (maxSize - minSize);
             this.instanceData[idx + 1] = minSpeed + t * (maxSpeed - minSpeed);
+
 
             // offset
             this.instanceData[idx + 4] = 0;
