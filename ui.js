@@ -76,7 +76,7 @@ class UICanvas {
     drawUi() {
         this.ensureFrame();
         this.drawSideBar();
-        controlRods.forEach(r => r.draw(this.ctx, this.simXOffset));
+        controlRods.forEach(r => { if (r) r.draw(this.ctx, this.simXOffset); });
         if (ui.powerMeter) ui.powerMeter.draw(this.ctx, this.simXOffset);
         if (ui.tempMeter) ui.tempMeter.draw(this.ctx, this.simXOffset);
         if (ui.controlSlider) ui.controlSlider.draw(this.ctx, this.simXOffset);
@@ -563,7 +563,7 @@ class UICanvas {
         ctx.textAlign = 'left';
         ctx.fillText("CONTROLS", marginX + innerPadX, elements.controls.y + 45 * 0.4 * globalScale);
 
-        // Link Rods Toggle
+        // Link Rods Toggle (always show)
         ctx.fillStyle = settings.linkRods ? '#5cb85c' : '#d9534f';
         ctx.fillRect(elements.linkToggle.x, elements.linkToggle.y, elements.linkToggle.w, elements.linkToggle.h);
         ctx.strokeStyle = 'white';
@@ -583,11 +583,32 @@ class UICanvas {
         ctx.strokeStyle = 'white';
         ctx.strokeRect(elements.waterSlider.x, elements.waterSlider.y, elements.waterSlider.w, elements.waterSlider.h);
 
-        const flowVal = settings.waterFlowSpeed / 1.0; // max 1.0
+        const flowVal = Math.max(0, Math.min(1, settings.waterFlowSpeed));
         if (flowVal > 0) {
             ctx.fillStyle = '#aaa';
             ctx.fillRect(elements.waterSlider.x, elements.waterSlider.y, elements.waterSlider.w * flowVal, elements.waterSlider.h);
         }
+
+        // Draw min/max markers
+        const minFlow = (player && typeof player.waterFlowMin === 'number') ? player.waterFlowMin : 0.0;
+        const maxFlow = (player && typeof player.waterFlowMax === 'number') ? player.waterFlowMax : 1.0;
+
+        const drawMarker = (ratio) => {
+            const mx = elements.waterSlider.x + elements.waterSlider.w * ratio;
+            const sliderBottom = elements.waterSlider.y + elements.waterSlider.h;
+            const ms = 6 * globalScale; // Marker size
+            
+            ctx.beginPath();
+            ctx.moveTo(mx, sliderBottom);
+            ctx.lineTo(mx - ms/2, sliderBottom + ms);
+            ctx.lineTo(mx + ms/2, sliderBottom + ms);
+            ctx.closePath();
+            ctx.fillStyle = 'white';
+            ctx.fill();
+        };
+
+        drawMarker(minFlow);
+        drawMarker(maxFlow);
 
         // Border line
         ctx.fillStyle = 'black';
@@ -702,12 +723,13 @@ class UICanvas {
 
                          // Check Checkbox Click (using a slightly wider hit area for comfort)
                          if (x >= boxX) {
+                              audioManager.playSfx('click');
                               btn.settingObj.enabled = !btn.settingObj.enabled;
                               return;
                          }
 
                     } else {
-                        // Standard Button or Simple Checkbox
+                        // Standard Button or Checkbox
                         audioManager.playSfx('click');
                         if (btn.action) btn.action();
                     }
@@ -727,18 +749,22 @@ class UICanvas {
             const layout = this.getSidebarLayout();
             const { config, elements } = layout;
             const { sbScale, marginX, fontScale, startY, controlsH, linkToggleSize, linkToggleOffsetY, sliderWidth, sliderH, sliderGap, shopGap, shopLabelGap, modH, modGap, itemHeight, itemGap, settingsGap, devBtnHeight } = config;
-
             // 1. Controls
+            // Link Rods
             if (x >= elements.linkToggle.x && x <= elements.linkToggle.x + elements.linkToggle.w && 
                 y >= elements.linkToggle.y && y <= elements.linkToggle.y + elements.linkToggle.h) {
+                audioManager.playSfx('click');
                 settings.linkRods = !settings.linkRods;
                 return;
             }
 
             // Water Flow Slider
             if (y >= elements.waterSlider.y && y <= elements.waterSlider.y + elements.waterSlider.h && x >= elements.waterSlider.x && x <= elements.waterSlider.x + elements.waterSlider.w) {
-                const newVal = (x - elements.waterSlider.x) / elements.waterSlider.w * 1.0;
-                settings.waterFlowSpeed = Math.max(0, Math.min(1, newVal));
+                        const ratio = (x - elements.waterSlider.x) / elements.waterSlider.w;
+                const newVal = Math.max(0, Math.min(1, ratio));
+                const minFlow = (player && typeof player.waterFlowMin === 'number') ? player.waterFlowMin : 0.0;
+                const maxFlow = (player && typeof player.waterFlowMax === 'number') ? player.waterFlowMax : 1.0;
+                settings.waterFlowSpeed = Math.max(minFlow, Math.min(maxFlow, newVal));
                 return;
             }
 
@@ -755,8 +781,15 @@ class UICanvas {
             // Items
             for (const item of elements.shopItems) {
                 if (y >= item.y && y <= item.y + item.h) {
-                    audioManager.playSfx('click');
-                    shop.buy(item.key);
+                    const buyInfo = shop.getPurchaseInfo(item.key);
+                    const canAfford = player && (player.getBalance() >= buyInfo.cost || settings.cheatMode) && buyInfo.count > 0;
+                    
+                    if (canAfford) {
+                        audioManager.playSfx('click');
+                        shop.buy(item.key);
+                    } else {
+                        audioManager.playSfx('click_fail');
+                    }
                     return;
                 }
             }
@@ -765,14 +798,15 @@ class UICanvas {
             if (y >= elements.devButton.y && y <= elements.devButton.y + elements.devButton.h) {
                 audioManager.playSfx('click');
                 settings.cheatMode = !settings.cheatMode;
-                if (settings.cheatMode && player) player.addMoney(1000000); //edit this to make everything cost 0
             }
 
             if (y >= elements.boomButton.y && y <= elements.boomButton.y + elements.boomButton.h) {
+                audioManager.playSfx('click');
                 boom = !boom;
             }
 
             if (y >= elements.settingsButton.y && y <= elements.settingsButton.y + elements.settingsButton.h) {
+                audioManager.playSfx('click');
                 paused = true;
                 this.pauseMenuState = 'MAIN';
             }
@@ -788,8 +822,11 @@ class UICanvas {
                 const { elements } = layout;
                 const sliderX = elements.waterSlider.x;
                 const sliderW = elements.waterSlider.w;
-                const newVal = (x - sliderX) / sliderW;
-                settings.waterFlowSpeed = Math.max(0, Math.min(1, newVal));
+                const ratio = (x - sliderX) / sliderW;
+                const newVal = Math.max(0, Math.min(1, ratio));
+                const minFlow = (player && typeof player.waterFlowMin === 'number') ? player.waterFlowMin : 0.0;
+                const maxFlow = (player && typeof player.waterFlowMax === 'number') ? player.waterFlowMax : 1.0;
+                settings.waterFlowSpeed = Math.max(minFlow, Math.min(maxFlow, newVal));
             } else if (this.draggingSlider.type === 'audio') {
                 const btn = this.draggingSlider.button;
                 const pScale = globalScale * 0.6;
@@ -839,8 +876,11 @@ class UICanvas {
                 // Water Flow Slider
                 if (y >= elements.waterSlider.y && y <= elements.waterSlider.y + elements.waterSlider.h && x >= elements.waterSlider.x && x <= elements.waterSlider.x + elements.waterSlider.w) {
                     this.draggingSlider = { type: 'water' };
-                    const newVal = (x - elements.waterSlider.x) / elements.waterSlider.w * 1.0;
-                    settings.waterFlowSpeed = Math.max(0, Math.min(1, newVal));
+                    const ratio = (x - elements.waterSlider.x) / elements.waterSlider.w;
+                    const newVal = Math.max(0, Math.min(1, ratio));
+                    const minFlow = (player && typeof player.waterFlowMin === 'number') ? player.waterFlowMin : 0.0;
+                    const maxFlow = (player && typeof player.waterFlowMax === 'number') ? player.waterFlowMax : 1.0;
+                    settings.waterFlowSpeed = Math.max(minFlow, Math.min(maxFlow, newVal));
                     return;
                 }
             }

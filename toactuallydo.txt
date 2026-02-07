@@ -51,7 +51,7 @@ When editing files, change the timestamp in index.html for cache busting.
 	- Check todo.txt for more details.
 	- Files: `ui.js`, new `audio.js`
 
-6) Control rods: upgrades (NOT STARTED)
+6) Control rods: upgrades (DONE)
 	- Importance: 4/5  Difficulty: 3/5
 	- Buying additional rods
 	- Files: `controlrod.js`, `ui.js`, `sketch.js`
@@ -61,7 +61,7 @@ When editing files, change the timestamp in index.html for cache busting.
 	- Implement centermost-first filling rules, bulk-buy (ctrl/shift), and UI feedback for available slots. Expose water flow control once 5 water upgrades purchased (valve UI).
 	- Files: `uranium.js`, `sketch.js`, `ui.js`, `water.js`
 
-8) Water upgrades, bubbles interaction & visual feedback (NOT STARTED)
+8) Water upgrades, bubbles interaction & visual feedback (DONE)
 	- Importance: 3/5  Difficulty: 2/5
 	- Max water speed upgrades, bubble speed tied to flow, and stronger heat transport tweaks.
 	- Files: `water.js`, `bubblesRenderer.js`, `ui.js`
@@ -71,7 +71,7 @@ When editing files, change the timestamp in index.html for cache busting.
 	- Gradual melting thresholds, escalating warnings, optional explosions, and a prestige reset path with persistent upgrades.
 	- Files: `uranium.js`, `water.js`, `prestige.js` (new), `sketch.js`
 
-10) Meter rework (NOT STARTED)
+10) Meter rework (STARTED)
 	- Importance: 3/5  Difficulty: 2/5
 	- Make meter scale with reactor power. Must be tested to figure out the numbers.
 

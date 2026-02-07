@@ -17,8 +17,8 @@ function createShaderLoadTask(name, path, srcKey, codeKey) {
 const loadingTasks = [
   createShaderLoadTask("simulation vertex shader", 'shaders/sim.vert', 'simVertSrc', 'simVertCode'),
   createShaderLoadTask("simulation fragment shader", 'shaders/sim.frag', 'simFragSrc', 'simFragCode'),
-  createShaderLoadTask("render vertex shader", 'shaders/render.vert', 'rendVertSrc', 'rendVertCode'),
-  createShaderLoadTask("render fragment shader", 'shaders/render.frag', 'rendFragSrc', 'rendFragCode'),
+  createShaderLoadTask("neutron vertex shader", 'shaders/neutron.vert', 'rendVertSrc', 'rendVertCode'),
+  createShaderLoadTask("neutron fragment shader", 'shaders/neutron.frag', 'rendFragSrc', 'rendFragCode'),
   createShaderLoadTask("report vertex shader", 'shaders/report.vert', 'reportVertSrc', 'reportVertCode'),
   createShaderLoadTask("report fragment shader", 'shaders/report.frag', 'reportFragSrc', 'reportFragCode'),
   createShaderLoadTask("atoms vertex shader", 'shaders/atoms.vert', 'atomsVertSrc', 'atomsVertCode'),
@@ -55,6 +55,8 @@ const loadingTasks = [
     func: () => {
       upgrades = new Upgrades();
       player = new Player();
+      if (typeof player.updateWaterFlowLimits === 'function') player.updateWaterFlowLimits();
+      settings.waterFlowSpeed = player.waterFlowStart;
       shop = new Shop();
       playerState = new PlayerState();
     }

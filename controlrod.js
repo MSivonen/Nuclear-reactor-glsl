@@ -37,27 +37,28 @@ class ControlRodsSlider {
         this.y = controlRodsStartPos;
         this.handleY = []; // per-rod handle (bottom Y) in simulation coords
         this.draggingIndex = -1; // -1 = none
-        // Initialize handles to match current rods if available
-        if (typeof controlRods !== 'undefined' && controlRods.length > 0) {
-            this.handleY = [];
-            for (let i = 0; i < controlRods.length; i++) {
-                const r = controlRods[i];
-                this.handleY.push(r.y + r.height);
-            }
+        this.ensureHandleLength();
+    }
+
+    ensureHandleLength() {
+        if (typeof controlRods === 'undefined' || !controlRods) return;
+
+        const prev = this.handleY || [];
+        this.handleY = new Array(controlRods.length).fill(null);
+        for (let i = 0; i < controlRods.length; i++) {
+            const rod = controlRods[i];
+            if (!rod) continue;
+            const prevVal = prev[i];
+            const rawHandle = (typeof prevVal === 'number') ? prevVal : (rod.y + rod.height);
+            const clampedHandle = clampControlRodHandleY(i, rawHandle);
+            this.handleY[i] = clampedHandle;
+            rod.targetY = this.handleY[i] - rod.height;
         }
     }
 
     draw(ctx, offsetX) {
         const simMousePos = scaleMouse(mouseX, mouseY);
-
-        // Ensure handle array length matches rods
-        if (!this.handleY || this.handleY.length !== controlRods.length) {
-            this.handleY = [];
-            for (let i = 0; i < controlRods.length; i++) {
-                const r = controlRods[i];
-                this.handleY.push(r.y + r.height);
-            }
-        }
+        this.ensureHandleLength();
 
         const HANDLE_RADIUS = 10 * globalScale;
 
@@ -70,8 +71,9 @@ class ControlRodsSlider {
             } else {
                 for (let i = 0; i < controlRods.length; i++) {
                     const rod = controlRods[i];
+                    if (!rod) continue;
                     const handleX = rod.x + rod.width / 2;
-                    const handleY = this.handleY[i];
+                    const handleY = (typeof this.handleY[i] === 'number') ? this.handleY[i] : (rod.y + rod.height);
                     const dx = simMousePos.x - handleX;
                     const dy = simMousePos.y - handleY;
                     if (Math.sqrt(dx * dx + dy * dy) <= HANDLE_RADIUS + 4) { //grab the balls
@@ -87,19 +89,22 @@ class ControlRodsSlider {
         if (this.draggingIndex !== -1 && mouseIsPressed) {
             const i = this.draggingIndex;
             // Clamp handle to simulation vertical bounds
-            const newY = Math.min(Math.max(simMousePos.y, 0), screenHeight);
+            const newY = simMousePos.y;
             // If 'link-rods' is checked in settings, move all handles to same Y
             const linked = settings.linkRods;
 
             if (linked) {
                 for (let j = 0; j < this.handleY.length; j++) {
-                    this.handleY[j] = newY;
+                    if (!controlRods[j]) continue;
+                    this.handleY[j] = clampControlRodHandleY(j, newY);
                     if (controlRods[j]) controlRods[j].targetY = this.handleY[j] - controlRods[j].height;
                 }
             } else {
-                this.handleY[i] = newY;
-                // Set rod's target to follow (top = bottom - height)
-                if (controlRods[i]) controlRods[i].targetY = this.handleY[i] - controlRods[i].height;
+                if (controlRods[i]) {
+                    this.handleY[i] = clampControlRodHandleY(i, newY);
+                    // Set rod's target to follow (top = bottom - height)
+                    controlRods[i].targetY = this.handleY[i] - controlRods[i].height;
+                }
             }
         }
 
@@ -111,8 +116,9 @@ class ControlRodsSlider {
         // Draw handles (below rods)
         for (let i = 0; i < controlRods.length; i++) {
             const rod = controlRods[i];
+            if (!rod) continue;
             const drawX = offsetX + rod.x + rod.width / 2;
-            const drawY = this.handleY[i];
+            const drawY = (typeof this.handleY[i] === 'number') ? this.handleY[i] : (rod.y + rod.height);
 
             ctx.globalAlpha = 0.5;
             ctx.fillStyle = 'red';
@@ -125,3 +131,71 @@ class ControlRodsSlider {
         ctx.restore();
     }
 }
+const CONTROL_ROD_UPGRADE_SEQUENCE = [1, 3, 0, 4, 1, 3];
+const CONTROL_ROD_STEP = 0.05;
+const CONTROL_ROD_SIDE_BASE = 0.25;
+const CONTROL_ROD_SIDE_CAP = 1.0;
+
+function getControlRodCenterIndex() {
+    return Math.floor(controlRodCount / 2);
+}
+
+function getControlRodMaxPercent(index) {
+    const centerIndex = getControlRodCenterIndex();
+    if (index === centerIndex) return 1.0;
+    const level = (controlRodUpgradeLevels && controlRodUpgradeLevels[index]) ? controlRodUpgradeLevels[index] : 0;
+    return Math.min(CONTROL_ROD_SIDE_CAP, CONTROL_ROD_SIDE_BASE + level * CONTROL_ROD_STEP);
+}
+
+function clampControlRodHandleY(index, desiredY) {
+    const maxPercent = getControlRodMaxPercent(index);
+    const maxY = screenHeight * maxPercent;
+    const clamped = Math.min(Math.max(desiredY, 0), maxY);
+    return clamped;
+}
+
+function getMaxControlRodPurchases() {
+    const centerIndex = getControlRodCenterIndex();
+    const maxPerRod = Math.max(0, Math.floor((CONTROL_ROD_SIDE_CAP - CONTROL_ROD_SIDE_BASE) / CONTROL_ROD_STEP));
+    return (controlRodCount - 1) * maxPerRod;
+}
+
+function applyControlRodPurchase() {
+    const maxPurchases = getMaxControlRodPurchases();
+    if (controlRodPurchaseCount >= maxPurchases) return false;
+
+    const seqIndex = controlRodPurchaseCount % CONTROL_ROD_UPGRADE_SEQUENCE.length;
+    const rodIndex = CONTROL_ROD_UPGRADE_SEQUENCE[seqIndex];
+    if (!controlRodUpgradeLevels || controlRodUpgradeLevels.length !== controlRodCount) {
+        controlRodUpgradeLevels = new Array(controlRodCount).fill(0);
+    }
+    controlRodUpgradeLevels[rodIndex] = (controlRodUpgradeLevels[rodIndex] || 0) + 1;
+    controlRodPurchaseCount++;
+
+    if (typeof player !== 'undefined' && player) player.rodCount = controlRodPurchaseCount;
+
+    if (typeof ui !== 'undefined' && ui && ui.controlSlider) {
+        ui.controlSlider.ensureHandleLength();
+    }
+
+    return true;
+}
+
+function initControlRodUpgrades() {
+    controlRodUpgradeLevels = new Array(controlRodCount).fill(0);
+    controlRodPurchaseCount = (typeof player !== 'undefined' && player && typeof player.rodCount === 'number') ? player.rodCount : 0;
+    for (let i = 0; i < controlRodPurchaseCount; i++) {
+        const seqIndex = i % CONTROL_ROD_UPGRADE_SEQUENCE.length;
+        const rodIndex = CONTROL_ROD_UPGRADE_SEQUENCE[seqIndex];
+        controlRodUpgradeLevels[rodIndex] = (controlRodUpgradeLevels[rodIndex] || 0) + 1;
+    }
+
+    if (typeof ui !== 'undefined' && ui && ui.controlSlider) {
+        ui.controlSlider.ensureHandleLength();
+    }
+}
+
+// Expose helpers
+window.applyControlRodPurchase = applyControlRodPurchase;
+window.initControlRodUpgrades = initControlRodUpgrades;
+window.getMaxControlRodPurchases = getMaxControlRodPurchases;

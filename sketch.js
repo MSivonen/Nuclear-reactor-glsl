@@ -16,7 +16,7 @@ const defaultSettings = {
   decayProbability: 0.0001,
   controlRodAbsorptionProbability: 0.1,
   controlRodHitProbability: 0.325,
-  waterFlowSpeed: 0.3,
+  waterFlowSpeed: 0.15,
   heatingRate: 50,
   uraniumToWaterHeatTransfer: 0.3,
   heatTransferCoefficient: 0.04,
@@ -33,6 +33,9 @@ let settings = { ...defaultSettings };
 // === Runtime state ===
 let uraniumAtoms = [];
 let controlRods = [];
+let controlRodSlotXs = [];
+let controlRodPurchaseCount = 0;
+let controlRodUpgradeLevels = [];
 let waterCells = [];
 let grid;
 var boom = false;

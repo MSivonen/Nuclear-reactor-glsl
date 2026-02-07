@@ -3,18 +3,18 @@ class Shop {
         this.items = {
             atom: {
                 name: "Add Atom",
-                basePrice: 50,
-                priceMult: 1.2
+                basePrice: 5,
+                priceMult: 1.01
             },
             group: {
                 name: "Add Group",
                 basePrice: 5000,
-                priceMult: 2.5
+                priceMult: 10
             },
             controlRod: {
                 name: "Control Rod",
-                basePrice: 2000,
-                priceMult: 3.0
+                basePrice: 10,
+                priceMult: 1.3
             },
             waterFlow: {
                 name: "Flow Limit",
@@ -38,9 +38,9 @@ class Shop {
             case 'group':
                 return (typeof player !== 'undefined' && player && player.ownedGroups) ? player.ownedGroups.length : 0;
             case 'controlRod':
-                return controlRods.length;
+                return (typeof controlRodPurchaseCount !== 'undefined') ? controlRodPurchaseCount : 0;
             case 'waterFlow':
-                return (typeof player !== 'undefined' && player && player.upgrades && player.upgrades.waterFlow) ? player.upgrades.waterFlow : 0;
+                return (typeof player !== 'undefined' && player && typeof player.waterFlowUpgradeCount === 'number') ? player.waterFlowUpgradeCount : 0;
             default:
                 return 0;
         }
@@ -65,6 +65,22 @@ class Shop {
         }
 
         let totalCost = 0;
+
+        const maxRodPurchases = (itemName === 'controlRod' && typeof getMaxControlRodPurchases === 'function')
+            ? getMaxControlRodPurchases()
+            : 0;
+
+        const maxWaterFlowUpgrades = (itemName === 'waterFlow' && player && typeof player.waterFlowUpgradeMax === 'number')
+            ? player.waterFlowUpgradeMax
+            : 0;
+
+        if (itemName === 'controlRod' && currentCount >= maxRodPurchases) {
+            return { count: 0, cost: 0 };
+        }
+
+        if (itemName === 'waterFlow' && currentCount >= maxWaterFlowUpgrades) {
+            return { count: 0, cost: 0 };
+        }
 
         if (countToBuy === 'MAX') {
             const money = (typeof player !== 'undefined' && player) ? player.getBalance() : 0;
@@ -95,6 +111,38 @@ class Shop {
             }
         }
 
+        // Clamp rod purchases to max purchases and recalc cost if needed
+        if (itemName === 'controlRod') {
+            const maxBuy = Math.max(0, maxRodPurchases - currentCount);
+            if (countToBuy > maxBuy) {
+                countToBuy = maxBuy;
+                if (countToBuy <= 0) return { count: 0, cost: 0 };
+
+                if (item.priceMult === 1) {
+                    totalCost = item.basePrice * countToBuy;
+                } else {
+                    const firstCost = item.basePrice * Math.pow(item.priceMult, currentCount);
+                    totalCost = firstCost * (Math.pow(item.priceMult, countToBuy) - 1) / (item.priceMult - 1);
+                }
+            }
+        }
+
+        // Clamp water flow purchases to max upgrades and recalc cost if needed
+        if (itemName === 'waterFlow') {
+            const maxBuy = Math.max(0, maxWaterFlowUpgrades - currentCount);
+            if (countToBuy > maxBuy) {
+                countToBuy = maxBuy;
+                if (countToBuy <= 0) return { count: 0, cost: 0 };
+
+                if (item.priceMult === 1) {
+                    totalCost = item.basePrice * countToBuy;
+                } else {
+                    const firstCost = item.basePrice * Math.pow(item.priceMult, currentCount);
+                    totalCost = firstCost * (Math.pow(item.priceMult, countToBuy) - 1) / (item.priceMult - 1);
+                }
+            }
+        }
+
         // Safety for insane numbers or zero
         if (countToBuy < 0) countToBuy = 0;
         if (totalCost < 0) totalCost = 0;
@@ -111,7 +159,7 @@ class Shop {
         const info = this.getPurchaseInfo(itemName);
         if (info.count <= 0) return false;
 
-        if (typeof player !== 'undefined' && player && player.spend(info.cost)) {
+        if (typeof player !== 'undefined' && player && (settings.cheatMode || player.spend(info.cost))) {
             console.log(`Bought ${info.count} ${itemName}(s) for ${info.cost}`);
             
             for(let i = 0; i < info.count; i++) {
@@ -133,12 +181,17 @@ class Shop {
                 // Logic for buying a group placeholder
                 break;
             case 'controlRod':
-                 // Placeholder
+                if (typeof applyControlRodPurchase === 'function') applyControlRodPurchase();
                 break;
             case 'waterFlow':
-                if (!player.upgrades.waterFlow) player.upgrades.waterFlow = 0;
-                player.upgrades.waterFlow++;
-                settings.waterFlowSpeed += 0.05;
+                if (player && typeof player.waterFlowUpgradeCount === 'number') {
+                    if (player.waterFlowUpgradeCount < player.waterFlowUpgradeMax) {
+                        player.waterFlowUpgradeCount += 1;
+                        player.upgrades.waterFlow = player.waterFlowUpgradeCount;
+                        if (typeof player.updateWaterFlowLimits === 'function') player.updateWaterFlowLimits();
+                        settings.waterFlowSpeed = Math.max(player.waterFlowMin, Math.min(player.waterFlowMax, settings.waterFlowSpeed));
+                    }
+                }
                 break;
         }
     }

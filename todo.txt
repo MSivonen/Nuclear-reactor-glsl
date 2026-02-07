@@ -11,51 +11,50 @@ MAKING A GAME
     -Make a method in the class to toggle atom groups on and off
         -Calculate the positions of atoms and blah blah
             -Atoms are marked with this.atomGroup for easier filtering
--Make an object of starting stats, which can be upgraded later.
+v-Make an object/class of starting stats, which can be upgraded later.
 
 === Player starts with: === 
-    -Game starts in start screen
+v    -Game starts in start screen
     -two groups of atoms, the two centermost ones
         -each group has three columns of atoms
         -each group has 15 rows of atoms
-    -one control rod, the center one
+v    -one control rod, the center one
 
 === Max upgrades are: === 
     -six columns of atom groups, each group has 6x30 atoms (total 36x30)
-    -five control rods
+v    -five control rods
 
 === Shop: === 
     -atoms to a group. The centermost slot is filled first, prioritize left/top one if there is multiple slots equally close to center
-        -ctrl+click to buy 5
-        -shift+click to buy 10
-    -Control rods. Same logic, centermost first.
+v        -ctrl+click to buy 5
+v        -shift+click to buy 10
+v    -Control rods. Same logic, centermost first.
     -Can the stuff be bought whenever or does the reactor need to be shut down first? / to be decided later
-    -Max water flow rate
+v    -Max water flow rate
 
 === UI elements that will be revealed in time: ===
-    -Meter when x amount of heat is reached
-    -Power output display when x+y amount of heat is reached
-    -Amount of money when x+y+z amount of heat is reached
+    -Temp meter when x amount of heat is reached
+    -Power output display when y amount of power is reached
+    -Amount of money when z amount of power is reached
     -Water speed valve appears when buying 5th water speed upgrade.
-    -Link rods button appears when second rod is bought
 
 === Economy: === 
-    -"Money" is the amount of energy produced
-    -Game money unit is a nuclear euro, eg "Neuro", plural "Neuri", symbol "n€"
+v    -"Money" is scaled by the amount of energy produced
+    -Game money unit is a nuclear euro, eg "Neuro", plural "Neuri", symbol "n€" //this is bad, think of something else.
     -Need to think of an increasing price ramp
     -New atom group should be relatively expensive
 
 === Gameplay features to add: ===
-    -!!!!!Save/load game locally!!!!!
-        -Three save slots?
-    -Control the speed of water
-        -Faster max speed via upgrades
-        -Bubbles' speed is altered with this
-        -And of course heat transfer
-    -Water moves energy out of the screen, calculate how much and give "money" to Player
-    -Hotter water is exponentially more expensive than cold water, this encourages the player to build heat instead of running the reactor cold
+v    -!!!!!Save/load game locally!!!!!
+v        -Three save slots?
+v    -Control the speed of water
+v        -Faster max speed via upgrades
+v        -Bubbles' speed is altered with this
+v        -And of course heat transfer
+v    -Water moves energy out of the screen, calculate how much and generate power
+v    -Hotter water is exponentially more expensive than cold water, this encourages the player to build heat instead of running the reactor cold
     -Better game over mechanic. The atoms should melt at a certain point... Or does the water explode? Or both?
-        -Prettier boom animation
+v        -Prettier boom animation
         -What happens when game over? 
             -Not a hc insta kill.
             -Prestige?
@@ -74,41 +73,41 @@ MAKING A GAME
         -And/or buy atom healing?
 
 === Sound: ===
-    -Minimal sfx
-        -Ambient sounds when running
-            -Play/mix/overlap randomly, with random volumes (30%-100%) and pitches (+-15%)
-                    -electric-hum
-                    -high-energy-buzzing (this one with 50% lower volume than others)
-                    -industrial-hum
-                    -scifi-generator
-                    -steam-bubbles
-                    -steam-bubbles2
-            -Water sounds
-                -water_low for low flow
-                -water_high for high flow
-            -Steam sound when running warm
-                -Steam1_low for cool
-                -Steam3_mid for intermediate heat
-                -Steam2_highPitch for hot
-            -Water and steam sounds should blend/mix smoothly from lower to higher level sound. Do not stop the lower sound, but make it 30% quieter.
-        -Alarm when going too hot
-        -Explosion sound
-            -boom
-        -Button click sounds for ui
-            -click
+v    -Minimal sfx
+v        -Ambient sounds when running
+v            -Play/mix/overlap randomly, with random volumes (30%-100%) and pitches (+-15%)
+v                    -electric-hum
+v                    -high-energy-buzzing (this one with 50% lower volume than others)
+v                    -industrial-hum
+v                    -scifi-generator
+v                    -steam-bubbles
+v                    -steam-bubbles2
+v            -Water sounds
+v                -water_low for low flow
+v                -water_high for high flow
+v            -Steam sound when running warm
+v                -Steam1_low for cool
+v                -Steam3_mid for intermediate heat
+v                -Steam2_highPitch for hot
+v            -Water and steam sounds should blend/mix smoothly from lower to higher level sound. Do not stop the lower sound, but make it 30% quieter.
+v        -Alarm when going too hot
+v        -Explosion sound
+v            -boom
+v        -Button click sounds for ui
+v            -click
         
     -Music?
         -Maybe later, not a priority
 
 === UI: ===
-    -Control rod sliders
-    -Water speed slider
-    -Menu
-        *Entered with esc key. Pauses the game*
-        -Start/restart
-        -Save/load
-        -Options
-            -Turn visual-only graphics layers on/off
+v    -Control rod sliders
+v    -Water speed slider
+v    -Menu
+v        *Entered with esc key. Pauses the game*
+v        -Start/restart
+v        -Save/load
+v        -Options
+v            -Turn visual-only graphics layers on/off
         -Tutorial on/off
     -Meter rework to make it's scale scale with more powerful reactor or max power reached? Must be tested.
     -Force widescreen aspect ratio (1.78:1). Move the simulation canvases to the right to make room for ui elements on the left.

@@ -58,6 +58,7 @@ function resetSimulation() {
     }
     // Reset control rods to their initial positions and reset slider handles
     controlRods.forEach((rod, i) => {
+        if (!rod) return;
         if (typeof rod.initialY !== 'undefined') {
             rod.y = rod.initialY;
             rod.targetY = rod.initialY;
@@ -67,13 +68,15 @@ function resetSimulation() {
     });
     if (ui && ui.controlSlider) {
         ui.controlSlider.draggingIndex = -1;
-        if (ui.controlSlider.handleY && ui.controlSlider.handleY.length === controlRods.length) {
-            for (let i = 0; i < controlRods.length; i++) {
-                ui.controlSlider.handleY[i] = controlRods[i].y + controlRods[i].height;
-            }
-        }
+        ui.controlSlider.ensureHandleLength();
     }
     settings = { ...defaultSettings };
+    if (typeof player !== 'undefined' && player) {
+        if (typeof player.waterFlowStart === 'number') {
+            settings.waterFlowSpeed = player.waterFlowStart;
+        }
+        settings.waterFlowSpeed = Math.max(player.waterFlowMin || 0, Math.min(player.waterFlowMax || 1, settings.waterFlowSpeed));
+    }
     initializeControls();
     boom = false;
     boomStartTime = 0; // Reset the boom animation timer

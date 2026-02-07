@@ -133,6 +133,12 @@ function initShadersAndGL() {
 }
 
 function initSimulationObjects() {
+    // Reset control rod slots and state
+    controlRodSlotXs = [];
+    controlRods = new Array(controlRodCount).fill(null);
+    controlRodPurchaseCount = 0;
+    controlRodUpgradeLevels = [];
+
     // Water cells
     for (let y = 0; y < uraniumAtomsCountY; y++) {
         for (let x = 0; x < uraniumAtomsCountX; x++) {
@@ -147,7 +153,7 @@ function initSimulationObjects() {
     // Uranium atoms and control rods
     for (let x = 0; x < uraniumAtomsCountX; x++) {
         if ((x + 1) % 7 === 0) {
-            controlRods.push(new ControlRod(x * uraniumAtomsSpacingX + controlRodWidth / 2, controlRodsStartPos));
+            controlRodSlotXs.push(x * uraniumAtomsSpacingX + controlRodWidth / 2);
         } else {
             for (let y = 0; y < uraniumAtomsCountY; y++) {
                 let waterCellIndex = x + y * uraniumAtomsCountX;
@@ -160,6 +166,15 @@ function initSimulationObjects() {
             }
         }
     }
+
+    // Create all rods at start
+    for (let i = 0; i < controlRodCount; i++) {
+        const slotX = controlRodSlotXs[i];
+        controlRods[i] = new ControlRod(slotX, controlRodsStartPos);
+    }
+
+    // Apply saved rod purchase upgrades
+    if (typeof initControlRodUpgrades === 'function') initControlRodUpgrades();
 
     // Spatial grid
     grid = new Grid(uraniumAtomsSpacingX);
@@ -198,7 +213,7 @@ function updateScene() {
         totalHeat += s.heat;
     });
     window.avgTemp = uraniumAtoms.length > 0 ? totalHeat / uraniumAtoms.length : 0;
-    controlRods.forEach(s => s.update());
+    controlRods.forEach(s => { if (s) s.update(); });
 
     // Combined water update (conduction, flow, energy)
     energyThisFrame = waterSystem.update(deltaTime, settings);

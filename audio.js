@@ -87,6 +87,7 @@ class AudioManager {
             { key: 'alarm', path: 'assets/Sounds/alarm.mp3', type: 'sfx' },
             { key: 'boom', path: 'assets/Sounds/boom.mp3', type: 'sfx' },
             { key: 'click', path: 'assets/Sounds/click.mp3', type: 'sfx' },
+            { key: 'click_fail', path: 'assets/Sounds/click_fail.mp3', type: 'sfx' },
             
             // Ambience (Hums) - Group: 'ambience'
             { key: 'hum_electric', path: 'assets/Sounds/electric-hum-141075.mp3', type: 'ambient', group: 'ambience', vol: 0.2, pitch: 1.0, vVar: 1, pVar: 0.25 },
@@ -189,8 +190,8 @@ class AudioManager {
     }
 
     playSfx(key) {
-        // If the game is paused, do not play SFX
-        if (this.prevPaused) return;
+        // If the game is paused, do not play SFX (EXCEPT CLICKS)
+        if (this.prevPaused && key !== 'click' && key !== 'click_fail') return;
 
         if (this.sounds[key]) {
              // Fallback default volumes if UI is not ready yet

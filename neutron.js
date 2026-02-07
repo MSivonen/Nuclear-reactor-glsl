@@ -47,11 +47,15 @@ class Neutron {
         const rodCount = controlRods.length;
         const rodYs = new Float32Array(rodCount || 1);
         for (let i = 0; i < rodCount; i++) {
-            if (typeof ui !== 'undefined' && ui.controlSlider && ui.controlSlider.handleY && ui.controlSlider.handleY.length > i) {
-                rodYs[i] = ui.controlSlider.handleY[i];
+            if (controlRods[i]) {
+                if (typeof ui !== 'undefined' && ui.controlSlider && ui.controlSlider.handleY && typeof ui.controlSlider.handleY[i] === 'number') {
+                    rodYs[i] = ui.controlSlider.handleY[i];
+                } else {
+                    // Fallback: use rod bottom (top y + height)
+                    rodYs[i] = controlRods[i].y + controlRods[i].height;
+                }
             } else {
-                // Fallback: use rod bottom (top y + height)
-                rodYs[i] = controlRods[i].y + controlRods[i].height;
+                rodYs[i] = -1.0;
             }
         }
         const uRodsLoc = gl.getUniformLocation(glShit.simProgram, "u_controlRods");
