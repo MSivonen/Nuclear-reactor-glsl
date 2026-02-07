@@ -146,6 +146,10 @@ function draw() {
     }
   }
 
+  // Update audio (pass paused state)
+  // Ensure audio manager is updated every frame (so it can stop audio when paused)
+  audioManager.update(deltaTime, settings, energyOutput, paused, game.boomValue);
+
   // Core layer (steam + atom cores) on coreCanvas
   // This draws the scene using 'renderTime' (if updated in sceneHelpers)
   // and draws the UI/Pause Menu on top

@@ -83,14 +83,31 @@ function resetSimulation() {
 
 function eventListeners() {
     //-----pause-----
+    const pauseForVisibility = () => {
+        paused = true;
+        if (ui && ui.canvas) ui.canvas.pauseMenuState = 'MAIN';
+        if (typeof audioManager !== 'undefined' && audioManager && typeof audioManager.stopAllImmediate === 'function') {
+            audioManager.stopAllImmediate();
+        } else if (typeof audioManager !== 'undefined' && audioManager) {
+            audioManager.update(0, settings, energyOutput, true, game ? game.boomValue : undefined);
+        }
+        if (typeof last !== 'undefined') last = performance.now();
+    };
+
     document.addEventListener("visibilitychange", () => {
-        paused = document.hidden;
-        if (!paused) last = performance.now();
+        if (document.hidden) {
+            pauseForVisibility();
+        } else {
+            // Keep paused when returning to the tab; user must resume manually.
+            paused = true;
+            if (typeof last !== 'undefined') last = performance.now();
+        }
     });
-    window.addEventListener("blur", () => paused = true);
+    window.addEventListener("blur", pauseForVisibility);
     window.addEventListener("focus", () => {
-        paused = false;
-        last = performance.now();
+        // Keep paused on focus; user must resume manually.
+        paused = true;
+        if (typeof last !== 'undefined') last = performance.now();
     });
     //-----pause-----
 

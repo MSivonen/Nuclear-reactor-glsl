@@ -185,7 +185,7 @@ class UICanvas {
                             settingObj: this.uiSettings.video.neutrons
                         },
                         { text: "BACK", action: () => { this.pauseMenuState = 'SETTINGS'; } }
-                    ], btnWidth)
+                    ], btnWidth * 1.5)
                 };
             case 'SETTINGS_RESOLUTION':
                  return {
@@ -240,6 +240,49 @@ class UICanvas {
             default:
                 return { title: "ERROR", buttons: [] };
         }
+    }
+
+    getMenuBounds(menu) {
+        const pScale = globalScale * 0.6;
+        const cx = this.simXOffset + this.simWidth / 2;
+
+        let minX = Infinity;
+        let minY = Infinity;
+        let maxX = -Infinity;
+        let maxY = -Infinity;
+
+        if (menu.buttons && menu.buttons.length > 0) {
+            menu.buttons.forEach(btn => {
+                minX = Math.min(minX, btn.x);
+                minY = Math.min(minY, btn.y);
+                maxX = Math.max(maxX, btn.x + btn.w);
+                maxY = Math.max(maxY, btn.y + btn.h);
+            });
+
+            // Title position mirrors drawPauseMenu()
+            const titleY = menu.buttons[0].y - 80 * pScale;
+            const titleTop = titleY - 40 * pScale;
+            const titleBottom = titleY + 40 * pScale;
+            minY = Math.min(minY, titleTop);
+            maxY = Math.max(maxY, titleBottom);
+
+            if (menu.warning) {
+                const warningY = titleY + 50 * pScale;
+                const warningTop = warningY - 20 * pScale;
+                const warningBottom = warningY + 20 * pScale;
+                minY = Math.min(minY, warningTop);
+                maxY = Math.max(maxY, warningBottom);
+            }
+        } else {
+            const w = 300 * pScale;
+            const h = 200 * pScale;
+            minX = cx - w / 2;
+            maxX = cx + w / 2;
+            minY = this.height / 2 - h / 2;
+            maxY = this.height / 2 + h / 2;
+        }
+
+        return { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
     }
 
     drawPauseMenu() {
@@ -670,6 +713,12 @@ class UICanvas {
                     }
                     return;
                 }
+            }
+
+            const bounds = this.getMenuBounds(menu);
+            const insideMenu = (x >= bounds.x && x <= bounds.x + bounds.w && y >= bounds.y && y <= bounds.y + bounds.h);
+            if (!insideMenu) {
+                paused = false;
             }
             return;
         }

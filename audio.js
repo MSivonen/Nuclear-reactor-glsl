@@ -1,12 +1,12 @@
 class AmbientTrack {
     constructor(soundFile, baseVolume = 1.0, basePitch = 1.0, volVar = 0.0, pitchVar = 0.0, rate = 0.01) {
         this.sound = soundFile;
-        this.baseVolume = baseVolume; // 0.0 to 1.0
-        this.basePitch = basePitch;
-        this.volVariation = volVar; // Percentage (e.g., 0.3 for 30%)
-        this.pitchVariation = pitchVar;
+        this.baseVolume = (typeof baseVolume === 'number' && Number.isFinite(baseVolume)) ? baseVolume : 1.0; // 0.0 to 1.0
+        this.basePitch = (typeof basePitch === 'number' && Number.isFinite(basePitch)) ? basePitch : 1.0;
+        this.volVariation = (typeof volVar === 'number' && Number.isFinite(volVar)) ? volVar : 0.0; // Percentage (e.g., 0.3 for 30%)
+        this.pitchVariation = (typeof pitchVar === 'number' && Number.isFinite(pitchVar)) ? pitchVar : 0.0;
         this.noiseOffset = Math.random() * 1000;
-        this.rate = rate; // Speed of variation
+        this.rate = (typeof rate === 'number' && Number.isFinite(rate)) ? rate : 0.01; // Speed of variation
         this.targetVolume = 0.0; // For fading in/out via game logic
         this.currentFadeVol = 0.0;
         
@@ -57,9 +57,15 @@ class AmbientTrack {
         // Base * Fade * Category * Master * Variation
         // Variation applies to the base "level", keeping it somewhat organic
         let finalVol = this.baseVolume * (1.0 + volVar) * this.currentFadeVol * catVol * masterVol;
-        finalVol = constrain(finalVol, 0, 1.0);
+        // Protect against NaN / non-finite values coming from bad inputs
+        if (!Number.isFinite(finalVol)) {
+            finalVol = 0;
+        } else {
+            finalVol = constrain(finalVol, 0, 1.0);
+        }
 
         let finalPitch = this.basePitch * (1.0 + pitchVar);
+        if (!Number.isFinite(finalPitch)) finalPitch = this.basePitch;
 
         this.sound.setVolume(finalVol, 0.1); // 0.1s ramp for smoothness
         this.sound.rate(finalPitch);
@@ -73,6 +79,7 @@ class AudioManager {
         this.ambientTracks = [];
         this.isInitialized = false;
         this.alarmIntensity = 0;
+        this.prevPaused = false;
 
         // Configuration for all sound assets
         this.assets = [
@@ -182,6 +189,9 @@ class AudioManager {
     }
 
     playSfx(key) {
+        // If the game is paused, do not play SFX
+        if (this.prevPaused) return;
+
         if (this.sounds[key]) {
              // Fallback default volumes if UI is not ready yet
              let sfxEnabled = true;
@@ -215,14 +225,14 @@ class AudioManager {
         // Access settings via ui.canvas.uiSettings
         if (typeof ui === 'undefined' || !ui.canvas || !ui.canvas.uiSettings) return;
 
-        // If paused or game over, mute ambient tracks INSTANTLY
+        // If paused, stop all ambient and persistent SFX immediately (no fades)
         if (isPaused) {
             this.ambientTracks.forEach(track => {
                 track.targetVolume = 0;
                 track.currentFadeVol = 0; // Force instant internal state
-                if (track.sound) track.sound.setVolume(0);
+                if (track.sound && track.sound.isPlaying()) track.sound.stop();
             });
-            
+
             // Stop persistent SFX
             this.alarmIntensity = 0;
             if (this.sounds['alarm'] && this.sounds['alarm'].isPlaying()) {
@@ -231,7 +241,14 @@ class AudioManager {
             if (this.sounds['boom'] && this.sounds['boom'].isPlaying()) {
                 this.sounds['boom'].stop();
             }
+            this.prevPaused = true;
             return;
+        } else if (this.prevPaused && !isPaused) {
+            // Transitioning from paused -> unpaused: restart ambience tracks
+            this.ambientTracks.forEach(track => {
+                if (track.sound && !track.sound.isPlaying()) track.play();
+            });
+            this.prevPaused = false;
         }
         
         // If BOOM (Game Over), stopping ambience is fine, but we might want the boom sound to play!
@@ -332,6 +349,19 @@ class AudioManager {
         this.groups['ambience'].forEach(item => item.track.targetVolume = ambientIntensity);
     }
 
+    setGroupTarget(groupName, key, target) {
+        const group = this.groups[groupName];
+        if (!group) return;
+        const t = (typeof target === 'number') ? constrain(target, 0, 1) : 0;
+        for (let i = 0; i < group.length; i++) {
+            const item = group[i];
+            if (item.key === key && item.track) {
+                item.track.targetVolume = t;
+                return;
+            }
+        }
+    }
+
     updateAlarm(masterVol) {
         const s = this.sounds['alarm'];
         if (!s) return;
@@ -381,11 +411,32 @@ class AudioManager {
         return 0;
     }
 
-    setGroupTarget(group, key, target) {
-        const item = this.groups[group].find(i => i.key === key);
-        if (item) {
-            item.track.targetVolume = target;
+    stopAlarm() {
+        if (this.sounds['alarm']) {
+            this.sounds['alarm'].stop();
         }
+    }
+
+    stopSfx(key) {
+        if (this.sounds[key]) {
+            this.sounds[key].stop();
+        }
+    }
+
+    stopAllImmediate() {
+        this.ambientTracks.forEach(track => {
+            track.targetVolume = 0;
+            track.currentFadeVol = 0;
+            if (track.sound) track.sound.stop();
+        });
+
+        Object.keys(this.sounds).forEach(key => {
+            const s = this.sounds[key];
+            if (s && s.isPlaying && s.isPlaying()) s.stop();
+        });
+
+        this.alarmIntensity = 0;
+        this.prevPaused = true;
     }
 }
 
