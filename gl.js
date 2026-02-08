@@ -26,6 +26,10 @@ const glShit = {
   reportData: null,
   atomMaskTex: null,
   atomMaskData: null,
+  lightTex: null,
+  lightFBO: null,
+  vectorFieldTex: null,
+  vectorFieldFBO: null,
   useGpuSteam: false,
   waterClearFrame: -1,
   coreClearFrame: -1,
@@ -65,6 +69,16 @@ const glShit = {
     explosionVertCode: null,
     explosionFragCode: null,
     atomsCoreFragCode: null,
-    atomsCoreFragSrc: null
+    atomsCoreFragSrc: null,
+    neutronLightFragCode: null,
+    neutronLightFragSrc: null,
+    lightVectorFragCode: null,
+    lightVectorFragCode: null,
+    specialLightFragCode: null,
+    specialLightFragSrc: null,
+    rodsVertCode: null,
+    rodsVertSrc: null,
+    rodsFragCode: null,
+    rodsFragSrc: null
   }
 };

@@ -6,7 +6,7 @@ let controlRodsStartPos = -screenHeight * .9;
 let globalScale = screenHeight / 600;
 
 const defaultSettings = {
-  neutronSpeed: 5, // Restored to original speed now that simulation is fixed
+  neutronSpeed: 5, 
   collisionProbability: 0.055,
   decayProbability: 0.0001,
   controlRodAbsorptionProbability: 0.1,
@@ -141,15 +141,19 @@ function setup() {
   californium = new Californium();
   californium.updateDimensions();
   plutonium.updateDimensions();
-}
+  // Show loading screen after we've resized DOM to avoid tiny flicker
+  const loadingScreen = document.getElementById('loading-screen');
+  if (loadingScreen) loadingScreen.style.display = 'flex';
 
-(async () => {
-  await loader.startLoading(loadingTasks, () => {
-    loading = false;
-    document.getElementById('loading-screen').style.display = 'none';
-    audioManager.startAmbience();
-  });
-})();
+  // Start loading now that canvas/DOM are correctly sized
+  (async () => {
+    await loader.startLoading(loadingTasks, () => {
+      loading = false;
+      if (loadingScreen) loadingScreen.style.display = 'none';
+      audioManager.startAmbience();
+    });
+  })();
+}
 
 function draw() {
   if (loading) {

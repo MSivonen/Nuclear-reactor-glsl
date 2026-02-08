@@ -12,11 +12,11 @@
 
 <body>
   <div id="canvas-container" style="position: relative; width: 1067px; height: 600px;">
-    <!-- Loading Screen -->
-    <div id="loading-screen" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; background-color: black; color: white; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 1000; font-family: 'UIFont1', monospace;">
+    <!-- Loading Screen (hidden by default; will be shown after canvas is resized) -->
+    <div id="loading-screen" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; background-color: black; color: white; display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 1000; font-family: 'UIFont1', monospace;">
       <div id="loading-panel" style="text-align: center; padding: 20px 30px; border: 2px solid #444; background: rgba(10,10,10,0.95); box-shadow: 0 0 20px rgba(0,0,0,0.8); width: 360px; height: 260px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 10px;">
         <div id="loading-title" style="font-size: 48px; letter-spacing: 2px; margin-top: 6px;">Atom's Blessing</div>
-        <div id="loading-subtitle" style="font-size: 20px; opacity: 0.8; margin-bottom: 8px;">-a fission management-</div>
+        <div id="loading-subtitle" style="font-size: 20px; opacity: 0.8; margin-bottom: 8px;">-the great glow-</div>
         <div id="loading-progress" style="display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1; justify-content: center; width: 100%;">
           <div id="loading-bar-container" style="width: 220px; height: 20px; background-color: gray;">
             <div id="loading-bar" style="height: 100%; background-color: green; width: 0%;"></div>
@@ -152,6 +152,7 @@
   <script src="miscFunctions.js?v=0.12"></script>
   <script src="shaderFunctions.js?v=0.12"></script>
   <script src="atomsRenderer.js?v=0.12"></script>
+  <script src="rodsRenderer.js?v=0.12"></script>
   <script src="specialRenderer.js?v=0.12"></script>
   <script src="steamRenderer.js?v=0.12"></script>
   <script src="bubblesRenderer.js?v=0.12"></script>

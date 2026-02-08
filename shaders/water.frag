@@ -4,6 +4,8 @@ precision highp float;
 uniform vec2 u_resolution;
 uniform float u_time;
 uniform sampler2D u_backgroundTexture;
+uniform sampler2D u_vectorField;
+uniform float u_shopWidth;
 out vec4 outColor;
 
 #define UVScale 			 1.0
@@ -108,6 +110,11 @@ void main() {
     
     // Add caustics, but less intense to allow some "transparency" feel
     finalColor += highlightColor * causticMask * .21;
+
+    // Add neutron lighting
+    vec2 lightUV = vec2((gl_FragCoord.x - u_shopWidth) / u_resolution.x, gl_FragCoord.y / u_resolution.y);
+    float neutronLight = texture(u_vectorField, lightUV).z;
+    finalColor += vec3(0.4, 0.6, 1.0) * neutronLight * 0.15;
 
     outColor = vec4(finalColor, 1.);
 }

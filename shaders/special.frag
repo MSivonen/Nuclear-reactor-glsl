@@ -84,7 +84,8 @@ void main(){
     
     // --- Sphere Surface Styling ---
     float z = sqrt(max(0.0, 1.0 - dot(p, p)));
-    vec3 normal = normalize(vec3(p, z));
+    // Flip p.y to match WebGL's Y-up orientation for lightDir behavior
+    vec3 normal = normalize(vec3(p.x, -p.y, z));
     vec3 lightDir = normalize(vec3(0.5, 0.5, 1.0));
     
     float diff = max(0.0, dot(normal, lightDir));
@@ -94,7 +95,8 @@ void main(){
     
     // Add radioactive "fleck" details
     float detail = sin(p.x * 6.0 + u_time) * cos(p.y * 6.0 - u_time * 0.8);
-    surfaceColor = mix(surfaceColor, glowColor * 0.6, (0.2 + 0.15 * detail) * sphereMask);
+    // Increased glow/brightness on the surface
+    surfaceColor = mix(surfaceColor, glowColor * 1.5, (0.35 + 0.2 * detail) * sphereMask);
     
     // --- Final Composition ---
     // Using explicit premultiplied composition for all layers

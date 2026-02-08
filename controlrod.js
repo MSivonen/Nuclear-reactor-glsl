@@ -4,7 +4,7 @@ class ControlRod {
         this.y = y;
         this.width = controlRodWidth;
         this.height = controlRodHeight;
-        this.color = { r: 44, g: 22, b: 4, a: 255 };
+        this.color = { r: 60, g: 70, b: 90, a: 255 }; // Metallic Dark Blue-Gray
         this.initialY = y;
         this.targetY = y;
         this.movementSpeed = 1;
@@ -54,7 +54,7 @@ class ControlRodsSlider {
         }
     }
 
-    draw(ctx, offsetX) {
+    draw(ctx, offsetX, skipDraw = false) {
         const simMousePos = scaleMouse(mouseX, mouseY);
         this.ensureHandleLength();
 
@@ -108,6 +108,11 @@ class ControlRodsSlider {
         if (!mouseIsPressed && this.draggingIndex !== -1) {
             this.draggingIndex = -1;
             if (ui.canvas && ui.canvas.activeDrag && ui.canvas.activeDrag.type === 'controlRod') ui.canvas.activeDrag = null;
+        }
+
+        if (skipDraw) {
+            ctx.restore();
+            return;
         }
 
         for (let i = 0; i < controlRods.length; i++) {

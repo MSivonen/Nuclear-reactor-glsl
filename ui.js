@@ -737,11 +737,14 @@ class UICanvas {
         // Update DOM state
         this.updateDOM();
 
-        controlRods.forEach(r => r.draw(this.ctx, this.simXOffset));
+        // Control rods moved to GL renderer
+        // controlRods.forEach(r => r.draw(this.ctx, this.simXOffset));
 
         ui.powerMeter.draw(this.ctx, this.simXOffset);
         ui.tempMeter.draw(this.ctx, this.simXOffset);
-        ui.controlSlider.draw(this.ctx, this.simXOffset);
+
+        // Slider handles moved to GL renderer, but logic still needs to run
+        ui.controlSlider.draw(this.ctx, this.simXOffset, true); // Added skipDraw flag
         
         drawFPS(this.ctx, this.simXOffset);
         gameOver(this.ctx, this.simXOffset);

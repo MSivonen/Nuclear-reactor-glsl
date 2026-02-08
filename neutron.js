@@ -139,6 +139,102 @@ class Neutron {
         gl.useProgram(null);
     }
 
+    drawLightPass(gl) {
+        // Draw to light map FBO
+        gl.bindFramebuffer(gl.FRAMEBUFFER, glShit.lightFBO);
+        const lw = Math.floor(screenSimWidth / 8);
+        const lh = Math.floor(screenHeight / 8);
+        gl.viewport(0, 0, lw, lh);
+        
+        gl.clearColor(0, 0, 0, 0);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+
+        gl.useProgram(glShit.neutronLightProgram);
+        gl.enable(gl.BLEND);
+        // Additive blending for light accumulation
+        gl.blendFunc(gl.ONE, gl.ONE);
+
+        gl.uniform1i(gl.getUniformLocation(glShit.neutronLightProgram, "u_textureSize"), MAX_NEUTRONS);
+        // Resolution is the sim size here so the vertices map correctly
+        gl.uniform2f(gl.getUniformLocation(glShit.neutronLightProgram, "u_resolution"), screenSimWidth, screenHeight);
+        gl.uniform2f(gl.getUniformLocation(glShit.neutronLightProgram, "u_simSize"), screenSimWidth, screenHeight);
+        // Larger points for the light map to create a soft glow
+        gl.uniform1f(gl.getUniformLocation(glShit.neutronLightProgram, "u_neutronSize"), settings.neutronSize * 4.0);
+
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, glShit.readTex);
+        gl.uniform1i(gl.getUniformLocation(glShit.neutronLightProgram, "u_neutrons"), 0);
+
+        gl.drawArrays(gl.POINTS, 0, MAX_NEUTRONS_SQUARED);
+
+        // --- NEW: Add Special Items Lighting ---
+        const specialItems = [];
+        if (typeof plutonium !== 'undefined') specialItems.push(plutonium);
+        if (typeof californium !== 'undefined') specialItems.push(californium);
+        
+        if (specialItems.length > 0) {
+            gl.useProgram(glShit.specialLightProgram);
+            
+            // Reuse instance data logic but for light pass
+            const tempRenderer = new SpecialRenderer();
+            tempRenderer.gl = gl;
+            tempRenderer.program = glShit.specialLightProgram;
+            tempRenderer.instanceBuffer = specialRenderer.instanceBuffer;
+            tempRenderer.instanceData = specialRenderer.instanceData;
+            tempRenderer.maxInstances = specialRenderer.maxInstances;
+            tempRenderer.instanceFloatCount = specialRenderer.instanceFloatCount;
+            
+            const activeCount = tempRenderer.updateInstances(specialItems);
+            // Size them up for bigger light spread
+            for(let i=0; i<activeCount; i++) {
+                tempRenderer.instanceData[i * 8 + 6] *= 5.0; 
+            }
+            
+            tempRenderer.draw(activeCount, { blendMode: 'additive' });
+        }
+        // ----------------------------------------
+
+        // --- NEW: Add Rod Lighting ---
+        if (controlRods.length > 0) {
+            gl.useProgram(glShit.specialLightProgram);
+            
+            const tr = new RodsRenderer();
+            tr.gl = gl;
+            tr.program = glShit.specialLightProgram;
+            tr.instanceBuffer = rodsRenderer.instanceBuffer;
+            tr.instanceData = rodsRenderer.instanceData;
+            tr.maxInstances = rodsRenderer.maxInstances;
+            tr.instanceFloatCount = rodsRenderer.instanceFloatCount;
+            
+            // Only draw types 0 (rod) and 1 (sphere) for lighting
+            const count = tr.updateInstances(controlRods, null);
+            for(let i=0; i<count; i++) {
+                const b = i * 9;
+                // Expand light emission area
+                tr.instanceData[b + 6] *= 4.0; 
+                tr.instanceData[b + 7] *= 1.2;
+                // intensity boost via color alpha if the shader supports it, 
+                // but specialLightFrag just uses vColor.rgb * 0.02.
+            }
+            tr.draw(count, { blendMode: 'additive' });
+        }
+        // ----------------------------------------
+
+        // Now compute vector field from light map
+        gl.bindFramebuffer(gl.FRAMEBUFFER, glShit.vectorFieldFBO);
+        gl.useProgram(glShit.lightVectorProgram);
+        gl.disable(gl.BLEND);
+
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, glShit.lightTex);
+        gl.uniform1i(gl.getUniformLocation(glShit.lightVectorProgram, "u_lightMap"), 0);
+        gl.uniform2f(gl.getUniformLocation(glShit.lightVectorProgram, "u_resolution"), lw, lh);
+
+        drawFullscreenQuad(gl);
+
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    }
+
     readFrameBuffer(gl) {
         gl.bindFramebuffer(gl.FRAMEBUFFER, glShit.readFBO);
 

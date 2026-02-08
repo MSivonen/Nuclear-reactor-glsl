@@ -22,6 +22,9 @@ const loadingTasks = [
   createShaderLoadTask("special vertex shader", 'shaders/special.vert', 'specialVertSrc', 'specialVertCode'),
   createShaderLoadTask("special fragment shader", 'shaders/special.frag', 'specialFragSrc', 'specialFragCode'),
   createShaderLoadTask("atoms core fragment shader", 'shaders/atoms_core.frag', 'atomsCoreFragSrc', 'atomsCoreFragCode'),
+  createShaderLoadTask("neutron light fragment shader", 'shaders/neutron_light.frag', 'neutronLightFragSrc', 'neutronLightFragCode'),
+  createShaderLoadTask("light vector fragment shader", 'shaders/light_vector.frag', 'lightVectorFragSrc', 'lightVectorFragCode'),
+  createShaderLoadTask("special light fragment shader", 'shaders/special_light.frag', 'specialLightFragSrc', 'specialLightFragCode'),
   createShaderLoadTask("steam vertex shader", 'shaders/steam.vert', 'steamVertSrc', 'steamVertCode'),
   createShaderLoadTask("steam fragment shader", 'shaders/steam.frag', 'steamFragSrc', 'steamFragCode'),
   createShaderLoadTask("bubbles vertex shader", 'shaders/bubbles.vert', 'bubblesVertSrc', 'bubblesVertCode'),
@@ -30,6 +33,8 @@ const loadingTasks = [
   createShaderLoadTask("water fragment shader", 'shaders/water.frag', 'waterFragSrc', 'waterFragCode'),
   createShaderLoadTask("explosion vertex shader", 'shaders/explosion.vert', 'explosionVertSrc', 'explosionVertCode'),
   createShaderLoadTask("explosion fragment shader", 'shaders/explosion.frag', 'explosionFragSrc', 'explosionFragCode'),
+  createShaderLoadTask("rods vertex shader", 'shaders/rods.vert', 'rodsVertSrc', 'rodsVertCode'),
+  createShaderLoadTask("rods fragment shader", 'shaders/rods.frag', 'rodsFragSrc', 'rodsFragCode'),
   {
       name: "Pre-Initializing Neutron System",
       func: () => {

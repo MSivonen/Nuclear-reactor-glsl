@@ -124,6 +124,17 @@ class AtomsRenderer {
         const rendWidthLoc = this.gl.getUniformLocation(this.program, "render_width");
         this.gl.uniform1f(rendWidthLoc, screenSimWidth);
 
+        const shopWidthLoc = this.gl.getUniformLocation(this.program, "u_shopWidth");
+        if (shopWidthLoc) this.gl.uniform1f(shopWidthLoc, SHOP_WIDTH);
+
+        // Pass the light vector field
+        if (glShit.vectorFieldTex) {
+            const uVectorLoc = this.gl.getUniformLocation(this.program, "u_vectorField");
+            this.gl.activeTexture(this.gl.TEXTURE0);
+            this.gl.bindTexture(this.gl.TEXTURE_2D, glShit.vectorFieldTex);
+            this.gl.uniform1i(uVectorLoc, 0);
+        }
+
         if (blendMode && blendMode !== 'none') {
             this.gl.enable(this.gl.BLEND);
             if (blendMode === 'alpha') {

@@ -69,6 +69,15 @@ class WaterLayer {
         this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture);
         this.gl.uniform1i(this.uTextureLoc, 0);
 
+        if (glShit.vectorFieldTex) {
+            const uVectorLoc = this.gl.getUniformLocation(this.program, "u_vectorField");
+            this.gl.activeTexture(this.gl.TEXTURE1);
+            this.gl.bindTexture(this.gl.TEXTURE_2D, glShit.vectorFieldTex);
+            this.gl.uniform1i(uVectorLoc, 1);
+            
+            this.gl.uniform1f(this.gl.getUniformLocation(this.program, "u_shopWidth"), SHOP_WIDTH);
+        }
+
         this.gl.drawArrays(this.gl.TRIANGLES, 0, 6);
         this.gl.bindVertexArray(null);
     }

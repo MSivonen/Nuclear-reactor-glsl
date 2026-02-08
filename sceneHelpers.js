@@ -26,7 +26,9 @@ function initShadersAndGL() {
     glShit.simProgram = createProgram(gl, glShit.shaderCodes.simVertCode, glShit.shaderCodes.simFragCode);
     glShit.reportProgram = createProgram(gl, glShit.shaderCodes.reportVertCode, glShit.shaderCodes.reportFragCode);
     glShit.explosionProgram = createProgram(gl, glShit.shaderCodes.explosionVertCode, glShit.shaderCodes.explosionFragCode);
-
+    glShit.neutronLightProgram = createProgram(gl, glShit.shaderCodes.rendVertCode, glShit.shaderCodes.neutronLightFragCode);
+    glShit.lightVectorProgram = createProgram(gl, glShit.shaderCodes.simVertCode, glShit.shaderCodes.lightVectorFragCode);
+    glShit.specialLightProgram = createProgram(gl, glShit.shaderCodes.atomsVertCode, glShit.shaderCodes.specialLightFragCode);
     glShit.uNeutronsLoc = gl.getUniformLocation(glShit.simProgram, "u_neutrons");
 
     glShit.readTex = neutron.createTexture(gl, neutron.buffer);
@@ -58,6 +60,25 @@ function initShadersAndGL() {
     initRenderShader(gl, glShit.shaderCodes.rendVertCode, glShit.shaderCodes.rendFragCode);
     reportSystem.init(gl);
 
+    // Light map setup (1/8 resolution)
+    const lw = Math.floor(screenSimWidth / 8);
+    const lh = Math.floor(screenHeight / 8);
+    glShit.lightTex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, glShit.lightTex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, lw, lh, 0, gl.RGBA, gl.FLOAT, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    glShit.lightFBO = createFBO(gl, glShit.lightTex);
+
+    glShit.vectorFieldTex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, glShit.vectorFieldTex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, lw, lh, 0, gl.RGBA, gl.FLOAT, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    glShit.vectorFieldFBO = createFBO(gl, glShit.vectorFieldTex);
+
     atomsRenderer.init(
         gl,
         uraniumAtomsCountX * uraniumAtomsCountY,
@@ -80,6 +101,13 @@ function initShadersAndGL() {
         16,
         glShit.shaderCodes.specialVertCode,
         glShit.shaderCodes.specialFragCode
+    );
+
+    rodsRenderer.init(
+        gl,
+        64, 
+        glShit.shaderCodes.rodsVertCode,
+        glShit.shaderCodes.rodsFragCode
     );
 
     steamRenderer.init(
@@ -200,6 +228,9 @@ function updateScene() {
 function drawScene() {
     const gl = glShit.waterGL; // They are all the same now
 
+    // 1. Generate Light Map from Neutrons
+    neutron.drawLightPass(gl);
+
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, glShit.gameCanvas.width, glShit.gameCanvas.height);
     gl.clearColor(0.2, 0.3, 0.4, 1.0);
@@ -222,6 +253,9 @@ function drawScene() {
 
     gl.viewport(simX, 0, simW, simH);
     renderAtomCoreLayer();
+
+    gl.viewport(simX, 0, simW, simH);
+    renderRodsLayer();
 
     if (vidSettings.bubbles) {
         gl.viewport(simX, 0, simW, simH);
@@ -301,18 +335,23 @@ function renderBubblesLayer() {
     bubblesRenderer.render(screenSimWidth, screenHeight, renderTime);
 }
 
-function renderSteamLayer() {
-    if (!glShit.useGpuSteam) return;
-    steamRenderer.updateInstances(waterCells);
-    steamRenderer.draw();
-}
-
 function renderSpecialLayer() {
     const items = [];
     if (plutonium) items.push(plutonium);
     if (californium) items.push(californium);
     const activeCount = specialRenderer.updateInstances(items);
     specialRenderer.draw(activeCount, { blendMode: 'alpha' });
+}
+
+function renderRodsLayer() {
+    const activeCount = rodsRenderer.updateInstances(controlRods, ui.controlSlider);
+    rodsRenderer.draw(activeCount);
+}
+
+function renderSteamLayer() {
+    if (!glShit.useGpuSteam) return;
+    steamRenderer.updateInstances(waterCells);
+    steamRenderer.draw();
 }
 
 function renderAtomCoreLayer() {
@@ -330,6 +369,3 @@ function renderAtomGlowLayer() {
 function renderNeutronLayer() {
     neutron.draw(glShit.simGL, { clear: false });
 }
-
-// These are now handled inside drawScene logic for UI
-
