@@ -23,7 +23,14 @@ const loader = {
     const startBtn = document.getElementById('loading-start-btn');
     const loadingStartDiv = document.getElementById('loading-start');
     startBtn.style.display = 'inline-block';
-    loadingStartDiv.style.flex = '1';
+    // Position start button at 15% from bottom of canvas
+    loadingStartDiv.style.position = 'absolute';
+    loadingStartDiv.style.bottom = '15%';
+    loadingStartDiv.style.left = '50%';
+    loadingStartDiv.style.transform = 'translateX(-50%)';
+    loadingStartDiv.style.display = 'block';
+    loadingStartDiv.style.width = 'auto';
+    loadingStartDiv.style.flex = '0 0 auto';
     loadingStartDiv.style.alignItems = 'center';
 
     startBtn.addEventListener('click', () => {

@@ -76,6 +76,7 @@ v        -Prettier boom animation
     -Move uranium groups up/down?
     -Modifiers menu to start screen. Idk what modifiers I want yet.
         -Make them affect the game difficulty and amount of money earned.
+    -Make the plutonium & californium purchaseable and upgradeable. Orbiting electrons will be added after every upgrade.
 
 
 === Sound: ===
@@ -133,3 +134,5 @@ v   -Force widescreen aspect ratio (1.78:1). Move the simulation canvases to the
 
 
 === Bugs/Fixes ===
+-put plutonium and californium on top of atoms
+-make them look like the start screen rock. Change the color of californium veins to yellow.

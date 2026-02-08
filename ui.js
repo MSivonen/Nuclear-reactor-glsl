@@ -38,6 +38,7 @@ class UICanvas {
         this.canvas.style.top = '0';
         this.canvas.style.zIndex = '15'; 
         this.canvas.style.pointerEvents = 'none';
+        this.canvas.style.display = 'none'; // Initially hidden
         this.canvas.id = "UI-Canvas";
 
         const container = document.getElementById('canvas-container');
@@ -94,7 +95,7 @@ class UICanvas {
         statsDiv.style.marginTop = '20px';
         statsDiv.style.marginBottom = '20px';
         statsDiv.innerHTML = `
-            <div style="font-size: 14px; color: #aaa;">REACTOR CONTROL</div>
+            <div style="font-size: 14px; color: #aaa;">Atom's Blessing<br>-the great glow-</div>
             <div id="stat-money" style="font-size: 24px; color: #90EE90; margin: 5px 0;">0€</div>
             <div id="stat-income" style="font-size: 14px; color: #777;">0€/s</div>
         `;

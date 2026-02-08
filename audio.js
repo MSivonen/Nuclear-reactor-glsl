@@ -280,8 +280,8 @@ class AudioManager {
         // Scale audio by temperature. Max intensity when close to max temp.
         // Steam starts at 100C, full intensity at 80% of max temp (400C)
         const tempLimit = 500;
-        const fadeStart = 100;
-        const fadeEnd = tempLimit * 0.8; // Full steam slightly before max temp
+        const fadeStart = 80;
+        const fadeEnd = tempLimit * 0.6; // Full steam slightly before max temp
 
         const steamIntensity = constrain(map(window.avgTemp || 0, fadeStart, fadeEnd, 0, 1), 0, 1);
 

@@ -14,6 +14,7 @@ uniform float render_width;
 out vec4 vColor;
 out float vFlash;
 out vec2 vQuadPos;
+out vec2 vInstPos;
 
 void main(){
     vec2 pos = a_instPos + a_quadPos * a_instSize;
@@ -28,4 +29,5 @@ void main(){
     vColor = a_instColor;
     vFlash = a_instFlash;
     vQuadPos = a_quadPos;
+    vInstPos = a_instPos;
 }

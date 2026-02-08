@@ -5,6 +5,7 @@ class Californium {
         this.dragging = false;
         this.dragOffset = { x: 0, y: 0 };
         this.color = { r: 200, g: 200, b: 200 }; // Light Grau / Metallic
+        this.seed = Math.random() * 1000.0;
         this.spawnTimer = 0;
         this.spawnInterval = 0.01; // Seconds between spawns
     }

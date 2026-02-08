@@ -5,6 +5,7 @@ class Plutonium {
         this.dragging = false;
         this.dragOffset = { x: 0, y: 0 };
         this.color = { r: 80, g: 80, b: 80 }; // Grau / Metallic
+        this.seed = Math.random() * 1000.0;
     }
 
     resetPosition() {

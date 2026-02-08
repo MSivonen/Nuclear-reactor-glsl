@@ -74,9 +74,21 @@ class SpecialRenderer {
             this.instanceData[base + 2] = item.color.r / 255.0;
             this.instanceData[base + 3] = item.color.g / 255.0;
             this.instanceData[base + 4] = item.color.b / 255.0;
-            this.instanceData[base + 5] = 1.0; // alpha
+            this.instanceData[base + 5] = item.seed; // Pass seed in alpha channel
             this.instanceData[base + 6] = item.radius * 3.0; // quad size large enough for orbit/glow
-            this.instanceData[base + 7] = 0.0; // flash
+            
+            // Interaction State: 0.0=Idle, 1.0=Grabbed, 2.0=Dragging(Moving)
+            let interactionState = 0.0;
+            if (item.dragging) {
+                interactionState = 1.0;
+                // Check if mouse is moving (using p5.js globals)
+                const mouseSpeed = Math.abs(mouseX - pmouseX) + Math.abs(mouseY - pmouseY);
+                if (mouseSpeed > 0.1) {
+                    interactionState = 2.0;
+                }
+            }
+            this.instanceData[base + 7] = interactionState;
+            
             count++;
         }
         return count;

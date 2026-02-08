@@ -41,11 +41,24 @@ var energyOutputCounter = 0;
 let lastMoneyPerSecond = 0;
 let paused = false;
 var renderTime = 0;
-let loading = true;
+// States: LOADING, TITLE, PLAYING
+let gameState = 'LOADING'; 
 
 let waterSystem;
 let plutonium;
 let californium;
+// let titleRenderer; // Removed to use window.titleRenderer directly
+
+function setUiVisibility(visible) {
+    const uiLayer = document.getElementById('ui-layer');
+    if (uiLayer) {
+        uiLayer.style.display = visible ? 'block' : 'none';
+    }
+    const uiCanvas = document.getElementById('UI-Canvas');
+    if(uiCanvas) {
+        uiCanvas.style.display = visible ? 'block' : 'none';
+    }
+}
 
 
 const ui = {
@@ -148,16 +161,50 @@ function setup() {
   // Start loading now that canvas/DOM are correctly sized
   (async () => {
     await loader.startLoading(loadingTasks, () => {
-      loading = false;
+      gameState = 'PLAYING';
+      setUiVisibility(true);
+      
+      const loadingScreen = document.getElementById('loading-screen');
       if (loadingScreen) loadingScreen.style.display = 'none';
+      
+      // Stop the title renderer/cleanup if needed?
+      // titleRenderer.cleanup(); 
+      
       audioManager.startAmbience();
     });
+    
+    // Tasks finished, now showing title screen while waiting for Start click
+    gameState = 'TITLE';
+    setUiVisibility(false);
+    
   })();
 }
 
 function draw() {
-  if (loading) {
+  if (gameState === 'LOADING') {
     return;
+  }
+  
+  if (gameState === 'TITLE') {
+     // Render title screen
+     // Need to clear screen?
+     if (window.titleRenderer) {
+         // Assuming main GL context is used? 
+         // titleRenderer uses whatever GL it was init with.
+         // We might need to handle viewport, clear etc.
+         
+         const gl = window.titleRenderer.gl;
+         if(gl) {
+             gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+             gl.clearColor(0, 0, 0, 1);
+             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+             
+             // Update title renderer
+             window.titleRenderer.update(deltaTime / 1000.0, mouseX, mouseY, gl.canvas.width, gl.canvas.height);
+             window.titleRenderer.draw(gl.canvas.width, gl.canvas.height);
+         }
+     }
+     return;
   }
 
   if (!paused) {
@@ -191,7 +238,7 @@ function windowResized() {
   container.style.height = screenHeight + 'px';
 
   // If loading screen is visible, resize it too
-  if (loading) {
+  if (gameState === 'LOADING' || gameState === 'TITLE') {
     const loadingPanel = document.getElementById('loading-panel');
     loadingPanel.style.width = (360 * globalScale) + 'px';
     loadingPanel.style.height = (260 * globalScale) + 'px';
@@ -215,6 +262,16 @@ function windowResized() {
     const loadingStartBtn = document.getElementById('loading-start-btn');
     loadingStartBtn.style.fontSize = (18 * globalScale) + 'px';
     loadingStartBtn.style.padding = (12 * globalScale) + 'px ' + (28 * globalScale) + 'px';
+    loadingStartBtn.style.marginTop = '0px';
+
+    const loadingStart = document.getElementById('loading-start');
+    // Position start button at 15% from bottom of the canvas
+    loadingStart.style.position = 'absolute';
+    loadingStart.style.bottom = '15%';
+    loadingStart.style.left = '50%';
+    loadingStart.style.transform = 'translateX(-50%)';
+    loadingStart.style.display = 'block';
+    loadingStart.style.width = 'auto';
   }
 
   // Update dimensions for objects

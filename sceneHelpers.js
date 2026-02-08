@@ -249,10 +249,10 @@ function drawScene() {
     }
     
     gl.viewport(simX, 0, simW, simH);
-    renderSpecialLayer();
+    renderAtomCoreLayer();
 
     gl.viewport(simX, 0, simW, simH);
-    renderAtomCoreLayer();
+    renderSpecialLayer();
 
     gl.viewport(simX, 0, simW, simH);
     renderRodsLayer();
