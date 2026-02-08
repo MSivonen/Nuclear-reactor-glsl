@@ -35,6 +35,26 @@ function initShadersAndGL() {
     glShit.readFBO = createFBO(gl, glShit.readTex);
     glShit.writeFBO = createFBO(gl, glShit.writeTex);
 
+    glShit.atomMaskTex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, glShit.atomMaskTex);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texImage2D(
+        gl.TEXTURE_2D,
+        0,
+        gl.RGBA,
+        uraniumAtomsCountX,
+        uraniumAtomsCountY,
+        0,
+        gl.RGBA,
+        gl.UNSIGNED_BYTE,
+        null
+    );
+    gl.bindTexture(gl.TEXTURE_2D, null);
+    glShit.atomMaskData = new Uint8Array(uraniumAtomsCountX * uraniumAtomsCountY * 4);
+
     initRenderShader(gl, glShit.shaderCodes.rendVertCode, glShit.shaderCodes.rendFragCode);
     reportSystem.init(gl);
 
@@ -159,6 +179,15 @@ function updateScene() {
     ui.powerMeter.update();
     ui.tempMeter.update();
     oncePerSecond();
+
+    // Smooth neutron size toward target over ~5 seconds
+    if (typeof settings.targetNeutronSize !== 'undefined') {
+        let sec = deltaTime / 1000.0;
+        if (sec <= 0) sec = 1.0 / 60.0;
+        const smoothTime = 5.0; // seconds to reach target
+        const frac = Math.min(1.0, sec / smoothTime);
+        settings.neutronSize += (settings.targetNeutronSize - settings.neutronSize) * frac;
+    }
 }
 
 function drawScene() {

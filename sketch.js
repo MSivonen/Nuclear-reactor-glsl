@@ -20,6 +20,7 @@ const defaultSettings = {
   uraniumSize: 10,
   neutronSize: 30,
   neutronsDownSizeMaxAmount:5000,
+  hitboxYScale: 2.6,
   linkRods: false,
   cheatMode: false
 };
@@ -101,6 +102,35 @@ function updateDimensions() {
 function setup() {
   updateDimensions();
 
+  // Resize DOM elements to match resolution
+  const container = document.getElementById('canvas-container');
+  container.style.width = screenWidth + 'px';
+  container.style.height = screenHeight + 'px';
+
+  const loadingPanel = document.getElementById('loading-panel');
+  loadingPanel.style.width = (360 * globalScale) + 'px';
+  loadingPanel.style.height = (260 * globalScale) + 'px';
+
+  const loadingTitle = document.getElementById('loading-title');
+  loadingTitle.style.fontSize = (48 * globalScale) + 'px';
+
+  const loadingSubtitle = document.getElementById('loading-subtitle');
+  loadingSubtitle.style.fontSize = (20 * globalScale) + 'px';
+
+  const loadingBarContainer = document.getElementById('loading-bar-container');
+  loadingBarContainer.style.width = (220 * globalScale) + 'px';
+  loadingBarContainer.style.height = (20 * globalScale) + 'px';
+
+  const loadingPercentage = document.getElementById('loading-percentage');
+  loadingPercentage.style.fontSize = (16 * globalScale) + 'px';
+
+  const loadingTask = document.getElementById('loading-task');
+  loadingTask.style.fontSize = (16 * globalScale) + 'px';
+
+  const loadingStartBtn = document.getElementById('loading-start-btn');
+  loadingStartBtn.style.fontSize = (18 * globalScale) + 'px';
+  loadingStartBtn.style.padding = (12 * globalScale) + 'px ' + (28 * globalScale) + 'px';
+
   noCanvas(); //For mouse etc, do not remove
 
   const gameCnv = document.getElementById('gameCanvas');
@@ -141,4 +171,49 @@ function draw() {
   audioManager.update(deltaTime, settings, energyOutput, paused, game.boomValue);
 
   drawScene();
+}
+
+function windowResized() {
+  updateDimensions();
+
+  // Resize canvas
+  const gameCnv = document.getElementById('gameCanvas');
+  gameCnv.width = screenRenderWidth;
+  gameCnv.height = screenHeight;
+
+  // Resize DOM elements
+  const container = document.getElementById('canvas-container');
+  container.style.width = screenWidth + 'px';
+  container.style.height = screenHeight + 'px';
+
+  // If loading screen is visible, resize it too
+  if (loading) {
+    const loadingPanel = document.getElementById('loading-panel');
+    loadingPanel.style.width = (360 * globalScale) + 'px';
+    loadingPanel.style.height = (260 * globalScale) + 'px';
+
+    const loadingTitle = document.getElementById('loading-title');
+    loadingTitle.style.fontSize = (48 * globalScale) + 'px';
+
+    const loadingSubtitle = document.getElementById('loading-subtitle');
+    loadingSubtitle.style.fontSize = (20 * globalScale) + 'px';
+
+    const loadingBarContainer = document.getElementById('loading-bar-container');
+    loadingBarContainer.style.width = (220 * globalScale) + 'px';
+    loadingBarContainer.style.height = (20 * globalScale) + 'px';
+
+    const loadingPercentage = document.getElementById('loading-percentage');
+    loadingPercentage.style.fontSize = (16 * globalScale) + 'px';
+
+    const loadingTask = document.getElementById('loading-task');
+    loadingTask.style.fontSize = (16 * globalScale) + 'px';
+
+    const loadingStartBtn = document.getElementById('loading-start-btn');
+    loadingStartBtn.style.fontSize = (18 * globalScale) + 'px';
+    loadingStartBtn.style.padding = (12 * globalScale) + 'px ' + (28 * globalScale) + 'px';
+  }
+
+  // Update dimensions for objects
+  if (plutonium) plutonium.updateDimensions();
+  if (californium) californium.updateDimensions();
 }

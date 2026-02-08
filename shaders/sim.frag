@@ -5,6 +5,8 @@ uniform sampler2D u_neutrons;
 uniform float u_controlRods[6]; // per-rod Y thresholds (in simulation coords)
 uniform int u_controlRodCount;
 uniform int u_uraniumCountX;
+uniform int u_uraniumCountY;
+uniform sampler2D u_atomMask;
 uniform float collision_prob;
 uniform float controlRodHitProbability;
 uniform float controlRodAbsorptionProbability;
@@ -15,6 +17,7 @@ uniform float u_atomSpacingX;
 uniform float u_atomSpacingY;
 uniform float u_atomRadius;
 uniform float u_globalScale;
+uniform float u_hitboxYScale;
 
 
 out vec4 outColor;
@@ -67,6 +70,17 @@ void main(){
   }else{
     int atomIndex=row*u_uraniumCountX+col;
 
+    if (col < 0 || col >= u_uraniumCountX || row < 0 || row >= u_uraniumCountY) {
+      outColor=vec4(pos,vel.x,vel.y);
+      return;
+    }
+
+    float hasAtom = texelFetch(u_atomMask, ivec2(col, row), 0).r;
+    if (hasAtom < 0.5) {
+      outColor=vec4(pos,vel.x,vel.y);
+      return;
+    }
+
     vec2 atomPos=vec2(
       float(col)*u_atomSpacingX+u_atomSpacingX*.5,
       float(row)*u_atomSpacingY+u_atomSpacingY*.5
@@ -74,9 +88,18 @@ void main(){
 
     float distSq=dot(pos-atomPos,pos-atomPos);
     float speed=length(vel);
-    float adaptedRadius=u_atomRadius*(collision_prob*((20.*u_globalScale)/speed));
+    // Add deterministic per-neutron jitter to collision probability so hits vary.
+    float rnd = fract(sin(dot(pos + vec2(float(gl_FragCoord.x), float(gl_FragCoord.y)), vec2(12.9898,78.233))) * 43758.5453);
+    // jitter factor in range [0.75, 1.25]
+    float jitter = mix(0.75, 1.25, rnd);
+    float localCollisionProb = collision_prob * jitter;
+    float adaptedRadius = u_atomRadius * (localCollisionProb * ((20.0 * u_globalScale) / speed));
 
-    if(distSq<adaptedRadius*adaptedRadius){
+    // Make hitbox taller in Y: use an elliptical test (rx=adaptedRadius, ry=adaptedRadius*yScale)
+    float yScale = u_hitboxYScale;
+    vec2 d = pos - atomPos;
+    float test = d.x * d.x + (d.y * d.y) / (yScale * yScale);
+    if (test < adaptedRadius * adaptedRadius) {
       hitID=float(atomIndex)+1.;
       vel=vec2(0.);
       pos=vec2(-100.,-100.);

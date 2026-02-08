@@ -5,6 +5,30 @@ class Neutron {
         this.spawnCount = 0;
     }
 
+    updateAtomMaskTexture(gl) {
+        if (!glShit.atomMaskTex) return;
+        const w = uraniumAtomsCountX;
+        const h = uraniumAtomsCountY;
+        const needed = w * h * 4;
+        if (!glShit.atomMaskData || glShit.atomMaskData.length !== needed) {
+            glShit.atomMaskData = new Uint8Array(needed);
+        }
+        const data = glShit.atomMaskData;
+        data.fill(0);
+
+        for (let i = 0; i < uraniumAtoms.length; i++) {
+            const atom = uraniumAtoms[i];
+            const idx = atom.index * 4;
+            if (idx < 0 || idx + 3 >= data.length) continue;
+            data[idx] = atom.hasAtom ? 255 : 0;
+            data[idx + 3] = 255;
+        }
+
+        gl.bindTexture(gl.TEXTURE_2D, glShit.atomMaskTex);
+        gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, data);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+    }
+
     createTexture(gl, data) {
         const tex = gl.createTexture();
         gl.bindTexture(gl.TEXTURE_2D, tex);
@@ -38,6 +62,8 @@ class Neutron {
         gl.clearColor(0, 0, 0, 0);
         gl.clear(gl.COLOR_BUFFER_BIT);
 
+        this.updateAtomMaskTexture(gl);
+
         gl.useProgram(glShit.simProgram);
 
         const rodCount = controlRods.length;
@@ -53,7 +79,11 @@ class Neutron {
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, glShit.readTex);
         gl.uniform1i(glShit.uNeutronsLoc, 0);
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_2D, glShit.atomMaskTex);
+        gl.uniform1i(gl.getUniformLocation(glShit.simProgram, "u_atomMask"), 1);
         gl.uniform1i(gl.getUniformLocation(glShit.simProgram, "u_uraniumCountX"), uraniumAtomsCountX);
+        gl.uniform1i(gl.getUniformLocation(glShit.simProgram, "u_uraniumCountY"), uraniumAtomsCountY);
         gl.uniform1f(gl.getUniformLocation(glShit.simProgram, "collision_prob"), settings.collisionProbability);
         gl.uniform1f(gl.getUniformLocation(glShit.simProgram, "controlRodHitProbability"), settings.controlRodHitProbability);
         gl.uniform1f(gl.getUniformLocation(glShit.simProgram, "controlRodAbsorptionProbability"), settings.controlRodAbsorptionProbability);
@@ -64,6 +94,8 @@ class Neutron {
         gl.uniform1f(gl.getUniformLocation(glShit.simProgram, "u_atomSpacingY"), uraniumAtomsSpacingY);
         gl.uniform1f(gl.getUniformLocation(glShit.simProgram, "u_atomRadius"), settings.uraniumSize / 2.0);
         gl.uniform1f(gl.getUniformLocation(glShit.simProgram, "u_globalScale"), globalScale);
+        // Hitbox Y scale (ellipse height multiplier)
+        gl.uniform1f(gl.getUniformLocation(glShit.simProgram, "u_hitboxYScale"), settings.hitboxYScale || 1.0);
 
         drawFullscreenQuad(gl);
 

@@ -9,7 +9,7 @@ class Plutonium {
 
     resetPosition() {
         // Start near bottom center of sim
-        this.x = screenSimWidth / 2;
+        this.x = screenSimWidth / 5;
         this.y = screenHeight - 60*globalScale;
     }
 
@@ -44,17 +44,20 @@ class Plutonium {
         this.radius = 15 * globalScale;
         
         // Interaction (Handle input here so it works when paused)
+        const mPos = scaleMouse(mouseX, mouseY);
+
         if (mouseIsPressed) {
-            const mPos = scaleMouse(mouseX, mouseY);
-            
             if (!this.dragging) {
-                // Check if clicked
-                const dx = mPos.x - this.x;
-                const dy = mPos.y - this.y;
-                if (Math.sqrt(dx*dx + dy*dy) < this.radius) {
-                    this.dragging = true;
-                    this.dragOffset.x = this.x - mPos.x;
-                    this.dragOffset.y = this.y - mPos.y;
+                // Only start dragging if no other UI element has captured the drag
+                if (!ui.canvas.activeDrag || ui.canvas.activeDrag.type === 'plutonium') {
+                    const dx = mPos.x - this.x;
+                    const dy = mPos.y - this.y;
+                    if (Math.sqrt(dx*dx + dy*dy) < this.radius) {
+                        this.dragging = true;
+                        this.dragOffset.x = this.x - mPos.x;
+                        this.dragOffset.y = this.y - mPos.y;
+                        ui.canvas.activeDrag = { type: 'plutonium' };
+                    }
                 }
             } else {
                 // Dragging
@@ -66,16 +69,38 @@ class Plutonium {
                 this.y = Math.max(this.radius, Math.min(this.y, screenHeight - this.radius));
             }
         } else {
+            if (this.dragging && ui.canvas && ui.canvas.activeDrag && ui.canvas.activeDrag.type === 'plutonium') ui.canvas.activeDrag = null;
             this.dragging = false;
         }
 
         const drawX = this.x + offsetX;
         const drawY = this.y;
+        // Compute transparency based on overlap with meters
+        let alpha = 1.0;
+        try {
+            const meters = [ui.powerMeter, ui.tempMeter];
+            for (const m of meters) {
+                if (!m) continue;
+                const meterCenterX = offsetX + m.x;
+                const meterCenterY = m.y;
+                const dx = drawX - meterCenterX;
+                const dy = drawY - meterCenterY;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                const influenceRadius = Math.max(m.width, m.height) * 0.6;
+                const factor = Math.min(Math.max(1 - dist / influenceRadius, 0), 1);
+                // Lerp alpha towards 0.3 when fully overlapping
+                const target = 1.0 - 0.7 * factor;
+                alpha = Math.min(alpha, target);
+            }
+        } catch (e) {
+            // ignore
+        }
 
         ctx.save();
         ctx.beginPath();
         ctx.arc(drawX, drawY, this.radius, 0, Math.PI * 2);
         ctx.fillStyle = `rgb(${this.color.r}, ${this.color.g}, ${this.color.b})`;
+        ctx.globalAlpha = alpha;
         ctx.fill();
         ctx.strokeStyle = "rgba(20, 100, 30, 0.8)";
         ctx.lineWidth = 2;

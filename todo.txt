@@ -15,13 +15,13 @@ v-Make an object/class of starting stats, which can be upgraded later.
 
 === Player starts with: === 
 v    -Game starts in start screen
-    -two groups of atoms, the two centermost ones
-        -each group has three columns of atoms
-        -each group has 15 rows of atoms
+v    -two groups of atoms, the two centermost ones
+v        -each group has 6 columns of atoms
+!        -each group has 15 rows of atoms - tweak it, they have 3 too little
 v    -one control rod, the center one
 
 === Max upgrades are: === 
-    -six atom groups, each group has 6x30 atoms (total 36x30)
+v    -six atom groups, each group has 6x30 atoms (total 36x30)
 v    -five control rods
 
 === Shop: === 
@@ -36,13 +36,15 @@ v    -Max water flow rate
     -Temp meter when x amount of heat is reached
     -Power output display when y amount of power is reached
     -Amount of money when z amount of power is reached
-    -Water speed valve appears when buying 5th water speed upgrade.
+    -Water speed valve appears when buying a water speed upgrade.
 
 === Economy: === 
 v    -"Money" is scaled by the amount of energy produced
 v    -Game money unit is a Mass Flow Euro, symbol is m with a dot on it "&#7745"
 v    -Need to think of an increasing price ramp
-     -New atom group should be relatively expensive
+v     -New atom group should be relatively expensive
+    -Hide some shop items until previous is bought
+        -Able to buy plutonium first, then californium, then uranium, water flow, atoms, atom groups
 
 === Gameplay features to add: ===
 v    -!!!!!Save/load game locally!!!!!
@@ -72,6 +74,8 @@ v        -Prettier boom animation
         -Automatic healing of atoms when they're cooled a lot?
         -And/or buy atom healing?
     -Move uranium groups up/down?
+    -Modifiers menu to start screen. Idk what modifiers I want yet.
+        -Make them affect the game difficulty and amount of money earned.
 
 
 === Sound: ===
@@ -129,6 +133,4 @@ v   -Force widescreen aspect ratio (1.78:1). Move the simulation canvases to the
 
 
 === Bugs/Fixes ===
--If I drag plutonium to a control rod handle or vice versa, they both get dragged.
--Plutonium goes behind meters. Make it unable to go there? Idk, something needs to be done...
--Neutrons are hitting empty atom slots
+-Make shader(s) to draw plutonium and californium. Put them to a layer right below atom cores.

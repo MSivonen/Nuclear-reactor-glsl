@@ -24,6 +24,8 @@ const glShit = {
   reportFBO: null,
   reportVao: null,
   reportData: null,
+  atomMaskTex: null,
+  atomMaskData: null,
   useGpuSteam: false,
   waterClearFrame: -1,
   coreClearFrame: -1,

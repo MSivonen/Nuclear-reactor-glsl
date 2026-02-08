@@ -64,9 +64,10 @@ class BaseMeter {
         let glow = 0;
         if (clampedRatio >= alarmThreshold) {
             const alarmT = (clampedRatio - alarmThreshold) / (1 - alarmThreshold);
+            const glowBase = 0.1 + 0.9 * alarmT;
             let phase = audioManager.getAlarmPhase();
             const pulse = 0.5 + 0.5 * Math.sin(phase * Math.PI * 2);
-            glow = alarmT * pulse;
+            glow = glowBase * (0.7 + 0.3 * pulse);
 
             ctx.save();
             ctx.globalAlpha = 0.5 * glow;
@@ -95,12 +96,18 @@ class BaseMeter {
         ctx.translate(drawX + this.width / 2, drawY + this.height / 2);
         ctx.rotate(this.needleAngle);
         
-        const needleWidth = 3 * globalScale;
+        const needleWidth = 5 * globalScale;
+        const needleTipWidth = 2 * globalScale;
+        const needleLength = globalScale * 45;
         ctx.fillStyle = 'black';
         
         ctx.beginPath();
 
-        ctx.rect(-needleWidth / 2, 0, needleWidth, globalScale*45);
+        ctx.moveTo(-needleWidth / 2, 0);
+        ctx.lineTo(needleWidth / 2, 0);
+        ctx.lineTo(needleTipWidth / 2, needleLength);
+        ctx.lineTo(-needleTipWidth / 2, needleLength);
+        ctx.closePath();
         ctx.fill();
         
         ctx.restore();
@@ -145,11 +152,13 @@ class BaseMeter {
 class PowerMeter extends BaseMeter {
     constructor(x, y) {
         super(x, y, 110, 0, 1000, 'W');
+        this.smoothedPower = 0;
     }
 
     update() {
         const powerVal = Math.max(0, energyThisFrame);
-        super.update(powerVal);
+        this.smoothedPower = lerp(this.smoothedPower, powerVal, 0.15);
+        super.update(this.smoothedPower);
     }
 
     drawValue(ctx, drawX, drawY) {

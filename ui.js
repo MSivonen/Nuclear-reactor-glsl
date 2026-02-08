@@ -61,6 +61,7 @@ class UICanvas {
 
         this.pauseMenuState = 'MAIN';
         this.pendingSaveSlot = null;
+        this.activeDrag = null; // { type: 'plutonium'|'controlRod', index?: number }
     }
 
     ensureFrame() {
@@ -238,6 +239,7 @@ class UICanvas {
         document.addEventListener('keyup', onKeyChange);
 
         this.renderShopItemsDOM();
+        this.renderAtomGroupRadios();
         this.setBuyAmount(shop.buyAmount);
 
         const bind = (id, fn) => { const el = document.getElementById(id); el.onclick = fn; };
@@ -514,6 +516,44 @@ class UICanvas {
         });
         
         this.updateShopButtons();
+        this.renderAtomGroupRadios();
+    }
+
+    renderAtomGroupRadios() {
+        if (!this.atomGroupRadiosContainer) return;
+
+        const maxGroups = getAtomGroupCount();
+        const owned = new Set(player.ownedGroups);
+        const ownedIndices = Array.from(owned).sort((a,b) => a - b);
+
+        this.atomGroupRadiosContainer.innerHTML = '';
+
+        for (let idx of ownedIndices) {
+            const label = document.createElement('label');
+            label.style.display = 'flex';
+            label.style.alignItems = 'center';
+            label.style.gap = '4px';
+
+            const input = document.createElement('input');
+            input.type = 'radio';
+            input.name = 'atomGroupRadio';
+            input.value = String(idx);
+            input.onchange = (e) => {
+                shop.setTargetAtomGroup(e.target.value);
+                this.updateShopButtons();
+            };
+
+            const text = document.createElement('span');
+            text.innerText = `Group ${idx + 1}`;
+
+            label.appendChild(input);
+            label.appendChild(text);
+            this.atomGroupRadiosContainer.appendChild(label);
+        }
+
+        // Set the initial selected
+        const selected = this.atomGroupRadiosContainer.querySelector(`input[value="${String(shop.targetAtomGroupIndex)}"]`);
+        if (selected) selected.checked = true;
     }
 
     updateShopButtons() {
@@ -521,41 +561,21 @@ class UICanvas {
 
         shop.setBuyAmount(this.modifiers[this.currentModifierIndex]);
 
-        if (this.atomGroupRadiosContainer) {
-            const maxGroups = getAtomGroupCount();
-            const owned = new Set(player.ownedGroups);
-            this.atomGroupRadiosContainer.innerHTML = '';
-
-            for (let i = 0; i < maxGroups; i++) {
-                const label = document.createElement('label');
-                label.style.display = 'flex';
-                label.style.alignItems = 'center';
-                label.style.gap = '4px';
-
-                const input = document.createElement('input');
-                input.type = 'radio';
-                input.name = 'atomGroupRadio';
-                input.value = i;
-                input.onchange = (e) => {
-                    shop.setTargetAtomGroup(e.target.value);
-                    this.updateShopButtons();
-                };
-
-                const text = document.createElement('span');
-                const ownedText = owned.has(i) ? 'Owned' : 'Locked';
-                text.innerText = `Group ${i + 1} (${ownedText})`;
-
-                label.appendChild(input);
-                label.appendChild(text);
-                this.atomGroupRadiosContainer.appendChild(label);
-            }
-
-            if (owned.size > 0 && !owned.has(shop.targetAtomGroupIndex)) {
-                const firstOwned = player.ownedGroups[0];
+        // Update atom group radios if owned groups changed
+        const owned = new Set(player.ownedGroups);
+        const ownedIndices = Array.from(owned).sort((a,b) => a - b);
+        if (this.atomGroupRadiosContainer && this.atomGroupRadiosContainer.children.length !== ownedIndices.length) {
+            this.renderAtomGroupRadios();
+        } else if (this.atomGroupRadiosContainer) {
+            // Ensure current target is one of the owned indices (compare as numbers)
+            const targetNum = Number(shop.targetAtomGroupIndex);
+            if (ownedIndices.length > 0 && !ownedIndices.includes(targetNum)) {
+                const firstOwned = ownedIndices[0];
                 shop.setTargetAtomGroup(firstOwned);
             }
-            const selected = this.atomGroupRadiosContainer.querySelector(`input[value="${shop.targetAtomGroupIndex}"]`);
-            selected.checked = true;
+            // Update selection
+            const selected = this.atomGroupRadiosContainer.querySelector(`input[value="${String(shop.targetAtomGroupIndex)}"]`);
+            if (selected) selected.checked = true;
         }
 
         Object.keys(shop.items).forEach(key => {
@@ -719,24 +739,95 @@ class UICanvas {
 
         controlRods.forEach(r => r.draw(this.ctx, this.simXOffset));
 
-        if (plutonium) plutonium.draw(this.ctx, this.simXOffset);
-        if (californium) californium.draw(this.ctx, this.simXOffset);
-
         ui.powerMeter.draw(this.ctx, this.simXOffset);
         ui.tempMeter.draw(this.ctx, this.simXOffset);
         ui.controlSlider.draw(this.ctx, this.simXOffset);
+        
+        if (plutonium) plutonium.draw(this.ctx, this.simXOffset);
+        if (californium) californium.draw(this.ctx, this.simXOffset);
         
         drawFPS(this.ctx, this.simXOffset);
         gameOver(this.ctx, this.simXOffset);
     }
 
-    handleMouseClick() {
+    handleMouseClick(x, y) {
+        const m = scaleMouse(x, y);
+        // Clicks outside simulation area are ignored
+        if (m.x < 0) return;
+
+        // Check control rod handles first (highest priority)
+        const HANDLE_RADIUS = 10 * globalScale;
+        if (controlRods && ui.controlSlider) {
+            for (let i = 0; i < controlRods.length; i++) {
+                const rod = controlRods[i];
+                const handleX = rod.x + rod.width / 2;
+                const handleY = (typeof ui.controlSlider.handleY[i] === 'number') ? ui.controlSlider.handleY[i] : (rod.y + rod.height);
+                const dx = m.x - handleX;
+                const dy = m.y - handleY;
+                if (Math.sqrt(dx * dx + dy * dy) <= HANDLE_RADIUS + 4 * globalScale) {
+                    this.activeDrag = { type: 'controlRod', index: i };
+                    ui.controlSlider.draggingIndex = i;
+                    return;
+                }
+            }
+        }
+
+        // Check plutonium
+        if (typeof plutonium !== 'undefined' && plutonium) {
+            const dx = m.x - plutonium.x;
+            const dy = m.y - plutonium.y;
+            if (Math.sqrt(dx * dx + dy * dy) <= plutonium.radius) {
+                this.activeDrag = { type: 'plutonium' };
+                plutonium.dragging = true;
+                plutonium.dragOffset.x = plutonium.x - m.x;
+                plutonium.dragOffset.y = plutonium.y - m.y;
+                return;
+            }
+        }
+
+        // Check californium as well so clicks capture it before draw methods
+        if (typeof californium !== 'undefined' && californium) {
+            const dx2 = m.x - californium.x;
+            const dy2 = m.y - californium.y;
+            if (Math.sqrt(dx2 * dx2 + dy2 * dy2) <= californium.radius) {
+                this.activeDrag = { type: 'californium' };
+                californium.dragging = true;
+                californium.dragOffset.x = californium.x - m.x;
+                californium.dragOffset.y = californium.y - m.y;
+                return;
+            }
+        }
     }
 
-    handleMouseDrag() {
+    handleMouseDrag(x, y) {
+        const m = scaleMouse(x, y);
+        if (!this.activeDrag) return;
+
+        if (this.activeDrag.type === 'controlRod') {
+            const i = this.activeDrag.index;
+            if (typeof i === 'number' && ui.controlSlider) {
+                const newY = m.y;
+                ui.controlSlider.handleY[i] = clampControlRodHandleY(i, newY);
+                controlRods[i].targetY = ui.controlSlider.handleY[i] - controlRods[i].height;
+            }
+        } else if (this.activeDrag.type === 'plutonium') {
+            if (typeof plutonium !== 'undefined' && plutonium && plutonium.dragging) {
+                plutonium.x = m.x + plutonium.dragOffset.x;
+                plutonium.y = m.y + plutonium.dragOffset.y;
+                plutonium.x = Math.max(plutonium.radius, Math.min(plutonium.x, screenSimWidth - plutonium.radius));
+                plutonium.y = Math.max(plutonium.radius, Math.min(plutonium.y, screenHeight - plutonium.radius));
+            }
+        }
     }
 
     handleMouseRelease() {
+        if (this.activeDrag && this.activeDrag.type === 'controlRod') {
+            ui.controlSlider.draggingIndex = -1;
+        }
+        if (this.activeDrag && this.activeDrag.type === 'plutonium') {
+            if (typeof plutonium !== 'undefined' && plutonium) plutonium.dragging = false;
+        }
+        this.activeDrag = null;
     }
 }
 

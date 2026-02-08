@@ -67,7 +67,7 @@ class ControlRodsSlider {
             this.draggingIndex = -1;
         }
 
-        if (mouseIsPressed && this.draggingIndex === -1) {
+        if (mouseIsPressed && this.draggingIndex === -1 && (!ui.canvas.activeDrag || ui.canvas.activeDrag.type === 'controlRod')) {
             if (!paused && !scramActive) {
                 for (let i = 0; i < controlRods.length; i++) {
                     const rod = controlRods[i];
@@ -76,9 +76,8 @@ class ControlRodsSlider {
                     const dx = simMousePos.x - handleX;
                     const dy = simMousePos.y - handleY;
                     if (Math.sqrt(dx * dx + dy * dy) <= HANDLE_RADIUS + 4 * globalScale) { //grab the balls
-                    //if (-dx <= HANDLE_RADIUS && dx <= HANDLE_RADIUS) {//grab anywhere in y direction
                         this.draggingIndex = i;
-
+                        ui.canvas.activeDrag = { type: 'controlRod', index: i };
                         break;
                     }
                 }
@@ -108,6 +107,7 @@ class ControlRodsSlider {
 
         if (!mouseIsPressed && this.draggingIndex !== -1) {
             this.draggingIndex = -1;
+            if (ui.canvas && ui.canvas.activeDrag && ui.canvas.activeDrag.type === 'controlRod') ui.canvas.activeDrag = null;
         }
 
         for (let i = 0; i < controlRods.length; i++) {

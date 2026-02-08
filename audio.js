@@ -9,8 +9,8 @@ class AmbientTrack {
         this.rate = (typeof rate === 'number' && Number.isFinite(rate)) ? rate : 0.01;
         this.targetVolume = 0.0;
         this.currentFadeVol = 0.0;
-        
-        this.categorySettings = null; 
+
+        this.categorySettings = null;
 
         this.sound.setLoop(true);
         this.sound.playMode('sustain');
@@ -38,8 +38,8 @@ class AmbientTrack {
 
         this.noiseOffset += this.rate;
         const n = noise(this.noiseOffset);
-        
-        const volVar = (n * 2 - 1) * this.volVariation; 
+
+        const volVar = (n * 2 - 1) * this.volVariation;
         const pitchVar = (noise(this.noiseOffset + 500) * 2 - 1) * this.pitchVariation;
 
         const catVol = this.categorySettings ? (this.categorySettings.enabled ? this.categorySettings.vol : 0) : 1.0;
@@ -76,10 +76,10 @@ class AudioManager {
             { key: 'click', path: 'assets/Sounds/click.mp3', type: 'sfx' },
             { key: 'click_fail', path: 'assets/Sounds/click_fail.mp3', type: 'sfx' },
             { key: 'scram', path: 'assets/Sounds/scram.mp3', type: 'sfx' },
-            
+
             // Ambience (Hums) - Group: 'ambience'
             { key: 'hum_electric', path: 'assets/Sounds/electric-hum-141075.mp3', type: 'ambient', group: 'ambience', vol: 0.2, pitch: 1.0, vVar: 1, pVar: 0.25 },
-            { key: 'hum_high', path: 'assets/Sounds/high-energy-buzzing-ambience-195142.mp3', type: 'ambient', group: 'ambience', vol: 0.8, pitch: 1.0, vVar: 1, pVar: 0.15 }, 
+            { key: 'hum_high', path: 'assets/Sounds/high-energy-buzzing-ambience-195142.mp3', type: 'ambient', group: 'ambience', vol: 0.8, pitch: 1.0, vVar: 1, pVar: 0.15 },
             { key: 'hum_industrial', path: 'assets/Sounds/industrial-hum-29639.mp3', type: 'ambient', group: 'ambience', vol: 0.5, pitch: 0.8, vVar: 1, pVar: 0.12 },
             { key: 'hum_scifi', path: 'assets/Sounds/sci-fi-generator-or-motor-or-forcefield-loop-31130.mp3', type: 'ambient', group: 'ambience', vol: 0.6, pitch: 1.0, vVar: 1, pVar: 0.12 },
 
@@ -117,7 +117,7 @@ class AudioManager {
     // Called by loading tasks
     loadSoundPromise(key, path) {
         return new Promise((resolve, reject) => {
-            const s = loadSound(path, 
+            const s = loadSound(path,
                 (loadedSound) => {
                     this.sounds[key] = loadedSound;
                     resolve(loadedSound);
@@ -125,7 +125,7 @@ class AudioManager {
                 (err) => {
                     console.error(`Failed to load ${path}`, err);
                     // Resolve anyway to not block loading, but sound will be missing
-                    resolve(null); 
+                    resolve(null);
                 }
             );
         });
@@ -141,13 +141,13 @@ class AudioManager {
                     asset.vVar,
                     asset.pVar
                 );
-                
+
                 if (asset.group === 'ambience') track.setCategory(uiSettings.ambience);
                 if (asset.group === 'steam') track.setCategory(uiSettings.steam);
                 if (asset.group === 'water') track.setCategory(uiSettings.water);
 
                 this.ambientTracks.push(track);
-                
+
                 if (this.groups[asset.group]) {
                     this.groups[asset.group].push({ key: asset.key, track: track });
                 }
@@ -168,7 +168,7 @@ class AudioManager {
             this.sounds[key].setVolume(0, duration);
             setTimeout(() => {
                 this.sounds[key].stop();
-            }, duration * 1000); 
+            }, duration * 1000);
         }
     }
 
@@ -191,7 +191,7 @@ class AudioManager {
             if (!scramSet.enabled) sfxEnabled = false;
             specificVol = scramSet.vol;
         }
-        
+
         if (sfxEnabled) {
             const vol = sfxVol * specificVol * masterVol;
             this.sounds[key].setVolume(vol);
@@ -201,7 +201,7 @@ class AudioManager {
 
     // Main update loop
     update(dt, settings, currentPower, isPaused, maxPowerRef) {
-        
+
         if (isPaused) {
             this.ambientTracks.forEach(track => {
                 track.targetVolume = 0;
@@ -226,11 +226,11 @@ class AudioManager {
             });
             this.prevPaused = false;
         }
-        
+
         // If BOOM (Game Over), stopping ambience is fine, but we might want the boom sound to play!
         // The original code muted ambience on boom.
         if (boom) {
-             this.ambientTracks.forEach(track => {
+            this.ambientTracks.forEach(track => {
                 track.targetVolume = 0;
                 track.update(0.2);
             });
@@ -238,14 +238,14 @@ class AudioManager {
             // Actually original code returned. But playSfx('boom') is called in sketch.js.
             // Let's keep existing boom behavior for now but respect pause.
             // If boom is true, game is over.
-             this.alarmIntensity = 0;
-               if (this.sounds['alarm'].isPlaying()) {
+            this.alarmIntensity = 0;
+            if (this.sounds['alarm'].isPlaying()) {
                 this.fadeOutSfx('alarm', 0.2);
-             }
-             return;
+            }
+            return;
         }
 
-           const masterVol = ui.canvas.uiSettings.audio.master.enabled ? ui.canvas.uiSettings.audio.master.vol : 0;
+        const masterVol = ui.canvas.uiSettings.audio.master.enabled ? ui.canvas.uiSettings.audio.master.vol : 0;
 
         // Drive game state logic for volumes
         this.updateMixLogic(settings, currentPower, maxPowerRef);
@@ -258,12 +258,12 @@ class AudioManager {
     }
 
     updateMixLogic(settings, currentPower, maxPowerRef) {
-        
+
         // --- Water Logic ---
         // water_low -> water_high blender
         // flowSpeed is usually 0.3 to 1.5 or so based on default settings, but can go higher
         const flow = Math.abs(settings.waterFlowSpeed);
-        
+
         // Volume scaling: 0 flow = 0 volume. 
         // Start hearing it at 0.1, Max volume at flow >= 3.0
         const volumeScale = constrain(map(flow, 0.1, 3.0, 0, 1), 0, 1);
@@ -272,7 +272,7 @@ class AudioManager {
         // 0.2 flow -> mostly low
         // 2.0 flow -> mix of high
         const toneMix = constrain(map(flow, 0.2, 2.0, 0, 1), 0, 1);
-        
+
         this.setGroupTarget('water', 'water_low', volumeScale * (1.0 - (toneMix * 0.5))); // Retain base rumble
         this.setGroupTarget('water', 'water_high', volumeScale * toneMix);
 
@@ -280,16 +280,16 @@ class AudioManager {
         // Scale audio by temperature. Max intensity when close to max temp.
         // Steam starts at 100C, full intensity at 80% of max temp (400C)
         const tempLimit = 500;
-        const fadeStart = 100; 
+        const fadeStart = 100;
         const fadeEnd = tempLimit * 0.8; // Full steam slightly before max temp
-        
+
         const steamIntensity = constrain(map(window.avgTemp || 0, fadeStart, fadeEnd, 0, 1), 0, 1);
 
         // steam_low (cool) -> steam_mid -> steam_high
         // 0.0 - 0.4: Low
         // 0.3 - 0.7: Mid
         // 0.6 - 1.0: High
-        
+
         let sLow = 0, sMid = 0, sHigh = 0, sBubbles = 0;
 
         if (steamIntensity > 0.05) {
@@ -315,7 +315,13 @@ class AudioManager {
         // --- Alarm ---
         const alarmLimit = maxPowerRef || 1000;
         const powerRatio = constrain((currentPower || 0) / alarmLimit, 0, 1);
-        const tempRatio = constrain(window.avgTemp / 500, 0, 1);
+        let waterAvgTemp = 0;
+        let sum = 0;
+        for (let i = 0; i < waterSystem.waterCells.length; i++) {
+            sum += (waterSystem.waterCells[i].temperature || 0);
+        }
+        waterAvgTemp = sum / waterSystem.waterCells.length;
+        const tempRatio = constrain(waterAvgTemp / 500, 0, 1);
         const alarmRatio = Math.max(powerRatio, tempRatio);
         this.alarmIntensity = constrain(map(alarmRatio, 0.8, 1.0, 0, 1), 0, 1);
 

@@ -24,7 +24,10 @@ function oncePerSecond() {
 
         const collisionFactor = Math.min(1, collisionsThisSecond / settings.neutronsDownSizeMaxAmount); // 0 at 0 collisions, 1 at 500+
         const targetMultiplier = 1 - (collisionFactor * 0.7); // 1.0 to 0.3
-        settings.neutronSize = defaultSettings.neutronSize * targetMultiplier * globalScale;
+        // Set target size; actual `settings.neutronSize` will smoothly interpolate towards this.
+        settings.targetNeutronSize = defaultSettings.neutronSize * targetMultiplier * globalScale;
+        // Reset the per-second collision counter so size can recover next second
+        ui.collisionsThisSecond = 0;
     } else {
         ui.framesCounted++;
     }
@@ -42,8 +45,19 @@ function formatLarge(amount, unit, decimals=2) {
 function resetSimulation() {
     audioManager.fadeOutSfx('boom', 2.0);
     
+    // Reset atom heat and visual state
     for (let atom of uraniumAtoms) {
-        atom.temperature = 25;
+        if (atom) {
+            atom.heat = 25;
+            atom.isHit = false;
+            atom.flash = 0;
+        }
+    }
+    // Reset water cell temperatures
+    if (waterSystem && waterSystem.waterCells) {
+        for (let wc of waterSystem.waterCells) {
+            if (wc) wc.temperature = 25;
+        }
     }
     controlRods.forEach((rod, i) => {
         rod.y = rod.initialY;
@@ -54,6 +68,9 @@ function resetSimulation() {
     settings = { ...defaultSettings };
     settings.waterFlowSpeed = player.waterFlowStart;
     settings.waterFlowSpeed = Math.max(player.waterFlowMin, Math.min(player.waterFlowMax, settings.waterFlowSpeed));
+    // Initialize neutron size target to default scaled value
+    settings.neutronSize = defaultSettings.neutronSize * globalScale;
+    settings.targetNeutronSize = settings.neutronSize;
     boom = false;
     boomStartTime = 0;
     energyOutput = 0;
