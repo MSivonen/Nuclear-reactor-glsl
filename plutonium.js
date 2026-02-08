@@ -4,7 +4,7 @@ class Plutonium {
         this.radius = 15; // Set in updateDimensions
         this.dragging = false;
         this.dragOffset = { x: 0, y: 0 };
-        this.color = { r: 10, g: 80, b: 20 }; // Dark green
+        this.color = { r: 80, g: 80, b: 80 }; // Grau / Metallic
     }
 
     resetPosition() {
@@ -14,7 +14,7 @@ class Plutonium {
     }
 
     updateDimensions() {
-        this.radius = 15 * globalScale; // Diameter 30 * globalScale
+        this.radius = 21 * globalScale; // 0.7x of 30
         
         // Clamp position if out of bounds after resize
         this.x = Math.max(this.radius, Math.min(this.x, screenSimWidth - this.radius));
@@ -22,27 +22,8 @@ class Plutonium {
     }
 
     update() {
-        this.radius = 15 * globalScale;
+        this.radius = 30 * globalScale;
 
-        // Heat Generation
-        // Find water cell below
-        if (waterSystem && waterSystem.waterCells) {
-             let gx = Math.floor(this.x / uraniumAtomsSpacingX);
-             let gy = Math.floor(this.y / uraniumAtomsSpacingY);
-             
-             if (gx >= 0 && gx < uraniumAtomsCountX && gy >= 0 && gy < uraniumAtomsCountY) {
-                 let index = gy * uraniumAtomsCountX + gx;
-                 if (waterSystem.waterCells[index]) {
-                     const dt = deltaTime / 1000.0;
-                     waterSystem.waterCells[index].temperature += 20000 * dt;
-                 }
-             }
-        }
-    }
-
-    draw(ctx, offsetX) {
-        this.radius = 15 * globalScale;
-        
         // Interaction (Handle input here so it works when paused)
         const mPos = scaleMouse(mouseX, mouseY);
 
@@ -73,6 +54,25 @@ class Plutonium {
             this.dragging = false;
         }
 
+        // Heat Generation
+        // Find water cell below
+        if (waterSystem && waterSystem.waterCells) {
+             let gx = Math.floor(this.x / uraniumAtomsSpacingX);
+             let gy = Math.floor(this.y / uraniumAtomsSpacingY);
+             
+             if (gx >= 0 && gx < uraniumAtomsCountX && gy >= 0 && gy < uraniumAtomsCountY) {
+                 let index = gy * uraniumAtomsCountX + gx;
+                 if (waterSystem.waterCells[index]) {
+                     const dt = deltaTime / 1000.0;
+                     waterSystem.waterCells[index].temperature += 20000 * dt;
+                 }
+             }
+        }
+    }
+
+    draw(ctx, offsetX) {
+        this.radius = 15 * globalScale;
+        
         const drawX = this.x + offsetX;
         const drawY = this.y;
         // Compute transparency based on overlap with meters
@@ -97,10 +97,10 @@ class Plutonium {
         }
 
         ctx.save();
+        ctx.globalAlpha = alpha;
         ctx.beginPath();
         ctx.arc(drawX, drawY, this.radius, 0, Math.PI * 2);
         ctx.fillStyle = `rgb(${this.color.r}, ${this.color.g}, ${this.color.b})`;
-        ctx.globalAlpha = alpha;
         ctx.fill();
         ctx.strokeStyle = "rgba(20, 100, 30, 0.8)";
         ctx.lineWidth = 2;

@@ -75,6 +75,13 @@ function initShadersAndGL() {
     );
     glShit.useCoreAtoms = true;
 
+    specialRenderer.init(
+        gl,
+        16,
+        glShit.shaderCodes.specialVertCode,
+        glShit.shaderCodes.specialFragCode
+    );
+
     steamRenderer.init(
         gl,
         uraniumAtomsCountX * uraniumAtomsCountY,
@@ -211,6 +218,9 @@ function drawScene() {
     }
     
     gl.viewport(simX, 0, simW, simH);
+    renderSpecialLayer();
+
+    gl.viewport(simX, 0, simW, simH);
     renderAtomCoreLayer();
 
     if (vidSettings.bubbles) {
@@ -295,6 +305,14 @@ function renderSteamLayer() {
     if (!glShit.useGpuSteam) return;
     steamRenderer.updateInstances(waterCells);
     steamRenderer.draw();
+}
+
+function renderSpecialLayer() {
+    const items = [];
+    if (plutonium) items.push(plutonium);
+    if (californium) items.push(californium);
+    const activeCount = specialRenderer.updateInstances(items);
+    specialRenderer.draw(activeCount, { blendMode: 'alpha' });
 }
 
 function renderAtomCoreLayer() {

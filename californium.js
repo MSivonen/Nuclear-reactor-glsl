@@ -4,7 +4,7 @@ class Californium {
         this.radius = 15; // Set in updateDimensions
         this.dragging = false;
         this.dragOffset = { x: 0, y: 0 };
-        this.color = { r: 255, g: 165, b: 0 }; // Orange
+        this.color = { r: 200, g: 200, b: 200 }; // Light Grau / Metallic
         this.spawnTimer = 0;
         this.spawnInterval = 0.01; // Seconds between spawns
     }
@@ -16,30 +16,15 @@ class Californium {
     }
 
     updateDimensions() {
-        this.radius = 15 * globalScale;
-
+        this.radius = 21 * globalScale; // 0.7x of 30
+        
         // Clamp position if out of bounds after resize
         this.x = Math.max(this.radius, Math.min(this.x, screenSimWidth - this.radius));
         this.y = Math.max(this.radius, Math.min(this.y, screenHeight - this.radius));
     }
 
     update() {
-        this.radius = 15 * globalScale;
-
-        this.spawnTimer += deltaTime / 1000.0;
-        if (this.spawnTimer >= this.spawnInterval) {
-            this.spawnTimer = 0;
-            if (window.neutron) {
-                const randAngle = Math.random() * .2 - .1;
-                const randPosY = globalScale * Math.random() * 20 - 10;
-                const randPosX = globalScale * Math.random() * 20 - 10;
-                neutron.spawn(this.x + randPosX, this.y + randPosY, this.radius / 2, randAngle);
-            }
-        }
-    }
-
-    draw(ctx, offsetX) {
-        this.radius = 15 * globalScale;
+        this.radius = 30 * globalScale;
 
         // Interaction (Handle input here so it works when paused)
         const mPos = scaleMouse(mouseX, mouseY);
@@ -71,28 +56,23 @@ class Californium {
             this.dragging = false;
         }
 
+        this.spawnTimer += deltaTime / 1000.0;
+        if (this.spawnTimer >= this.spawnInterval) {
+            this.spawnTimer = 0;
+            if (window.neutron) {
+                const randAngle = Math.random() * .2 - .1;
+                const randPosY = globalScale * Math.random() * 20 - 10;
+                const randPosX = globalScale * Math.random() * 20 - 10;
+                neutron.spawn(this.x + randPosX, this.y + randPosY, this.radius / 2, randAngle);
+            }
+        }
+    }
+
+    draw(ctx, offsetX) {
+        this.radius = 15 * globalScale;
+
         const drawX = this.x + offsetX;
         const drawY = this.y;
-        // Compute transparency based on overlap with meters
-        let alpha = 1.0;
-        try {
-            const meters = [ui.powerMeter, ui.tempMeter];
-            for (const m of meters) {
-                if (!m) continue;
-                const meterCenterX = offsetX + m.x;
-                const meterCenterY = m.y;
-                const dx = drawX - meterCenterX;
-                const dy = drawY - meterCenterY;
-                const dist = Math.sqrt(dx*dx + dy*dy);
-                const influenceRadius = Math.max(m.width, m.height) * 0.6;
-                const factor = Math.min(Math.max(1 - dist / influenceRadius, 0), 1);
-                // Lerp alpha towards 0.3 when fully overlapping
-                const target = 1.0 - 0.7 * factor;
-                alpha = Math.min(alpha, target);
-            }
-        } catch (e) {
-            // ignore
-        }
 
         ctx.save();
         ctx.globalAlpha = alpha;

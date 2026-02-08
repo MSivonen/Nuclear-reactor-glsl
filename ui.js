@@ -743,9 +743,6 @@ class UICanvas {
         ui.tempMeter.draw(this.ctx, this.simXOffset);
         ui.controlSlider.draw(this.ctx, this.simXOffset);
         
-        if (plutonium) plutonium.draw(this.ctx, this.simXOffset);
-        if (californium) californium.draw(this.ctx, this.simXOffset);
-        
         drawFPS(this.ctx, this.simXOffset);
         gameOver(this.ctx, this.simXOffset);
     }

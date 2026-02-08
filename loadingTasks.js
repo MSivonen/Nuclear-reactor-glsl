@@ -19,6 +19,8 @@ const loadingTasks = [
   createShaderLoadTask("report fragment shader", 'shaders/report.frag', 'reportFragSrc', 'reportFragCode'),
   createShaderLoadTask("atoms vertex shader", 'shaders/atoms.vert', 'atomsVertSrc', 'atomsVertCode'),
   createShaderLoadTask("atoms fragment shader", 'shaders/atoms.frag', 'atomsFragSrc', 'atomsFragCode'),
+  createShaderLoadTask("special vertex shader", 'shaders/special.vert', 'specialVertSrc', 'specialVertCode'),
+  createShaderLoadTask("special fragment shader", 'shaders/special.frag', 'specialFragSrc', 'specialFragCode'),
   createShaderLoadTask("atoms core fragment shader", 'shaders/atoms_core.frag', 'atomsCoreFragSrc', 'atomsCoreFragCode'),
   createShaderLoadTask("steam vertex shader", 'shaders/steam.vert', 'steamVertSrc', 'steamVertCode'),
   createShaderLoadTask("steam fragment shader", 'shaders/steam.frag', 'steamFragSrc', 'steamFragCode'),

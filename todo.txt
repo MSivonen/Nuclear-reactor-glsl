@@ -133,4 +133,3 @@ v   -Force widescreen aspect ratio (1.78:1). Move the simulation canvases to the
 
 
 === Bugs/Fixes ===
--Make shader(s) to draw plutonium and californium. Put them to a layer right below atom cores.
