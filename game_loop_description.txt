@@ -1,0 +1,171 @@
+GAME LOOP AND PROGRESSION MANUAL
+
+This file is the single source of truth for how the game loop, progression,
+prestige, and unlocks should work. Use it as the checklist when implementing
+features.
+
+GENERAL RULES
+- Always use loader.js for loading assets, compiling shaders, and other loading tasks.
+- When editing files, change the version number in index.html for cache busting. The actual number doesn't matter.
+- UI layout is locked to widescreen (1.78:1) with the sim on the right and UI on the left. Draw black borders if resolution is set to another aspect ratio.
+
+DEFINITIONS
+- Atom group: the bunch of atoms between two control rod slots.
+- Atom column: one vertical column inside an atom group.
+- Slot: a place where an atom group or a control rod (or another item, if implemented) can be placed.
+- BOOM: when the reactor explodes
+
+CORE LOOP STATES
+1) TITLE
+	 - Title animation runs.
+	 - Save slot selection is shown (three slots). Start uses the selected slot.
+2) LOADING
+	 - Asset and shader loading only via loader.js.
+3) PLAYING
+	 - Simulation updates, economy ticks, UI updates, autosave timer runs.
+4) PAUSED
+	 - Simulation frozen; pause menu and options available.
+5) BOOM
+	 - Explosion overlay. Branch to PRESTIGE or SETBACK depending on conditions.
+6) PRESTIGE RESET
+	 - Resets the run, applies permanent bonuses, begins next loop.
+
+PRESTIGE CONDITIONS
+- Prestige is only granted when BOOM happens and the run has:
+	- Money >= 1000
+	- Power >= 25 kW
+    - These values increase every prestige
+- If BOOM happens without meeting both thresholds, it is a SETBACK (no prestige).
+
+SETBACK (NON-PRESTIGE BOOM)
+- BOOM without thresholds causes a partial rollback of progress = current money and money earned this prestige.
+- Do not reduce anything below new-game minimums, respecting prestige rules too, of course.
+- No permanent bonuses are granted.
+- BOOM always autosaves, if autosave is on
+
+PLAYER START
+v Player starts with two atom groups (the two centermost).
+v Each group starts with 6 columns of atoms.
+v Each group should have 15 rows of atoms.
+- One control rod, center slot.
+- Non-upgraded control rods will only go down to 50%
+- Weak plutonium is purchaseable after first tutorial and some tinkering
+
+MAX UPGRADES
+v Max atom groups: six groups (6x30 each, total 36x30).
+- Max control rods: five.
+
+PROGRESSION PHASES (NARRATIVE)
+- Loop 1: reactor is weak. Plutonium provides most heat. Uranium does little.
+- Loop 2: californium becomes available; higher neutron production possible. Able to buy atoms.
+- Loop 3: able to buy adjustable water flow.
+- Loop 4: able to buy two more atom groups.
+- Loop 5: able to buy more control rods
+- Later loops: reactor becomes the primary power source; special rocks become
+	less central by design. Californium may be needed to kickstart the reactor.
+- Special rocks remain useful in early-mid game via upgrades.
+
+SHOP RULES
+v Atom groups/columns are filled centermost first. If multiple slots are equally
+	close, prioritize left/top.
+v Ctrl+click buys 5. Shift+click buys 10. Shift+ctrl+click buys max.
+v Control rods use the same centermost-first logic.
+v Water max flow rate is upgradeable.
+- Some shop items are hidden until prerequisites are met.
+- Decide later whether installing purchases require reactor shutdown (currently not enforced).
+
+UI ELEMENTS UNLOCKED OVER TIME
+- Temperature meter appears after reaching a heat threshold.
+- Power output display appears after a power threshold.
+- Money display appears after a power threshold.
+- Water speed valve appears after a water-speed upgrade is unlocked.
+- Current goal (next milestone / prestige requirement) appears when some money is gained.
+
+ECONOMY RULES
+v Money is scaled by energy produced (water heat moved out of the top).
+v Money unit is Mass Flow Euro, shown as: m with dot (HTML entity &#7745).
+v New atom groups should be relatively expensive; price ramp increases.
+v Hotter water should be exponentially more expensive than cold water to encourage
+	building heat rather than running cold.
+
+METERS AND SCALING
+- All meters scale based on prestige loop values.
+- Each prestige increases the meter scaling values (caps and thresholds).
+- Meter scaling is driven by prestige data (see prestige.js).
+- Meter rework must be tested and tuned against real power output.
+
+SPECIAL ROCKS (PLUTONIUM / CALIFORNIUM)
+- Both are purchaseable and upgradeable.
+- Start with 1 electron.
+- Every upgrade increases electron count by +1.
+- Size grows with upgrades; max radius = 21 * globalScale. Min radius 8 * globalScale.
+- Visual size must match upgrade level.
+
+FAILURE MECHANICS
+- Explosion and/or melting should be gradual, with escalating warnings.
+- Explosion should only happen after 5 seconds at max power.
+- If power goes above max, limit money generation but still show the power.
+
+PRESTIGE DATA SOURCE (prestige.js)
+- Create prestige.js and store all prestige-related data and rules there.
+- The file should own:
+	- Loop thresholds (money, power, heat) and meter scaling values.
+	- Fixed early-loop unlock sets and starting stats.
+	- Procedural infinite-loop rules for later loops.
+	- Permanent bonuses and tapering logic.
+	- Any settings values that are affected by prestige.
+
+PRESTIGE LOOP STRUCTURE
+- First few prestiges are fixed with explicit unlocks.
+- After that, procedural infinite loops generate scaling.
+- Procedural loops should avoid runaway neutron counts by nerfing collision
+	settings over time (see Permanent Bonuses and Settings below).
+
+PERMANENT BONUSES
+- Max heat cap (permanent).
+- Max power cap (permanent).
+- Early-game easing multipliers:
+	- Heating rate and/or collision probability start higher for the shitty reactor to work at all and taper down later
+		to prevent million-billion neutron counts on upgraded reactors.
+- All permanent bonuses live in a settings object and are driven by prestige.js.
+
+SAVE/LOAD AND AUTOSAVE
+v Three save slots are available.
+- Save slot selection happens on the title screen (before Start). Remove the slot selection from the in-game menu. Changing the slot will require to go to title screen.
+- Autosave every 60 seconds to the selected slot, and instantly on BOOM.
+
+DEV MENU
+- Add a dev menu overlay panel below the canvas, toggled from the sidebar.
+- The panel allows:
+	- Selecting any prestige loop.
+	- Editing loop parameters in prestige.js.
+	- Editing settings values that are affected by prestige.
+    - To print the prestige and settings to console, so they can be copypasted to the files easily.
+
+TUTORIAL SYSTEM
+- Tutorial windows pause the game and show text.
+- They appear at start and whenever something new is unlocked.
+- Tutorial function signature:
+	- Title
+	- Text
+	- Blinking layer (optional)
+	- Window size (or dynamic)
+	- Window position
+    - Circle to highlight a position on screen (optional)
+
+UI MENU REQUIREMENTS
+v Pause menu (Esc or menu button) with Start/Restart, Save/Load, Options
+- Quit Game button that returns to the title screen.
+
+SOUND REQUIREMENTS (ALREADY IMPLEMENTED, KEEP IN SYNC)
+v Ambient sounds mix and overlap with random volume/pitch ranges.
+v Water and steam sounds blend smoothly across heat/flow levels.
+v Alarm on high temperature and explosion sound on BOOM.
+v UI button clicks have feedback sounds.
+
+OPEN QUESTIONS (NEED DECISIONS LATER)
+- Whether purchases require reactor shutdown.
+- Degrading atoms or atom healing systems.
+- Moving uranium groups up/down.
+- Modifiers menu on title screen (difficulty and money changes).
+- Stats and graphs UI (late-game).

@@ -56,7 +56,7 @@ When editing files, change the timestamp in index.html for cache busting.
 	- Buying additional rods
 	- Files: `controlrod.js`, `ui.js`, `sketch.js`
 
-7) Atom group/column purchase logic (NOT STARTED)
+7) Atom group/column purchase logic (DONE)
 	- Importance: 4/5  Difficulty: 2/5
 	- Implement centermost-first filling rules, bulk-buy (ctrl/shift), and UI feedback for available slots.
 	- Files: `uranium.js`, `sketch.js`, `ui.js`, `water.js`
