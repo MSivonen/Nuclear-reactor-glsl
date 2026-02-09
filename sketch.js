@@ -6,20 +6,20 @@ let controlRodsStartPos = -screenHeight * .9;
 let globalScale = screenHeight / 600;
 
 const defaultSettings = {
-  neutronSpeed: 5, 
+  neutronSpeed: 5,
   collisionProbability: 0.055,
   decayProbability: 0.0001,
   controlRodAbsorptionProbability: 0.1,
   controlRodHitProbability: 0.325,
   waterFlowSpeed: 0.15,
-  heatingRate: 50,
-  uraniumToWaterHeatTransfer: 0.3,
+  heatingRate: 150,
+  uraniumToWaterHeatTransfer: 0.2,
   heatTransferCoefficient: 0.14,
   inletTemperature: 25,
   moneyExponent: 1.5,
   uraniumSize: 10,
   neutronSize: 30,
-  neutronsDownSizeMaxAmount:5000,
+  neutronsDownSizeMaxAmount: 5000,
   hitboxYScale: 2.6,
   linkRods: false,
   cheatMode: false
@@ -42,7 +42,7 @@ let lastMoneyPerSecond = 0;
 let paused = false;
 var renderTime = 0;
 // States: LOADING, TITLE, PLAYING
-let gameState = 'LOADING'; 
+let gameState = 'LOADING';
 
 let waterSystem;
 let plutonium;
@@ -50,14 +50,14 @@ let californium;
 // let titleRenderer; // Removed to use window.titleRenderer directly
 
 function setUiVisibility(visible) {
-    const uiLayer = document.getElementById('ui-layer');
-    if (uiLayer) {
-        uiLayer.style.display = visible ? 'block' : 'none';
-    }
-    const uiCanvas = document.getElementById('UI-Canvas');
-    if(uiCanvas) {
-        uiCanvas.style.display = visible ? 'block' : 'none';
-    }
+  const uiLayer = document.getElementById('ui-layer');
+  if (uiLayer) {
+    uiLayer.style.display = visible ? 'block' : 'none';
+  }
+  const uiCanvas = document.getElementById('UI-Canvas');
+  if (uiCanvas) {
+    uiCanvas.style.display = visible ? 'block' : 'none';
+  }
 }
 
 
@@ -163,20 +163,20 @@ function setup() {
     await loader.startLoading(loadingTasks, () => {
       gameState = 'PLAYING';
       setUiVisibility(true);
-      
+
       const loadingScreen = document.getElementById('loading-screen');
       if (loadingScreen) loadingScreen.style.display = 'none';
-      
+
       // Stop the title renderer/cleanup if needed?
       // titleRenderer.cleanup(); 
-      
+
       audioManager.startAmbience();
     });
-    
+
     // Tasks finished, now showing title screen while waiting for Start click
     gameState = 'TITLE';
     setUiVisibility(false);
-    
+
   })();
 }
 
@@ -184,27 +184,19 @@ function draw() {
   if (gameState === 'LOADING') {
     return;
   }
-  
+
   if (gameState === 'TITLE') {
-     // Render title screen
-     // Need to clear screen?
-     if (window.titleRenderer) {
-         // Assuming main GL context is used? 
-         // titleRenderer uses whatever GL it was init with.
-         // We might need to handle viewport, clear etc.
-         
-         const gl = window.titleRenderer.gl;
-         if(gl) {
-             gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-             gl.clearColor(0, 0, 0, 1);
-             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-             
-             // Update title renderer
-             window.titleRenderer.update(deltaTime / 1000.0, mouseX, mouseY, gl.canvas.width, gl.canvas.height);
-             window.titleRenderer.draw(gl.canvas.width, gl.canvas.height);
-         }
-     }
-     return;
+    if (window.titleRenderer) {
+      const gl = window.titleRenderer.gl;
+      gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+      gl.clearColor(0, 0, 0, 1);
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+      // Update title renderer
+      window.titleRenderer.update(deltaTime / 1000.0, mouseX, mouseY, gl.canvas.width, gl.canvas.height);
+      window.titleRenderer.draw(gl.canvas.width, gl.canvas.height);
+    }
+    return;
   }
 
   if (!paused) {

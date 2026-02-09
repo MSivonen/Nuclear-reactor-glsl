@@ -3,6 +3,7 @@ class Neutron {
         this.buffer = new Float32Array(MAX_NEUTRONS_SQUARED * NEUTRON_STRIDE);
         this.currentIndex = 0;
         this.spawnCount = 0;
+        this.spawnQueue = [];
     }
 
     updateAtomMaskTexture(gl) {
@@ -107,6 +108,64 @@ class Neutron {
         const tmpFbo = glShit.readFBO;
         glShit.readFBO = glShit.writeFBO;
         glShit.writeFBO = tmpFbo;
+
+        // Flush batched spawns to GPU
+        this.flushSpawns(gl);
+    }
+
+    flushSpawns(gl) {
+        if (this.spawnQueue.length === 0) return;
+
+        // Sort by index to group consecutive spawns
+        this.spawnQueue.sort((a, b) => a.index - b.index);
+
+        // Group consecutive indices
+        const groups = [];
+        let currentGroup = [this.spawnQueue[0]];
+        for (let i = 1; i < this.spawnQueue.length; i++) {
+            if (this.spawnQueue[i].index === this.spawnQueue[i - 1].index + 1) {
+                currentGroup.push(this.spawnQueue[i]);
+            } else {
+                groups.push(currentGroup);
+                currentGroup = [this.spawnQueue[i]];
+            }
+        }
+        groups.push(currentGroup);
+
+        // Upload each group, split into per-row chunks
+        for (const group of groups) {
+            const startIndex = group[0].index;
+            const count = group.length;
+            let offset = 0;
+
+            while (offset < count) {
+                const index = startIndex + offset;
+                const texX = index % MAX_NEUTRONS;
+                const texY = Math.floor(index / MAX_NEUTRONS);
+                const spaceInRow = MAX_NEUTRONS - texX;
+                const chunkCount = Math.min(spaceInRow, count - offset);
+
+                const data = new Float32Array(chunkCount * 4);
+                for (let i = 0; i < chunkCount; i++) {
+                    const spawn = group[offset + i];
+                    const base = i * 4;
+                    data[base] = spawn.x;
+                    data[base + 1] = spawn.y;
+                    data[base + 2] = spawn.vx;
+                    data[base + 3] = spawn.vy;
+                }
+
+                gl.bindTexture(gl.TEXTURE_2D, glShit.readTex);
+                gl.texSubImage2D(gl.TEXTURE_2D, 0, texX, texY, chunkCount, 1, gl.RGBA, gl.FLOAT, data);
+
+                gl.bindTexture(gl.TEXTURE_2D, glShit.writeTex);
+                gl.texSubImage2D(gl.TEXTURE_2D, 0, texX, texY, chunkCount, 1, gl.RGBA, gl.FLOAT, data);
+
+                offset += chunkCount;
+            }
+        }
+
+        this.spawnQueue.length = 0;
     }
 
     draw(gl, { clear = true } = {}) {
@@ -306,7 +365,14 @@ class Neutron {
         this.buffer[i + 2] = vx;
         this.buffer[i + 3] = vy;
 
-        this.updateInTexture(glShit.simGL, this.currentIndex, finalX, finalY, vx, vy);
+        // Queue for batched GPU update
+        this.spawnQueue.push({
+            index: this.currentIndex,
+            x: finalX,
+            y: finalY,
+            vx: vx,
+            vy: vy
+        });
     }
 }
 

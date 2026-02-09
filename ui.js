@@ -24,7 +24,7 @@ class UICanvas {
                 steam: true,
                 atomGlow: true,
                 neutrons: { vol: 1.0, enabled: true },
-                resolution: 0 
+                resolution: 0
             }
         };
 
