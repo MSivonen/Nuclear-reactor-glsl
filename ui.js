@@ -23,6 +23,7 @@ class UICanvas {
                 waterEffect: true,
                 steam: true,
                 atomGlow: true,
+                lighting: true,
                 neutrons: { vol: 1.0, enabled: true },
                 resolution: 0
             }
@@ -368,9 +369,9 @@ class UICanvas {
         };
         
         bindCheck('set-video-bubbles', this.uiSettings.video, 'bubbles');
-        bindCheck('set-video-water', this.uiSettings.video, 'waterEffect');
         bindCheck('set-video-steam', this.uiSettings.video, 'steam');
         bindCheck('set-video-glow', this.uiSettings.video, 'atomGlow');
+        bindCheck('set-video-lighting', this.uiSettings.video, 'lighting');
         
         const nSlider = document.getElementById('set-video-neutrons');
         const nCheck = document.getElementById('chk-video-neutrons');

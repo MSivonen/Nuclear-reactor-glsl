@@ -31,6 +31,7 @@ const glShit = {
   vectorFieldTex: null,
   vectorFieldFBO: null,
   useGpuSteam: false,
+  lightingPrev: true,
   waterClearFrame: -1,
   coreClearFrame: -1,
   simClearFrame: -1,

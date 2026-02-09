@@ -215,7 +215,7 @@ function updateScene() {
     ui.tempMeter.update();
     oncePerSecond();
 
-    // Smooth neutron size toward target over ~5 seconds
+    // Smooth neutron size toward target over 5 seconds to prevent flickering
     if (typeof settings.targetNeutronSize !== 'undefined') {
         let sec = deltaTime / 1000.0;
         if (sec <= 0) sec = 1.0 / 60.0;
@@ -229,18 +229,39 @@ function drawScene() {
     const gl = glShit.waterGL; // They are all the same now
 
     // 1. Generate Light Map from Neutrons
-    neutron.drawLightPass(gl);
+    const vidSettings = ui.canvas.uiSettings.video;
+    const lightingEnabled = !!vidSettings.lighting;
+    if (lightingEnabled) {
+        neutron.drawLightPass(gl);
+        glShit.lightingPrev = true;
+    } else {
+        if (glShit.lightingPrev) {
+            const lw = Math.floor(screenSimWidth / 8);
+            const lh = Math.floor(screenHeight / 8);
+
+            gl.bindFramebuffer(gl.FRAMEBUFFER, glShit.lightFBO);
+            gl.viewport(0, 0, lw, lh);
+            gl.clearColor(0.0, 0.0, 0.0, 0.0);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+
+            gl.bindFramebuffer(gl.FRAMEBUFFER, glShit.vectorFieldFBO);
+            gl.viewport(0, 0, lw, lh);
+            gl.clearColor(0.0, 0.0, 0.0, 0.0);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+            glShit.lightingPrev = false;
+        }
+    }
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, glShit.gameCanvas.width, glShit.gameCanvas.height);
-    gl.clearColor(0.2, 0.3, 0.4, 1.0);
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT);
 
     const simX = SHOP_WIDTH;
     const simW = screenSimWidth;
     const simH = screenHeight;
-
-    const vidSettings = ui.canvas.uiSettings.video;
 
     if (vidSettings.waterEffect) {
         gl.viewport(simX, 0, simW, simH);
