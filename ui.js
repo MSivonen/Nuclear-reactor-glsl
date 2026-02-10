@@ -64,12 +64,32 @@ class UICanvas {
         this.pauseMenuState = 'MAIN';
         this.pendingSaveSlot = null;
         this.activeDrag = null; // { type: 'plutonium'|'controlRod', index?: number }
+        this.toastTimeouts = [];
     }
 
     ensureFrame() {
         if (this.lastFrame === frameCount) return;
         this.lastFrame = frameCount;
         this.ctx.clearRect(0, 0, this.width, this.height);
+    }
+
+    showToast(msg, duration = 2000) {
+        try {
+            const container = document.getElementById('ui-toast-container');
+            if (!container) return;
+            const t = document.createElement('div');
+            t.className = 'ui-toast';
+            t.innerText = msg;
+            container.appendChild(t);
+            // Force reflow
+            t.getBoundingClientRect();
+            t.classList.add('show');
+            const timeout = setTimeout(() => {
+                t.classList.remove('show');
+                setTimeout(() => { try { container.removeChild(t); } catch (e) {} }, 220);
+            }, duration);
+            this.toastTimeouts.push(timeout);
+        } catch (e) { console.error(e); }
     }
 
     initDOM() {
@@ -247,9 +267,53 @@ class UICanvas {
         const bind = (id, fn) => { const el = document.getElementById(id); el.onclick = fn; };
         
         bind('btn-resume', () => { paused = false; this.updateDOM(); });
-        bind('btn-save', () => { this.openSlotMenu('SAVE'); });
-        bind('btn-load', () => { this.openSlotMenu('LOAD'); });
+        bind('btn-save', () => {
+            const slot = (playerState && typeof playerState.getSelectedSlot === 'function') ? playerState.getSelectedSlot() : 0;
+            const ok = playerState.saveGame(slot);
+            this.showToast(ok ? `Saved to Slot ${slot + 1}` : `Save failed`);
+            audioManager.playSfx(ok ? 'click' : 'click_fail');
+        });
+        bind('btn-load', () => {
+            const slot = (playerState && typeof playerState.getSelectedSlot === 'function') ? playerState.getSelectedSlot() : 0;
+            const ok = playerState.loadGame(slot);
+            if (!ok) this.showToast('No save in selected slot');
+            paused = false;
+            this.updateDOM();
+            audioManager.playSfx(ok ? 'click' : 'click_fail');
+        });
         bind('btn-settings', () => { this.openSettingsMenu(); });
+        bind('btn-quit', () => {
+            // Quit to title screen
+            paused = true;
+            const fadeOverlay = document.getElementById('fade-overlay');
+            if (fadeOverlay) fadeOverlay.style.opacity = '1';
+
+            // Wait for fade out
+            setTimeout(() => {
+                audioManager.stopAllImmediate && audioManager.stopAllImmediate();
+                setUiVisibility(false);
+                gameState = 'TITLE';
+                
+                // Show loading/title overlay and slot selector
+                try {
+                    const loadingScreen = document.getElementById('loading-screen');
+                    if (loadingScreen) loadingScreen.style.display = 'flex';
+                    if (this.showTitleSlotMenu) this.showTitleSlotMenu();
+                    
+                    const loadingStart = document.getElementById('loading-start');
+                    if (loadingStart) {
+                         loadingStart.style.bottom = '8%';
+                         loadingStart.style.opacity = '1'; // Reset opacity
+                    }
+                    
+                    const startBtn = document.getElementById('loading-start-btn');
+                    if (startBtn) startBtn.disabled = false; // Re-enable
+
+                    // Fade back in to title
+                    if (fadeOverlay) fadeOverlay.style.opacity = '0';
+                } catch (e) { console.error(e); }
+            }, 1000);
+        });
         ['btn-resume','btn-save','btn-load','btn-settings'].forEach(id => bindButtonSound(document.getElementById(id)));
         
         bind('btn-slot-cancel', () => { 
@@ -278,6 +342,58 @@ class UICanvas {
           ['btn-set-audio','btn-set-video','btn-audio-back','btn-video-back','btn-settings-close'].forEach(id => bindButtonSound(document.getElementById(id)));
 
         this.syncSettingsDOM();
+
+        // Title screen slot buttons (Start/Save UI in loading-start area)
+        const titleButtonsContainer = document.getElementById('title-slot-buttons');
+        const titleStart = document.getElementById('loading-start-btn');
+        const titleDelete = document.getElementById('title-delete-btn');
+        const titleSaveBtn = document.getElementById('title-save-btn');
+        const titleSaveInput = document.getElementById('title-save-name');
+        if (titleStart) {
+            titleStart.addEventListener('click', () => {
+                const slot = (playerState && typeof playerState.getSelectedSlot === 'function') ? playerState.getSelectedSlot() : 0;
+                if (playerState.hasSave(slot)) {
+                    const ok = playerState.loadGame(slot);
+                    if (!ok) this.showToast('Failed to load save. Starting new.');
+                } else {
+                    // Start a fresh game in the selected slot
+                    resetSimulation();
+                    initializePlayerAtomGroups(player);
+                }
+                // Transition logic is handled by loader.js
+            });
+        }
+        if (titleDelete) {
+            titleDelete.onclick = () => {
+                const slot = (playerState && typeof playerState.getSelectedSlot === 'function') ? playerState.getSelectedSlot() : 0;
+                if (playerState.hasSave(slot)) {
+                    if (confirm(`Delete save in Slot ${slot + 1}?`)) {
+                        playerState.deleteSave(slot);
+                        this.populateTitleSlotButtons();
+                        this.showToast(`Deleted Slot ${slot + 1}`);
+                    }
+                } else {
+                    this.showToast('No save in selected slot');
+                }
+            };
+        }
+
+        if (titleSaveBtn && titleSaveInput) {
+            titleSaveBtn.onclick = () => {
+                const slot = (playerState && typeof playerState.getSelectedSlot === 'function') ? playerState.getSelectedSlot() : 0;
+                let name = titleSaveInput.value ? String(titleSaveInput.value).trim().substring(0,12) : null;
+                if (name === '') name = null;
+                const ok = playerState.saveGame(slot, name);
+                if (ok) {
+                    this.populateTitleSlotButtons();
+                    this.showToast(`Saved to Slot ${slot+1}`);
+                    audioManager.playSfx('click');
+                } else {
+                    console.log('Failed to save');
+                    audioManager.playSfx('click_fail');
+                }
+            };
+        }
     }
 
     isScramComplete() {
@@ -413,7 +529,7 @@ class UICanvas {
                 audioManager.playSfx('click');
                 if (mode === 'SAVE') {
                     playerState.saveGame(i);
-                    alert(`Saved to Slot ${i+1}`);
+                    console.log(`Saved to Slot ${i+1}`);
                     btn.innerText = `Slot ${i+1}: ${playerState.saveSlots[i]}`;
                 } else {
                     playerState.loadGame(i);
@@ -429,6 +545,80 @@ class UICanvas {
         this.pauseMenu.classList.add('hidden');
         this.settingsMenu.classList.remove('hidden');
         this.syncSettingsDOM(); 
+    }
+
+    populateTitleSlotButtons() {
+        const container = document.getElementById('title-slot-buttons');
+        if (!container || !playerState) return;
+        container.innerHTML = '';
+        for (let i = 0; i < 3; i++) {
+            const btn = document.createElement('button');
+            const slotInfo = (playerState && playerState.saveSlots && playerState.saveSlots[i]) ? playerState.saveSlots[i] : 'Empty';
+            const info = playerState.getSaveInfo(i);
+            btn.className = 'title-slot-button';
+            // Primary label: save name if present, otherwise slot label
+            const label = (info && info.name) ? info.name : `Slot ${i+1}`;
+            btn.innerText = label;
+            // Tooltip: timestamp and version when available
+            if (info && info.timestamp) {
+                try {
+                    const t = new Date(info.timestamp).toLocaleString();
+                    btn.title = `${t} (v${info.version})`;
+                } catch (e) { btn.title = `${info.timestamp} (v${info.version})`; }
+            } else {
+                btn.title = 'Empty slot';
+            }
+            btn.dataset.slotIndex = String(i);
+            btn.onclick = () => {
+                playerState.setSelectedSlot(i);
+                // Update input with current name for this slot
+                const nameInput = document.getElementById('title-save-name');
+                const inf = playerState.getSaveInfo(i);
+                if (nameInput) nameInput.value = (inf && inf.name) ? inf.name : '';
+                this.populateTitleSlotButtons();
+                audioManager.playSfx('click');
+            };
+            if (playerState.getSelectedSlot && playerState.getSelectedSlot() === i) {
+                btn.classList.add('selected-down');
+            }
+            container.appendChild(btn);
+        }
+    }
+
+    showTitleSlotMenu() {
+        // Ensure loading start and slot container are visible on title
+        const loadingStart = document.getElementById('loading-start');
+        const loadingStartBtn = document.getElementById('loading-start-btn');
+        const slotContainer = document.getElementById('title-slot-buttons-container');
+        this.populateTitleSlotButtons();
+        // Show the whole loading/title overlay so Start and slots are visible
+        const loadingScreen = document.getElementById('loading-screen');
+        if (loadingScreen) loadingScreen.style.display = 'flex';
+        if (loadingStartBtn) loadingStartBtn.style.display = 'inline-block';
+        if (slotContainer) slotContainer.style.display = 'block';
+        // Also show the save name input and save/delete buttons which are hidden by default
+        const saveInput = document.getElementById('title-save-name');
+        const saveBtn = document.getElementById('title-save-btn');
+        const deleteBtn = document.getElementById('title-delete-btn');
+        if (saveInput) saveInput.style.display = 'inline-block';
+        if (saveBtn) saveBtn.style.display = 'inline-block';
+        if (deleteBtn) deleteBtn.style.display = 'inline-block';
+        // Prefill save name input with selected slot's name
+        const nameInput = document.getElementById('title-save-name');
+        try {
+            const sel = (playerState && typeof playerState.getSelectedSlot === 'function') ? playerState.getSelectedSlot() : 0;
+            const info = playerState.getSaveInfo(sel);
+            if (nameInput) nameInput.value = (info && info.name) ? info.name : '';
+        } catch (e) {}
+        // Nudge buttons downward a bit
+        const loadingStartDiv = document.getElementById('loading-start');
+        if (loadingStartDiv) loadingStartDiv.style.bottom = '4%';
+    }
+
+    hideTitleSlotMenu() {
+        const el = document.getElementById('title-slot-menu');
+        if (!el) return;
+        el.classList.add('hidden');
     }
 
     activateScram(btn) {

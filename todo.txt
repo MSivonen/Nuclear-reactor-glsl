@@ -6,18 +6,18 @@ MAKING A GAME
 -Slot: A place where an atom (group) or a control rod can be
 
 === Setup: === 
--Make slots for atoms and control rods. The slot places are fixed, but the slots can be empty or filled.
-    -Atoms are toggled on/off with UraniumAtom.hasAtom
-    -Make a method in the class to toggle atom groups on and off
-        -Calculate the positions of atoms and blah blah
-            -Atoms are marked with this.atomGroup for easier filtering
+v-Make slots for atoms and control rods. The slot places are fixed, but the slots can be empty or filled.
+v    -Atoms are toggled on/off with UraniumAtom.hasAtom
+v    -Make a method in the class to toggle atom groups on and off
+v        -Calculate the positions of atoms and blah blah
+v            -Atoms are marked with this.atomGroup for easier filtering
 v-Make an object/class of starting stats, which can be upgraded later.
 
 === Player starts with: === 
 v    -Game starts in start screen
 v    -two groups of atoms, the two centermost ones
 v        -each group has 6 columns of atoms
-!        -each group has 15 rows of atoms - tweak it, they have 3 too little
+v        -each group has 15 rows of atoms - tweak it, they have 3 too little
 v    -one control rod, the center one
 
 === Max upgrades are: === 
@@ -25,7 +25,7 @@ v    -six atom groups, each group has 6x30 atoms (total 36x30)
 v    -five control rods
 
 === Shop: === 
-    -atoms to a group. The centermost slot is filled first, prioritize left/top one if there is multiple slots equally close to center
+v    -atoms to a group. The centermost slot is filled first, prioritize left/top one if there is multiple slots equally close to center
 v        -ctrl+click to buy 5
 v        -shift+click to buy 10
 v    -Control rods. Same logic, centermost first.
@@ -57,24 +57,11 @@ v    -Water moves energy out of the screen, calculate how much and generate powe
 v    -Hotter water is exponentially more expensive than cold water, this encourages the player to build heat instead of running the reactor cold
     -Better game over mechanic. The atoms should melt at a certain point... Or does the water explode? Or both?
 v        -Prettier boom animation
-        -What happens when game over? 
-            -Not a hc insta kill.
-            -Prestige?
-                -Some task must be completed to prestige. Max power output? Blow up once? Different for every prestige?
-                -What should be better after prestige?
-                    -Water heat capacity?
-                    -Collision probability neutrons-atoms?
-                    -Control rod slowing probability?
-            -Lose some shit and try again?
-                -Atoms?
-                -Money?
-                -Rods?
-                -Make sure to not reduce anything to less than new game amount
     -Degrading atoms that need replacing? MAYBE later...
         -Automatic healing of atoms when they're cooled a lot?
         -And/or buy atom healing?
-    -Move uranium groups up/down?
-    -Modifiers menu to start screen. Idk what modifiers I want yet.
+    -Move uranium groups up/down? LATER MAYBE
+    -Modifiers menu to start screen. Idk what modifiers I want yet. LATER
         -Make them affect the game difficulty and amount of money earned.
     -Make the plutonium & californium purchaseable and upgradeable. Orbiting electrons will be added after every upgrade, and the size will change. Max size 21 * globalScale
     -Make the reactor explode only after 5 seconds at max power. Limit the money when going over max power, but show the power.
@@ -117,13 +104,12 @@ v        -Save/load
 v        -Options
 v            -Turn visual-only graphics layers on/off
         -Tutorial on/off
-    -Meter rework to make it's scale scale with more powerful reactor or max power reached? Must be tested.
+    -Meter rework to make it's scale scale with more powerful reactor or max power reached? // Decided to scale with prestige. Must be tested.
 v   -Force widescreen aspect ratio (1.78:1). Move the simulation canvases to the right to make room for ui elements on the left.
     -Add stats and graphs
         -One of the last things to do
-    -Add a quit game button to menu. That takes the player to title screen.
-    -Add enable/disable autosave in title screen and settings menu
-    -Ability to give a name to savegame
+v    -Add a quit game button to menu. That takes the player to title screen.
+v    -Ability to give a name to savegame
 
 === Tutorial: ===
     -A tutorial window will pause the game and show some text. Blink the according element (layer) on screen.

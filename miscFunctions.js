@@ -20,6 +20,19 @@ function oncePerSecond() {
 
         const collisionsThisSecond = ui.collisionsThisSecond;
 
+        // Autosave every 60 seconds to the selected slot
+        ui.autosaveCounter = (ui.autosaveCounter || 0) + 1;
+        try {
+            const selected = (playerState && typeof playerState.getSelectedSlot === 'function') ? playerState.getSelectedSlot() : 0;
+            if (ui.autosaveCounter >= 60) {
+                ui.autosaveCounter = 0;
+                if (playerState && typeof playerState.saveGame === 'function') {
+                    playerState.saveGame(selected);
+                    try { if (ui && ui.canvas && typeof ui.canvas.showToast === 'function') ui.canvas.showToast(`Autosaved to slot ${selected + 1}`, 2000); } catch (e) {}
+                }
+            }
+        } catch (e) { /* ignore autosave errors */ }
+
         if (energyOutput >= game.boomValue) boom = true;
 
         const collisionFactor = Math.min(1, collisionsThisSecond / settings.neutronsDownSizeMaxAmount); // 0 at 0 collisions, 1 at 500+

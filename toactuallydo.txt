@@ -69,15 +69,6 @@ When editing files, change the timestamp in index.html for cache busting.
 
 9) Failure mechanics: melting, explosions & prestige hooks (NOT STARTED)
 	- Importance: 3/5  Difficulty: 4/5
-	- Gradual melting thresholds, escalating warnings, optional explosions, and a prestige reset path with persistent upgrades.
-	- Files: `uranium.js`, `water.js`, `prestige.js` (new), `sketch.js`
-
-10) Meter rework (STARTED)
-	- Importance: 3/5  Difficulty: 2/5
-	- Make meter scale with reactor power. Must be tested to figure out the numbers.
-
-11) Make all the menu items work
-
-
-
+	- prestige reset path with persistent upgrades.
+	- Make meter scale with reactor power and temp.
 

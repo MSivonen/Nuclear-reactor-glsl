@@ -1,0 +1,135 @@
+TODO: GAME LOOP & PROGRESSION
+Based on game_loop_description.txt & user feedback
+
+MILESTONE 1: FAILURE & BOOM MECHANICS
+[x] Implement gradual warning system
+    [x] Add visual pulsing/flashing when Temp or Power nears critical.
+    [x] Add acoustic warnings (alarm sound).
+[ ] Implement BOOM event
+    [x] Create `triggerBoom()` function in `game.js`/`sketch.js`.
+    [x] Stop simulation loop.
+    [x] Display "Explosion Overlay".
+    [x] Play explosion sound.
+    [ ] Check Prestige Conditions in `triggerBoom()`:
+        *   Logic: Fetch thresholds from `PrestigeManager.currentLevelData` (to be created).
+        *   IF (Money >= Threshold AND Power >= Threshold): Go to PRESTIGE.
+            - Show text: "The Great Glow achieved." and a button "Go to level N"
+        *   ELSE: Go to SETBACK.
+[ ] Implement SETBACK state (Non-Prestige Boom)
+    *   Condition: Triggers when exploding without meeting thresholds.
+    [ ] Calculate setback penalty:
+        *   Loss: -25% of current Total Money (or `money = money * 0.75`).
+    [ ] Ensure values don't drop below prestige level minimums.
+    [ ] Trigger Autosave immediately.
+    [ ] Update Explosion Overlay:
+        *   Text: "Reactor Melted - Progress Lost".
+        *   Animation: Fade in text/buttons after 2 seconds.
+        *   Input: Disable standard inputs. Remove "Right-click to reset".
+        *   Button: "88mph backwards" and mouseover "Roll back time and try again" (reloads/resets scene with penalty applied).
+
+MILESTONE 2: DEV TOOLS (Priority for balancing)
+[ ] Dev Menu UI
+    [ ] Create HTML overlay below the game canvas.
+    [ ] Style: Plain minimal CSS (no visuals needed).
+[ ] Dev Functionality
+    [ ] Input: "Jump to Loop #" (Int).
+    [ ] Input: "Set Money" (Float).
+    [ ] Input: "Infinite Money" (checkbox).
+    [ ] Input: Simple inputs for key values (Heat generation mult, Cooling mult, prestige variables).
+    [ ] Button: "Print Configuration".
+        *   Action: `console.log(something)` for easy copy-pasting into source code.
+
+MILESTONE 3: TUTORIAL SYSTEM
+[ ] Tutorial Manager
+    [ ] Create `TutorialManager` class/object.
+    [ ] State: boolean `isEnabled` (stored in settings/save). Default: TRUE for new saves.
+    [ ] Menu: Add toggle in Options to disable tutorials.
+[ ] Tutorial Functionality
+    [ ] `showTutorial(title, text, highlightTarget)`
+        *   Pauses game.
+        *   Draws window with text. Window position can be edited per tutorial item.
+            * supports multiple consecutive windows, and actions after each window.
+        *   Optional: Highlights a UI element (red circle or blinking border or blinking graphics layer).
+[ ] Planned Tutorials (Trigger points):
+    [ ] Start of Game (Welcome).
+    [ ] Timer 2min. (Notice the reactor is useless shit, give plutonium)
+    [ ] First bit of Heat generated.
+    [ ] First bit of Power generated.
+    [ ] Each item Unlock (Shop).
+    [ ] First Prestige available.
+    [ ] Failed Prestige.
+    [ ] Successful Prestige.
+    [ ] Tutorial prestiges done, going endless.
+
+    
+MILESTONE 4: PRESTIGE SYSTEM CORE
+[ ] Create `prestige.js` / `PrestigeManager`
+    *   Decision: Use a singleton Object `prestigeManager` for simplicity.
+    [ ] Define Data Structure `PrestigeData` logic:
+        *   `loopNumber`: Current iteration (Starts at 1).
+        *   `thresholds`: { money: X, power: Y } needed to advance.
+        *   `bonuses`:
+            *   `maxHeatCap` (Global Limit). /increases with prestige
+            *   `maxPowerCap` (Global Limit). /increases with prestige
+            *   `globalHeatMult` (Difficulty curve). /what is this
+            *   heatingRate (endgame: 50, startgame: 200) /for easier first levels
+            *   collisionProbability (default 0.055-ish) /to be tested
+            *   decayProbability (default 0.0001) /to be tested
+    [ ] Implement scaling logic:
+        *   `getMeterMax(type)`: Returns max value based on current loop settings.
+[ ] Prestige Reset Logic `resetRunForPrestige()`
+    [ ] Increment `loopNumber`.
+    [ ] Reset Inventory:
+        *   2 Atom Groups (Centermost).
+        *   1 Control Rod (Center).
+        *   low level plutonium and californium owned, after first levels when they're unlocked
+    [ ] Reset Money to 0.
+    [ ] Apply new thresholds and scaling from `PrestigeData`.
+    [ ] Save `PrestigeData`.
+    [ ] Trigger Autosave.
+
+MILESTONE 5: LOOP CONTENT & PROGRESSION
+[ ] Define Pre-set Loops (The Tutorial Phase)
+    [ ] Loop 1 Data:
+        *   Low thresholds.
+        *   No Californium available.
+        *   Water Valve: Locked.
+        *   Nothing in shop at start (tutorial will unlock shop items to be purchaseable, and these unlocks persist always)
+    [ ] Loop 2 Data:
+        *   Higher thresholds.
+        *   Unlock: Californium.
+        *   Tutorial event: unlock uranium in shop
+    [ ] Loop 3 Data:
+        *   Unlock: Water Valve manual control.
+        *   Tutorial event: unlock uranium groups in shop
+    [ ] Loop 4 Data:
+        *   Unlock: Buy more control rods in shop.
+        *   Tutorial event: unlock control rod upgrades in shop
+    [ ] Loop N (Procedural):
+        *   Algorithm to scale Money/Power requirements exponentially (e.g., 1.5x previous).
+        *   And make the game harder
+[ ] UI Conditional Visibility
+    [ ] Modify `ui.js`:
+        *   Check `prestigeManager.loopNumber` OR `player.totalLifetimeMoney`.
+        *   Hook up Gauge/Meter max values to `prestige.js` scaling factors.
+        *   Hide Water Valve until the control of it is unlocked.
+[ ] Shop Unlocks implementation
+    [ ] `checkShopRequirements()`:
+        *   Plutonium: Unlock > Loop 1.
+        *   Californium: Unlock > Loop 2.
+
+MILESTONE 6: SAVE/LOAD REFINEMENTS
+[x] Title Screen Slots
+    [x] 3 Slots visible.
+    [x] Start loads selected.
+[ ] In-Game Menu Updates
+    [ ] Remove "Save" and "Load" individual buttons.
+    [ ] Rename "Quit" -> "Save & Quit". (remember to actually add the save functionality to it)
+[ ] Autosave Triggers
+    [ ] Timer: Every 60s.
+    [ ] Event: On Boom (Setback).
+    [ ] Event: On Prestige.
+    [ ] Event: On Quit.
+
+
+MISC THINGS, bugs, etc:

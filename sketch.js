@@ -14,7 +14,7 @@ const defaultSettings = {
   waterFlowSpeed: 0.15,
   heatingRate: 150,
   uraniumToWaterHeatTransfer: 0.2,
-  heatTransferCoefficient: 0.14,
+  heatTransferCoefficient: 0.14, //water to water
   inletTemperature: 25,
   moneyExponent: 1.5,
   uraniumSize: 10,
@@ -176,6 +176,10 @@ function setup() {
     // Tasks finished, now showing title screen while waiting for Start click
     gameState = 'TITLE';
     setUiVisibility(false);
+    // Show title save-slot selection overlay
+    try {
+      if (ui && ui.canvas && typeof ui.canvas.showTitleSlotMenu === 'function') ui.canvas.showTitleSlotMenu();
+    } catch (e) { /* ignore if UI not ready */ }
 
   })();
 }
@@ -208,6 +212,10 @@ function draw() {
     if (boom && boomStartTime == 0) {
       boomStartTime = renderTime;
       audioManager.playSfx('boom');
+      try {
+          const selected = (playerState && typeof playerState.getSelectedSlot === 'function') ? playerState.getSelectedSlot() : 0;
+          if (playerState && typeof playerState.saveGame === 'function') playerState.saveGame(selected);
+      } catch (e) { /* ignore */ }
     }
   }
 

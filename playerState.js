@@ -1,7 +1,13 @@
 class PlayerState {
     constructor() {
         this.saveSlots = ['Empty', 'Empty', 'Empty'];
+        this.selectedSlot = 0; // active slot index used for autosave / quick save/load
         this.loadSlots();
+        // Load selected slot from storage if present
+        try {
+            const sel = localStorage.getItem('nuclearReactor_selectedSlot');
+            if (sel !== null) this.selectedSlot = parseInt(sel);
+        } catch (e) { /* ignore */ }
     }
 
     saveGame(slotIndex) {
@@ -9,8 +15,12 @@ class PlayerState {
 
         const GAME_VERSION = '0.12';
 
+        // optional name parameter may be passed as second arg
+        const name = (arguments.length > 1 && typeof arguments[1] === 'string') ? String(arguments[1]).substring(0, 12) : null;
+
         const saveData = {
             timestamp: new Date().toISOString(),
+            name: name,
             player: player.serialize(),
             shop: shop.serialize(),
             settings: { ...settings },
@@ -20,7 +30,8 @@ class PlayerState {
 
         try {
             localStorage.setItem(`nuclearReactor_save_${slotIndex}`, JSON.stringify(saveData));
-            this.saveSlots[slotIndex] = `${new Date().toLocaleString()} (v${GAME_VERSION})`;
+            const namePart = name ? `${name} — ` : '';
+            this.saveSlots[slotIndex] = `${namePart}${new Date().toLocaleString()} (v${GAME_VERSION})`;
             this.saveSlotsToStorage();
             return true;
         } catch (e) {
@@ -66,6 +77,7 @@ class PlayerState {
             return {
                 timestamp: saveData.timestamp,
                 version: saveData.version,
+                name: saveData.name || null,
                 hasData: true
             };
         } catch (e) {
@@ -76,10 +88,19 @@ class PlayerState {
     saveSlotsToStorage() {
         try {
             localStorage.setItem('nuclearReactor_saveSlots', JSON.stringify(this.saveSlots));
+            localStorage.setItem('nuclearReactor_selectedSlot', String(this.selectedSlot));
         } catch (e) {
             console.error('Failed to save slot info:', e);
         }
     }
+
+    setSelectedSlot(index) {
+        if (index < 0 || index > 2) return;
+        this.selectedSlot = index;
+        try { localStorage.setItem('nuclearReactor_selectedSlot', String(this.selectedSlot)); } catch (e) {}
+    }
+
+    getSelectedSlot() { return this.selectedSlot; }
 
     loadSlots() {
         try {
