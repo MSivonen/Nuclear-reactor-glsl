@@ -124,12 +124,6 @@ function setup() {
   loadingPanel.style.width = (360 * globalScale) + 'px';
   loadingPanel.style.height = (260 * globalScale) + 'px';
 
-  const loadingTitle = document.getElementById('loading-title');
-  loadingTitle.style.fontSize = (48 * globalScale) + 'px';
-
-  const loadingSubtitle = document.getElementById('loading-subtitle');
-  loadingSubtitle.style.fontSize = (20 * globalScale) + 'px';
-
   const loadingBarContainer = document.getElementById('loading-bar-container');
   loadingBarContainer.style.width = (220 * globalScale) + 'px';
   loadingBarContainer.style.height = (20 * globalScale) + 'px';
@@ -242,12 +236,6 @@ function windowResized() {
     const loadingPanel = document.getElementById('loading-panel');
     loadingPanel.style.width = (360 * globalScale) + 'px';
     loadingPanel.style.height = (260 * globalScale) + 'px';
-
-    const loadingTitle = document.getElementById('loading-title');
-    loadingTitle.style.fontSize = (48 * globalScale) + 'px';
-
-    const loadingSubtitle = document.getElementById('loading-subtitle');
-    loadingSubtitle.style.fontSize = (20 * globalScale) + 'px';
 
     const loadingBarContainer = document.getElementById('loading-bar-container');
     loadingBarContainer.style.width = (220 * globalScale) + 'px';

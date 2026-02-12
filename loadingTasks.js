@@ -2,7 +2,7 @@ function createShaderLoadTask(name, path, srcKey, codeKey) {
   return {
     name: `Loading ${name}`,
     func: async () => {
-      const response = await fetch(path);
+      const response = await fetch(path, {cache: "no-store"});
       const text = await response.text();
       glShit.shaderCodes[srcKey] = text.split('\n');
       glShit.shaderCodes[codeKey] = glShit.shaderCodes[srcKey].join('\n');

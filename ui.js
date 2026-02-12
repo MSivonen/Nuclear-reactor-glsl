@@ -603,6 +603,13 @@ class UICanvas {
         if (saveInput) saveInput.style.display = 'inline-block';
         if (saveBtn) saveBtn.style.display = 'inline-block';
         if (deleteBtn) deleteBtn.style.display = 'inline-block';
+        // Fade in the title buttons when they are shown later than the initial loader fade.
+        if (loadingStart) {
+            if (!loadingStart.style.transition) loadingStart.style.transition = 'opacity 1s ease-in-out';
+            loadingStart.style.opacity = '0';
+            loadingStart.getBoundingClientRect();
+            setTimeout(() => { loadingStart.style.opacity = '1'; }, 50);
+        }
         // Prefill save name input with selected slot's name
         const nameInput = document.getElementById('title-save-name');
         try {
