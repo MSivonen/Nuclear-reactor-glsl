@@ -81,6 +81,7 @@ class ReportSystem {
         const readPBOIndex = (writePBOIndex + 1) % 2;
         const readPBO = glShit.reportPBOs[readPBOIndex];
         const readSync = glShit.reportPBOSyncs[readPBOIndex];
+        let hasFreshReportData = false;
 
         if (readSync) {
             const status = gl.clientWaitSync(readSync, 0, 0);
@@ -89,12 +90,19 @@ class ReportSystem {
                 gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, glShit.reportData);
                 gl.deleteSync(readSync);
                 glShit.reportPBOSyncs[readPBOIndex] = null;
+                hasFreshReportData = true;
+                glShit.reportPBOPrimed = true;
             }
         }
 
         gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
         glShit.reportPBOIndex = (writePBOIndex + 1) % 2;
         gl.viewport(0, 0, glShit.simCanvas.width, glShit.simCanvas.height);
+
+        if (!glShit.reportPBOPrimed || !hasFreshReportData) {
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+            return;
+        }
 
         for (let i = 0; i < uraniumAtoms.length; i++) {
             if (!uraniumAtoms[i].hasAtom) continue;
