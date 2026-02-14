@@ -26,6 +26,7 @@ const loadingTasks = [
   createShaderLoadTask("light vector fragment shader", 'shaders/light_vector.frag', 'lightVectorFragSrc', 'lightVectorFragCode'),
   createShaderLoadTask("special light fragment shader", 'shaders/special_light.frag', 'specialLightFragSrc', 'specialLightFragCode'),
   createShaderLoadTask("steam vertex shader", 'shaders/steam.vert', 'steamVertSrc', 'steamVertCode'),
+  createShaderLoadTask("steam stamp fragment shader", 'shaders/steam_stamp.frag', 'steamStampFragSrc', 'steamStampFragCode'),
   createShaderLoadTask("steam fragment shader", 'shaders/steam.frag', 'steamFragSrc', 'steamFragCode'),
   createShaderLoadTask("bubbles vertex shader", 'shaders/bubbles.vert', 'bubblesVertSrc', 'bubblesVertCode'),
   createShaderLoadTask("bubbles fragment shader", 'shaders/bubbles.frag', 'bubblesFragSrc', 'bubblesFragCode'),

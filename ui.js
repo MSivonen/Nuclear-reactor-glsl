@@ -326,23 +326,17 @@ class UICanvas {
         const bind = (id, fn) => { const el = document.getElementById(id); el.onclick = fn; };
         
         bind('btn-resume', () => { paused = false; this.updateDOM(); });
-        bind('btn-save', () => {
-            const slot = (playerState && typeof playerState.getSelectedSlot === 'function') ? playerState.getSelectedSlot() : 0;
-            const ok = playerState.saveGame(slot);
-            this.showToast(ok ? `Game saved to Slot ${slot + 1}` : `Save operation failed`);
-            audioManager.playSfx(ok ? 'click' : 'click_fail');
-        });
-        bind('btn-load', () => {
-            const slot = (playerState && typeof playerState.getSelectedSlot === 'function') ? playerState.getSelectedSlot() : 0;
-            const ok = playerState.loadGame(slot);
-            if (!ok) this.showToast('No saved game in Slot ${slot + 1}');
-            paused = false;
-            this.updateDOM();
-            audioManager.playSfx(ok ? 'click' : 'click_fail');
-        });
         bind('btn-settings', () => { this.openSettingsMenu(); });
         bind('btn-quit', () => {
-            // Quit to title screen
+            // Save and quit to title screen
+            const slot = (playerState && typeof playerState.getSelectedSlot === 'function') ? playerState.getSelectedSlot() : 0;
+            const didSave = (playerState && typeof playerState.saveGame === 'function') ? playerState.saveGame(slot) : false;
+            if (!didSave) {
+                this.showToast(`Save failed in Slot ${slot + 1}`);
+                audioManager.playSfx('click_fail');
+                return;
+            }
+
             paused = true;
             const fadeOverlay = document.getElementById('fade-overlay');
             if (fadeOverlay) fadeOverlay.style.opacity = '1';
@@ -373,7 +367,7 @@ class UICanvas {
                     if (fadeOverlay) fadeOverlay.style.opacity = '0';
             }, 1000);
         });
-        ['btn-resume','btn-save','btn-load','btn-settings'].forEach(id => bindButtonSound(document.getElementById(id)));
+                ['btn-resume','btn-settings','btn-quit'].forEach(id => bindButtonSound(document.getElementById(id)));
         
         bind('btn-slot-cancel', () => { 
             this.slotMenu.classList.add('hidden'); 

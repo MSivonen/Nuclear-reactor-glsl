@@ -123,14 +123,14 @@ MILESTONE 6: SAVE/LOAD REFINEMENTS
 [x] Title Screen Slots
     [x] 3 Slots visible.
     [x] Start loads selected.
-[ ] In-Game Menu Updates
-    [ ] Remove "Save" and "Load" individual buttons.
-    [ ] Rename "Quit" -> "Save & Quit". (remember to actually add the save functionality to it)
-[ ] Autosave Triggers
-    [ ] Timer: Every 60s.
-    [ ] Event: On Boom (Setback).
-    [ ] Event: On Prestige.
-    [ ] Event: On Quit.
+[x] In-Game Menu Updates
+    [x] Remove "Save" and "Load" individual buttons.
+    [x] Rename "Quit" -> "Save & Quit". (remember to actually add the save functionality to it)
+[x] Autosave Triggers
+    [x] Timer: Every 60s.
+    [x] Event: On Boom (Setback).
+    [x] Event: On Prestige.
+    [x] Event: On Quit.
 
 
 MISC THINGS, bugs, etc:

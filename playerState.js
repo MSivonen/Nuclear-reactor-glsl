@@ -17,7 +17,9 @@ class PlayerState {
 
         // optional name parameter may be passed as second arg
         const rawName = (arguments.length > 1 && typeof arguments[1] === 'string') ? String(arguments[1]).trim().substring(0, 12) : '';
-        const name = rawName || `Slot ${slotIndex + 1}`;
+        const existing = this.getSaveInfo(slotIndex);
+        const preservedName = (existing && existing.name) ? String(existing.name).trim().substring(0, 12) : '';
+        const name = rawName || preservedName || `Slot ${slotIndex + 1}`;
 
             prestigeManager.saveToPlayer(player);
 

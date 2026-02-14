@@ -114,6 +114,7 @@ function initShadersAndGL() {
         gl,
         uraniumAtomsCountX * uraniumAtomsCountY,
         glShit.shaderCodes.steamVertCode,
+        glShit.shaderCodes.steamStampFragCode,
         glShit.shaderCodes.steamFragCode
     );
     glShit.useGpuSteam = true;
