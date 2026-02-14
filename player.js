@@ -19,6 +19,10 @@ class Player {
         this.waterFlowMin = this.waterFlowStart;
         this.waterFlowMax = this.waterFlowStart;
         this.upgrades.waterFlow = 0;
+        this.prestige = {
+            loopNumber: 1,
+            currentLevelData: null
+        };
         this.updateWaterFlowLimits();
     }
 
@@ -29,6 +33,10 @@ class Player {
             this.balance += finalAmount;
             this.incomePerSecond = finalAmount;
         }
+    }
+
+    applySetbackPenalty(multiplier = 0.75) {
+        this.balance = Math.max(0, this.balance * multiplier);
     }
 
     spend(amount) {
@@ -63,7 +71,8 @@ class Player {
             waterFlowMinLimit: this.waterFlowMinLimit,
             waterFlowMaxLimit: this.waterFlowMaxLimit,
             waterFlowUpgradeMax: this.waterFlowUpgradeMax,
-            waterFlowUpgradeCount: this.waterFlowUpgradeCount
+            waterFlowUpgradeCount: this.waterFlowUpgradeCount,
+            prestige: this.prestige
         };
     }
 
@@ -81,6 +90,10 @@ class Player {
         this.waterFlowUpgradeMax = obj.waterFlowUpgradeMax ?? 20;
         this.waterFlowUpgradeCount = obj.waterFlowUpgradeCount ?? (this.upgrades.waterFlow || 0);
         this.upgrades.waterFlow = this.waterFlowUpgradeCount;
+        this.prestige = obj.prestige || {
+            loopNumber: 1,
+            currentLevelData: null
+        };
         this.updateWaterFlowLimits();
     }
 }

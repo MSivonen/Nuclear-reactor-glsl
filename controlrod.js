@@ -131,7 +131,7 @@ class ControlRodsSlider {
         ctx.restore();
     }
 }
-const CONTROL_ROD_UPGRADE_SEQUENCE = [1, 3, 0, 4, 1, 3];
+const CONTROL_ROD_UPGRADE_SEQUENCE = [1, 3, 1, 3, 0, 4];
 const CONTROL_ROD_STEP = 0.05;
 const CONTROL_ROD_SIDE_BASE = 0.25;
 const CONTROL_ROD_SIDE_CAP = 1.0;
@@ -160,15 +160,35 @@ function getMaxControlRodPurchases() {
     return (controlRodCount - 1) * maxPerRod;
 }
 
+function getNextControlRodUpgradeIndex(startOffset = 0) {
+    const centerIndex = getControlRodCenterIndex();
+    const maxPerRod = Math.max(0, Math.floor((CONTROL_ROD_SIDE_CAP - CONTROL_ROD_SIDE_BASE) / CONTROL_ROD_STEP));
+    const seq = CONTROL_ROD_UPGRADE_SEQUENCE;
+    if (!seq.length) return -1;
+
+    for (let i = 0; i < seq.length; i++) {
+        const idx = seq[(startOffset + i) % seq.length];
+        if (idx < 0 || idx >= controlRodCount) continue;
+        if (idx === centerIndex) continue;
+        const level = controlRodUpgradeLevels[idx] || 0;
+        if (level < maxPerRod) return idx;
+    }
+
+    return -1;
+}
+
 function applyControlRodPurchase() {
     const maxPurchases = getMaxControlRodPurchases();
     if (controlRodPurchaseCount >= maxPurchases) return false;
+    if (!CONTROL_ROD_UPGRADE_SEQUENCE.length) return false;
 
-    const seqIndex = controlRodPurchaseCount % CONTROL_ROD_UPGRADE_SEQUENCE.length;
-    const rodIndex = CONTROL_ROD_UPGRADE_SEQUENCE[seqIndex];
     if (!controlRodUpgradeLevels || controlRodUpgradeLevels.length !== controlRodCount) {
         controlRodUpgradeLevels = new Array(controlRodCount).fill(0);
     }
+    const seqIndex = controlRodPurchaseCount % CONTROL_ROD_UPGRADE_SEQUENCE.length;
+    const rodIndex = getNextControlRodUpgradeIndex(seqIndex);
+    if (rodIndex === -1) return false;
+
     controlRodUpgradeLevels[rodIndex] = (controlRodUpgradeLevels[rodIndex] || 0) + 1;
     controlRodPurchaseCount++;
 
@@ -180,12 +200,25 @@ function applyControlRodPurchase() {
 
 function initControlRodUpgrades() {
     controlRodUpgradeLevels = new Array(controlRodCount).fill(0);
-    controlRodPurchaseCount = player.rodCount;
-    for (let i = 0; i < controlRodPurchaseCount; i++) {
-        const seqIndex = i % CONTROL_ROD_UPGRADE_SEQUENCE.length;
-        const rodIndex = CONTROL_ROD_UPGRADE_SEQUENCE[seqIndex];
-        controlRodUpgradeLevels[rodIndex] = (controlRodUpgradeLevels[rodIndex] || 0) + 1;
+    const maxPurchases = getMaxControlRodPurchases();
+    const requestedPurchases = Math.min(player.rodCount || 0, maxPurchases);
+    controlRodPurchaseCount = 0;
+
+    if (!CONTROL_ROD_UPGRADE_SEQUENCE.length) {
+        player.rodCount = controlRodPurchaseCount;
+        ui.controlSlider.ensureHandleLength();
+        return;
     }
+
+    for (let i = 0; i < requestedPurchases; i++) {
+        const seqIndex = controlRodPurchaseCount % CONTROL_ROD_UPGRADE_SEQUENCE.length;
+        const rodIndex = getNextControlRodUpgradeIndex(seqIndex);
+        if (rodIndex === -1) break;
+        controlRodUpgradeLevels[rodIndex] = (controlRodUpgradeLevels[rodIndex] || 0) + 1;
+        controlRodPurchaseCount++;
+    }
+
+    player.rodCount = controlRodPurchaseCount;
 
     ui.controlSlider.ensureHandleLength();
 }

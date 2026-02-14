@@ -124,4 +124,4 @@ v    -Ability to give a name to savegame
 
 
 === Bugs/Fixes ===
-Control rod position is incorrectly reported bu the target, not by the actual position
+      ugly:      - Show text: "Atom's blessing granted - The Great Glow achieved." and a button "Go to level N"

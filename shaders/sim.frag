@@ -13,6 +13,7 @@ uniform float controlRodAbsorptionProbability;
 
 uniform float u_simWidth;
 uniform float u_simHeight;
+uniform float u_controlRodHeight;
 uniform float u_atomSpacingX;
 uniform float u_atomSpacingY;
 uniform float u_atomRadius;
@@ -52,7 +53,7 @@ void main(){
     if (rodIndex >= 0 && rodIndex < u_controlRodCount) {
       rodY = u_controlRods[rodIndex];
     }
-    if(pos.y < rodY){
+    if(pos.y > rodY && pos.y < rodY + u_controlRodHeight){
       // Hit a control rod. Deterministic pseudo-random for decisions
       float r=fract(sin(dot(pos+vec2(float(gl_FragCoord.x),float(gl_FragCoord.y)),vec2(12.9898,78.233)))*43758.5453);
       float r2=fract(sin(dot(pos+vec2(float(gl_FragCoord.x),float(gl_FragCoord.y)),vec2(12.98938,78.233)))*43758.5453);

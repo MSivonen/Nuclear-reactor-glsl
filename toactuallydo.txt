@@ -67,7 +67,7 @@ When editing files, change the timestamp in index.html for cache busting.
 	- Files: `water.js`, `bubblesRenderer.js`, `ui.js`
 !	- Expose water flow control once a water upgrade is purchased (valve UI).
 
-9) Failure mechanics: melting, explosions & prestige hooks (NOT STARTED)
+9) Failure mechanics: melting, explosions & prestige hooks (STARTED)
 	- Importance: 3/5  Difficulty: 4/5
 	- prestige reset path with persistent upgrades.
 	- Make meter scale with reactor power and temp.

@@ -184,6 +184,10 @@ function initUiObjects() {
     ui.controlSlider = new ControlRodsSlider();
     ui.canvas = new UICanvas();
 
+    if (prestigeManager && typeof prestigeManager.applyCurrentLoopScaling === 'function') {
+        prestigeManager.applyCurrentLoopScaling();
+    }
+
     uiOverlay.init(gl);
 }
 
@@ -191,6 +195,10 @@ function initUiObjects() {
 
 function updateScene() {
     audioManager.update(deltaTime, settings, energyOutput, paused, game.boomValue);
+
+    if (!Number.isFinite(settings.collisionProbability) || settings.collisionProbability <= 0) {
+        settings.collisionProbability = defaultSettings.collisionProbability;
+    }
 
     // Update neutrons in GPU
     neutron.update(glShit.simGL);

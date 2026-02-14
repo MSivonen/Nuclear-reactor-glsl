@@ -20,6 +20,24 @@ class TitleRenderer {
         this.orbitTime = 0;
     }
 
+    initNeutrons() {
+        this.neutrons = [];
+        for (let i = 0; i < this.neutronCount; i++) {
+            this.neutrons.push({
+                angle: (Math.PI * 2 * i) / this.neutronCount,
+                radiusX: 300 + Math.random() * 50,
+                radiusY: 100 + Math.random() * 30,
+                speed: 0.2 + Math.random() * 0.2,
+                tilt: (Math.random() - 0.5) * 0.5
+            });
+        }
+    }
+
+    resetNeutrons() {
+        this.orbitTime = 0;
+        this.initNeutrons();
+    }
+
     async loadAssets(jsonPath, imagePath) {
         // Load JSON
         const res = await fetch(jsonPath);
@@ -69,15 +87,7 @@ class TitleRenderer {
         gl.bindVertexArray(null);
         
         // Init Neutrons
-        for(let i=0; i<this.neutronCount; i++) {
-            this.neutrons.push({
-                angle: (Math.PI * 2 * i) / this.neutronCount,
-                radiusX: 300 + Math.random() * 50,
-                radiusY: 100 + Math.random() * 30,
-                speed: 0.2 + Math.random() * 0.2,
-                tilt: (Math.random() - 0.5) * 0.5
-            });
-        }
+        this.initNeutrons();
         
         // Create Mesh for title
         this.createFullTitleMesh();
@@ -249,6 +259,28 @@ class TitleRenderer {
             this.neutrons[i].z = orbitRadiusModel * Math.sin(t) * Math.cos(inclination);
         }
     }
+
+    drawRockBackground(width, height) {
+        if (!this.rockProgram || !this.gl) return;
+        const gl = this.gl;
+        gl.useProgram(this.rockProgram);
+        gl.bindVertexArray(this.rockVao);
+        gl.uniform2f(gl.getUniformLocation(this.rockProgram, "u_resolution"), width, height);
+        gl.uniform1f(gl.getUniformLocation(this.rockProgram, "u_time"), this.orbitTime);
+        gl.uniform1f(gl.getUniformLocation(this.rockProgram, "u_seed"), this.rockSeed);
+
+        const rockNeutrons = [];
+        const invH = 1.0 / height;
+        const zScaleFactor = 200.0;
+        for (let i = 0; i < this.neutronCount; i++) {
+            const n = this.neutrons[i];
+            rockNeutrons.push(n.x * invH, -n.y * invH, n.z * zScaleFactor * invH);
+        }
+
+        gl.uniform3fv(gl.getUniformLocation(this.rockProgram, "u_neutrons"), new Float32Array(rockNeutrons));
+        gl.uniform1i(gl.getUniformLocation(this.rockProgram, "u_neutronCount"), this.neutronCount);
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
+    }
     
     draw(width, height) {
         if (!this.program || !this.gl) return;
@@ -260,30 +292,7 @@ class TitleRenderer {
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
         // Drawn background or rock first
-        if (this.rockProgram) {
-            gl.useProgram(this.rockProgram);
-            gl.bindVertexArray(this.rockVao);
-            gl.uniform2f(gl.getUniformLocation(this.rockProgram, "u_resolution"), width, height);
-            gl.uniform1f(gl.getUniformLocation(this.rockProgram, "u_time"), this.orbitTime);
-            gl.uniform1f(gl.getUniformLocation(this.rockProgram, "u_seed"), this.rockSeed);
-            
-            // Pass neutrons to rock shader
-            const rockNeutrons = [];
-            // Neutrons are in centered pixel coordinates.
-            // Shader UV space has height = 1.0 (from -0.5 to 0.5).
-            const invH = 1.0 / height;
-            const zScaleFactor = 200.0; // Match update() scale
-            for(let i=0; i<this.neutronCount; i++) {
-                const n = this.neutrons[i];
-                // Invert Y because shader UV Y is up-positive, but screen Y is down-positive
-                rockNeutrons.push(n.x * invH, -n.y * invH, n.z * zScaleFactor * invH);
-            }
-            
-            gl.uniform3fv(gl.getUniformLocation(this.rockProgram, "u_neutrons"), new Float32Array(rockNeutrons));
-            gl.uniform1i(gl.getUniformLocation(this.rockProgram, "u_neutronCount"), this.neutronCount);
-            
-            gl.drawArrays(gl.TRIANGLES, 0, 6);
-        }
+        this.drawRockBackground(width, height);
 
         gl.useProgram(this.program);
         gl.bindVertexArray(this.vao);

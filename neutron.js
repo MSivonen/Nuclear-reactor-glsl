@@ -6,6 +6,43 @@ class Neutron {
         this.spawnQueue = [];
     }
 
+    reset(gl) {
+        this.buffer.fill(0);
+        this.currentIndex = 0;
+        this.spawnCount = 0;
+        this.spawnQueue.length = 0;
+
+        if (!gl || !glShit || !glShit.readTex || !glShit.writeTex) return;
+
+        gl.bindTexture(gl.TEXTURE_2D, glShit.readTex);
+        gl.texSubImage2D(
+            gl.TEXTURE_2D,
+            0,
+            0,
+            0,
+            MAX_NEUTRONS,
+            MAX_NEUTRONS,
+            gl.RGBA,
+            gl.FLOAT,
+            this.buffer
+        );
+
+        gl.bindTexture(gl.TEXTURE_2D, glShit.writeTex);
+        gl.texSubImage2D(
+            gl.TEXTURE_2D,
+            0,
+            0,
+            0,
+            MAX_NEUTRONS,
+            MAX_NEUTRONS,
+            gl.RGBA,
+            gl.FLOAT,
+            this.buffer
+        );
+
+        gl.bindTexture(gl.TEXTURE_2D, null);
+    }
+
     updateAtomMaskTexture(gl) {
         if (!glShit.atomMaskTex) return;
         const w = uraniumAtomsCountX;
@@ -70,7 +107,7 @@ class Neutron {
         const rodCount = controlRods.length;
         const rodYs = new Float32Array(rodCount || 1);
         for (let i = 0; i < rodCount; i++) {
-            rodYs[i] = ui.controlSlider.handleY[i];
+            rodYs[i] = controlRods[i].y;
         }
         const uRodsLoc = gl.getUniformLocation(glShit.simProgram, "u_controlRods");
         gl.uniform1fv(uRodsLoc, rodYs);
@@ -91,6 +128,7 @@ class Neutron {
 
         gl.uniform1f(gl.getUniformLocation(glShit.simProgram, "u_simWidth"), screenSimWidth);
         gl.uniform1f(gl.getUniformLocation(glShit.simProgram, "u_simHeight"), screenHeight);
+        gl.uniform1f(gl.getUniformLocation(glShit.simProgram, "u_controlRodHeight"), controlRodHeight);
         gl.uniform1f(gl.getUniformLocation(glShit.simProgram, "u_atomSpacingX"), uraniumAtomsSpacingX);
         gl.uniform1f(gl.getUniformLocation(glShit.simProgram, "u_atomSpacingY"), uraniumAtomsSpacingY);
         gl.uniform1f(gl.getUniformLocation(glShit.simProgram, "u_atomRadius"), settings.uraniumSize / 2.0);

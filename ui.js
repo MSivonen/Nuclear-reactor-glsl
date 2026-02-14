@@ -64,6 +64,7 @@ class UICanvas {
         this.pauseMenuState = 'MAIN';
         this.pendingSaveSlot = null;
         this.activeDrag = null; // { type: 'plutonium'|'controlRod', index?: number }
+        this.boomOverlayButton = null;
         this.toastTimeouts = [];
     }
 
@@ -198,6 +199,13 @@ class UICanvas {
             this.pauseMenu.classList.remove('hidden');
             this.settingsMenu.classList.add('hidden');
             this.slotMenu.classList.add('hidden');
+
+            const saveName = playerState.getSaveName ? playerState.getSaveName() : 'Unnamed Save';
+            const pauseTitle = document.getElementById('pause-title');
+            if (pauseTitle) {
+                pauseTitle.innerText = `Paused\n${saveName}`;
+            }
+
             this.updateDOM();
         };
         bindButtonSound(sideSetBtn);
@@ -270,13 +278,13 @@ class UICanvas {
         bind('btn-save', () => {
             const slot = (playerState && typeof playerState.getSelectedSlot === 'function') ? playerState.getSelectedSlot() : 0;
             const ok = playerState.saveGame(slot);
-            this.showToast(ok ? `Saved to Slot ${slot + 1}` : `Save failed`);
+            this.showToast(ok ? `Game saved to Slot ${slot + 1}` : `Save operation failed`);
             audioManager.playSfx(ok ? 'click' : 'click_fail');
         });
         bind('btn-load', () => {
             const slot = (playerState && typeof playerState.getSelectedSlot === 'function') ? playerState.getSelectedSlot() : 0;
             const ok = playerState.loadGame(slot);
-            if (!ok) this.showToast('No save in selected slot');
+            if (!ok) this.showToast('No saved game in Slot ${slot + 1}');
             paused = false;
             this.updateDOM();
             audioManager.playSfx(ok ? 'click' : 'click_fail');
@@ -291,8 +299,12 @@ class UICanvas {
             // Wait for fade out
             setTimeout(() => {
                 audioManager.stopAllImmediate && audioManager.stopAllImmediate();
+                resetSimulation();
                 setUiVisibility(false);
                 gameState = 'TITLE';
+                if (window.titleRenderer && typeof window.titleRenderer.resetNeutrons === 'function') {
+                    window.titleRenderer.resetNeutrons();
+                }
                 
                 // Show loading/title overlay and slot selector
                 try {
@@ -354,11 +366,13 @@ class UICanvas {
                 const slot = (playerState && typeof playerState.getSelectedSlot === 'function') ? playerState.getSelectedSlot() : 0;
                 if (playerState.hasSave(slot)) {
                     const ok = playerState.loadGame(slot);
-                    if (!ok) this.showToast('Failed to load save. Starting new.');
+                    if (!ok) {
+                        this.showToast('Failed to load save. Starting new.');
+                        startFreshGame();
+                    }
                 } else {
                     // Start a fresh game in the selected slot
-                    resetSimulation();
-                    initializePlayerAtomGroups(player);
+                    startFreshGame();
                 }
                 // Transition logic is handled by loader.js
             });
@@ -517,9 +531,9 @@ class UICanvas {
         // Create 3 slots
         for(let i=0; i<3; i++) {
             const btn = document.createElement('button');
-            let slotInfo = (playerState && playerState.saveSlots && playerState.saveSlots[i]) ? playerState.saveSlots[i] : "Empty";
+            let slotInfo = (playerState && playerState.saveSlots && playerState.saveSlots[i]) ? playerState.saveSlots[i] : `Slot ${i + 1} - empty`;
             const info = playerState.getSaveInfo(i);
-            if (info && info.version && slotInfo !== 'Empty' && !slotInfo.includes(`v${info.version}`)) {
+            if (info && info.version && !slotInfo.includes(`v${info.version}`)) {
                 slotInfo = `${slotInfo} (v${info.version})`;
             }
             btn.innerText = `Slot ${i+1}: ${slotInfo}`;
@@ -553,11 +567,10 @@ class UICanvas {
         container.innerHTML = '';
         for (let i = 0; i < 3; i++) {
             const btn = document.createElement('button');
-            const slotInfo = (playerState && playerState.saveSlots && playerState.saveSlots[i]) ? playerState.saveSlots[i] : 'Empty';
             const info = playerState.getSaveInfo(i);
             btn.className = 'title-slot-button';
             // Primary label: save name if present, otherwise slot label
-            const label = (info && info.name) ? info.name : `Slot ${i+1}`;
+            const label = (info && info.name) ? info.name : `Slot ${i+1} - empty`;
             btn.innerText = label;
             // Tooltip: timestamp and version when available
             if (info && info.timestamp) {
@@ -950,6 +963,11 @@ class UICanvas {
     }
 
     handleMouseClick(x, y) {
+        if (boomInputLocked) {
+            this.handleBoomOverlayClick(x, y);
+            return;
+        }
+
         const m = scaleMouse(x, y);
         // Clicks outside simulation area are ignored
         if (m.x < 0) return;
@@ -999,6 +1017,7 @@ class UICanvas {
     }
 
     handleMouseDrag(x, y) {
+        if (boomInputLocked) return;
         const m = scaleMouse(x, y);
         if (!this.activeDrag) return;
 
@@ -1020,6 +1039,7 @@ class UICanvas {
     }
 
     handleMouseRelease() {
+        if (boomInputLocked) return;
         if (this.activeDrag && this.activeDrag.type === 'controlRod') {
             ui.controlSlider.draggingIndex = -1;
         }
@@ -1027,6 +1047,16 @@ class UICanvas {
             if (typeof plutonium !== 'undefined' && plutonium) plutonium.dragging = false;
         }
         this.activeDrag = null;
+    }
+
+    handleBoomOverlayClick(x, y) {
+        if (!boomInputLocked || boomOutcome !== 'SETBACK') return;
+        const btn = this.boomOverlayButton;
+        if (!btn || !btn.visible) return;
+
+        if (x >= btn.x && x <= (btn.x + btn.w) && y >= btn.y && y <= (btn.y + btn.h)) {
+            rollbackSetback();
+        }
     }
 }
 
@@ -1057,16 +1087,27 @@ function drawFPS(ctx, offsetX) {
 
 function gameOver(ctx, offsetX = 0) {
     if (!boom) return;
-    if (mouseIsPressed && mouseButton === RIGHT) {
-        resetSimulation();
-        return;
-    }
-
-    settings.collisionProbability = 0;
     const boomText = 'Boom!!!';
 
     const centerX = offsetX + screenSimWidth / 2;
     const centerY = screenHeight / 2;
+    const elapsed = boomStartTime > 0 ? Math.max(0, renderTime - boomStartTime) : 0;
+    const fadeInAlpha = Math.max(0, Math.min(1, (elapsed - 2.0) / 0.5));
+    const buttonWidth = 290 * globalScale;
+    const buttonHeight = 58 * globalScale;
+    const buttonX = centerX - buttonWidth / 2;
+    const buttonY = centerY + 130 * globalScale;
+    const hoverButton = fadeInAlpha > 0 && mouseX >= buttonX && mouseX <= (buttonX + buttonWidth) && mouseY >= buttonY && mouseY <= (buttonY + buttonHeight);
+
+    if (ui && ui.canvas) {
+        ui.canvas.boomOverlayButton = {
+            x: buttonX,
+            y: buttonY,
+            w: buttonWidth,
+            h: buttonHeight,
+            visible: boomOutcome === 'SETBACK' && fadeInAlpha > 0
+        };
+    }
 
     ctx.save();
     ctx.textAlign = 'center';
@@ -1095,6 +1136,33 @@ function gameOver(ctx, offsetX = 0) {
     ctx.fillText(boomText, centerX + (Math.random() - 0.5) * 4 * globalScale, centerY + (Math.random() - 0.5) * 4 * globalScale);
     ctx.font = `${130 * globalScale}px boom2, sans-serif`;
     ctx.fillText(boomText, centerX + (Math.random() - 0.5) * 4 * globalScale, centerY + (Math.random() - 0.5) * 4 * globalScale);
+
+    if (boomOutcome === 'SETBACK' && fadeInAlpha > 0) {
+        ctx.fillStyle = `rgba(255, 255, 255, ${fadeInAlpha})`;
+        ctx.font = `${24 * globalScale}px UIFont1, sans-serif`;
+        ctx.fillText('Reactor Melted - Progress Lost', centerX, centerY + 85 * globalScale);
+
+        const lossText = `Setback loss: -${formatLarge(boomSetbackLoss || 0, CURRENCY_UNIT, 2)}`;
+        ctx.fillStyle = `rgba(255, 180, 180, ${fadeInAlpha})`;
+        ctx.font = `${18 * globalScale}px UIFont1, sans-serif`;
+        ctx.fillText(lossText, centerX, centerY + 115 * globalScale);
+
+        ctx.fillStyle = hoverButton ? `rgba(45, 45, 45, ${fadeInAlpha})` : `rgba(22, 22, 22, ${fadeInAlpha})`;
+        ctx.strokeStyle = `rgba(255, 255, 255, ${fadeInAlpha})`;
+        ctx.lineWidth = 2 * globalScale;
+        ctx.fillRect(buttonX, buttonY, buttonWidth, buttonHeight);
+        ctx.strokeRect(buttonX, buttonY, buttonWidth, buttonHeight);
+
+        ctx.fillStyle = `rgba(255, 255, 255, ${fadeInAlpha})`;
+        ctx.font = `${24 * globalScale}px UIFont1, sans-serif`;
+        ctx.fillText('88mph backwards', centerX, buttonY + buttonHeight / 2);
+
+        if (hoverButton) {
+            ctx.fillStyle = `rgba(255, 232, 148, ${fadeInAlpha})`;
+            ctx.font = `${18 * globalScale}px UIFont1, sans-serif`;
+            ctx.fillText('Roll back time and try again', centerX, buttonY + buttonHeight + 28 * globalScale);
+        }
+    }
 
     ctx.restore();
 }

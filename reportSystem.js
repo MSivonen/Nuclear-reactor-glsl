@@ -67,16 +67,19 @@ class ReportSystem {
 
         const writePBOIndex = glShit.reportPBOIndex;
         const writePBO = glShit.reportPBOs[writePBOIndex];
-        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, writePBO);
-        gl.bufferData(gl.PIXEL_PACK_BUFFER, glShit.reportPBOSize, gl.STREAM_READ);
-        gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, 0);
+        let kickedWrite = false;
 
-        gl.flush();
-        const sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
-        if (glShit.reportPBOSyncs[writePBOIndex]) {
-            gl.deleteSync(glShit.reportPBOSyncs[writePBOIndex]);
+        // Don't overwrite a PBO that is still in-flight.
+        if (!glShit.reportPBOSyncs[writePBOIndex]) {
+            gl.bindBuffer(gl.PIXEL_PACK_BUFFER, writePBO);
+            gl.bufferData(gl.PIXEL_PACK_BUFFER, glShit.reportPBOSize, gl.STREAM_READ);
+            gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, 0);
+
+            gl.flush();
+            const sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+            glShit.reportPBOSyncs[writePBOIndex] = sync;
+            kickedWrite = true;
         }
-        glShit.reportPBOSyncs[writePBOIndex] = sync;
 
         const readPBOIndex = (writePBOIndex + 1) % 2;
         const readPBO = glShit.reportPBOs[readPBOIndex];
@@ -123,6 +126,46 @@ class ReportSystem {
             }
         }
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    }
+
+    reset(gl) {
+        const activeGl = gl || glShit.simGL;
+        if (!activeGl) return;
+
+        if (glShit.reportData && typeof glShit.reportData.fill === 'function') {
+            glShit.reportData.fill(0);
+        }
+
+        if (glShit.reportPBOSyncs && Array.isArray(glShit.reportPBOSyncs)) {
+            for (let i = 0; i < glShit.reportPBOSyncs.length; i++) {
+                const sync = glShit.reportPBOSyncs[i];
+                if (sync) {
+                    activeGl.deleteSync(sync);
+                    glShit.reportPBOSyncs[i] = null;
+                }
+            }
+        }
+
+        if (glShit.reportPBOs && Array.isArray(glShit.reportPBOs)) {
+            for (let i = 0; i < glShit.reportPBOs.length; i++) {
+                const pbo = glShit.reportPBOs[i];
+                if (!pbo) continue;
+                activeGl.bindBuffer(activeGl.PIXEL_PACK_BUFFER, pbo);
+                activeGl.bufferData(activeGl.PIXEL_PACK_BUFFER, glShit.reportPBOSize || 0, activeGl.STREAM_READ);
+            }
+            activeGl.bindBuffer(activeGl.PIXEL_PACK_BUFFER, null);
+        }
+
+        if (glShit.reportFBO) {
+            activeGl.bindFramebuffer(activeGl.FRAMEBUFFER, glShit.reportFBO);
+            activeGl.viewport(0, 0, uraniumAtomsCountX, uraniumAtomsCountY);
+            activeGl.clearColor(0, 0, 0, 0);
+            activeGl.clear(activeGl.COLOR_BUFFER_BIT);
+            activeGl.bindFramebuffer(activeGl.FRAMEBUFFER, null);
+        }
+
+        glShit.reportPBOIndex = 0;
+        glShit.reportPBOPrimed = false;
     }
 }
 

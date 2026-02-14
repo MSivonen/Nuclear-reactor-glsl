@@ -313,7 +313,12 @@ class AudioManager {
         this.setGroupTarget('steam', 'steam_bubbles1', sBubbles * 0.8);
 
         // --- Alarm ---
-        const alarmLimit = maxPowerRef || 1000;
+        const powerLimitFromMeter = (typeof ui !== 'undefined' && ui && ui.powerMeter && Number.isFinite(ui.powerMeter.max))
+            ? ui.powerMeter.max
+            : NaN;
+        const alarmLimit = (Number.isFinite(maxPowerRef) && maxPowerRef > 0)
+            ? maxPowerRef
+            : (Number.isFinite(powerLimitFromMeter) && powerLimitFromMeter > 0 ? powerLimitFromMeter : 1000);
         const powerRatio = constrain((currentPower || 0) / alarmLimit, 0, 1);
         let waterAvgTemp = 0;
         let sum = 0;
@@ -321,13 +326,22 @@ class AudioManager {
             sum += (waterSystem.waterCells[i].temperature || 0);
         }
         waterAvgTemp = sum / waterSystem.waterCells.length;
-        const tempRatio = constrain(waterAvgTemp / 500, 0, 1);
+        const tempLimitFromMeter = (typeof ui !== 'undefined' && ui && ui.tempMeter && Number.isFinite(ui.tempMeter.max))
+            ? ui.tempMeter.max
+            : NaN;
+        const tempLimitFromPrestige = (typeof prestigeManager !== 'undefined' && prestigeManager && typeof prestigeManager.getCurrentBonuses === 'function')
+            ? prestigeManager.getCurrentBonuses().maxHeatCap
+            : NaN;
+        const alarmTempLimit = (Number.isFinite(tempLimitFromMeter) && tempLimitFromMeter > 0)
+            ? tempLimitFromMeter
+            : (Number.isFinite(tempLimitFromPrestige) && tempLimitFromPrestige > 0 ? tempLimitFromPrestige : 500);
+        const tempRatio = constrain(waterAvgTemp / alarmTempLimit, 0, 1);
         const alarmRatio = Math.max(powerRatio, tempRatio);
         this.alarmIntensity = constrain(map(alarmRatio, 0.8, 1.0, 0, 1), 0, 1);
 
         // --- General Ambience ---
         // Scale with power output: 10% at 0 power, 100% at max power
-        const ambientIntensity = constrain(map(currentPower || 0, 0, maxPowerRef || 1000, 0.1, 1.0), 0.1, 1.0);
+        const ambientIntensity = constrain(map(currentPower || 0, 0, alarmLimit, 0.1, 1.0), 0.1, 1.0);
         this.groups['ambience'].forEach(item => item.track.targetVolume = ambientIntensity);
     }
 
