@@ -54,15 +54,15 @@ MILESTONE 2: PRESTIGE SYSTEM CORE
     [x] Trigger Autosave.
 
 MILESTONE 3: DEV TOOLS (Priority for balancing)
-[ ] Dev Menu UI
-    [ ] Create HTML overlay below the game canvas.
-    [ ] Style: Plain minimal CSS (no visuals needed).
-[ ] Dev Functionality
-    [ ] Input: "Jump to Loop #" (Int).
-    [ ] Input: "Set Money" (Float).
-    [ ] Input: "Infinite Money" (checkbox).
-    [ ] Input: Simple inputs for key values (settings{} variables, prestige variables).
-    [ ] Button: "Print Configuration".
+[x] Dev Menu UI
+    [x] Create HTML overlay below the game canvas.
+    [x] Style: Plain minimal CSS (no visuals needed).
+[x] Dev Functionality
+    [x] Input: "Jump to Loop #" (Int).
+    [x] Input: "Set Money" (Float).
+    [x] Input: "Infinite Money" (checkbox).
+    [x] Input: Simple inputs for key values (settings{} variables, prestige variables).
+    [x] Button: "Print Configuration".
         *   Action: `console.log(something)` for easy copy-pasting into source code.
 
 MILESTONE 4: LOOP CONTENT & PROGRESSION

@@ -58,6 +58,29 @@ class UICanvas {
         this.slotMenu = document.getElementById('ui-slot-menu');
         this.settingsMenu = document.getElementById('ui-settings-menu');
         this.uiLayer = document.getElementById('ui-layer');
+        this.devToolsPanel = document.getElementById('dev-tools-panel');
+
+        this.devInfiniteMoneyEnabled = false;
+        this.devInfiniteMoneyValue = 1e15;
+
+        this.devInputs = {
+            jumpLoop: document.getElementById('dev-jump-loop'),
+            setMoney: document.getElementById('dev-set-money'),
+            infiniteMoney: document.getElementById('dev-infinite-money'),
+            settingHeatingRate: document.getElementById('dev-setting-heating-rate'),
+            settingCollisionProb: document.getElementById('dev-setting-collision-prob'),
+            settingDecayProb: document.getElementById('dev-setting-decay-prob'),
+            settingMoneyExponent: document.getElementById('dev-setting-money-exp'),
+            settingWaterFlow: document.getElementById('dev-setting-water-flow'),
+            thresholdMoney: document.getElementById('dev-prestige-threshold-money'),
+            thresholdPower: document.getElementById('dev-prestige-threshold-power'),
+            bonusMaxHeat: document.getElementById('dev-prestige-max-heat'),
+            bonusMaxPower: document.getElementById('dev-prestige-max-power'),
+            applyLoopBtn: document.getElementById('dev-apply-loop'),
+            applyMoneyBtn: document.getElementById('dev-apply-money'),
+            applyValuesBtn: document.getElementById('dev-apply-values'),
+            printConfigBtn: document.getElementById('dev-print-config')
+        };
 
         this.initDOM();
 
@@ -231,7 +254,6 @@ class UICanvas {
         const devBtn = document.createElement('button');
         devBtn.id = 'btn-devmode';
         devBtn.innerText = settings.cheatMode ? "DEV MODE: ON" : "DEV MODE: OFF";
-        devBtn.style.marginTop = "auto"; // Push to bottom if sidebar uses flex column
         devBtn.onclick = () => {
             settings.cheatMode = !settings.cheatMode;
             devBtn.innerText = settings.cheatMode ? "DEV MODE: ON" : "DEV MODE: OFF";
@@ -239,6 +261,18 @@ class UICanvas {
         };
         bindButtonSound(devBtn);
         this.sidebar.appendChild(devBtn);
+
+        const devToolsBtn = document.createElement('button');
+        devToolsBtn.id = 'btn-dev-tools';
+        devToolsBtn.innerText = 'Dev Tools';
+        devToolsBtn.style.marginTop = 'auto';
+        devToolsBtn.onclick = () => {
+            this.toggleDevToolsPanel();
+        };
+        bindButtonSound(devToolsBtn);
+        this.sidebar.appendChild(devToolsBtn);
+
+        this.initDevTools();
 
         document.getElementById('ui-shop-close').onclick = () => this.toggleShop();
         bindButtonSound(document.getElementById('ui-shop-close'));
@@ -566,6 +600,158 @@ class UICanvas {
         this.pauseMenu.classList.add('hidden');
         this.settingsMenu.classList.remove('hidden');
         this.syncSettingsDOM(); 
+    }
+
+    initDevTools() {
+        if (!this.devToolsPanel) return;
+
+        this.devToolsPanel.style.width = `${screenWidth}px`;
+        this.syncDevToolsUI();
+
+        const parseFinite = (value) => {
+            const parsed = parseFloat(value);
+            return Number.isFinite(parsed) ? parsed : null;
+        };
+
+        if (this.devInputs.applyLoopBtn) {
+            this.devInputs.applyLoopBtn.onclick = () => {
+                const raw = parseInt(this.devInputs.jumpLoop ? this.devInputs.jumpLoop.value : '1', 10);
+                const loop = Number.isFinite(raw) ? Math.max(1, raw) : 1;
+
+                prestigeManager.loopNumber = loop;
+                prestigeManager.currentLevelData = prestigeManager.getLoopData(loop);
+                prestigeManager.applyCurrentLoopScaling();
+                if (player && typeof prestigeManager.saveToPlayer === 'function') {
+                    prestigeManager.saveToPlayer(player);
+                }
+
+                this.syncDevToolsUI();
+                this.showToast(`Jumped to loop ${loop}`);
+            };
+        }
+
+        if (this.devInputs.applyMoneyBtn) {
+            this.devInputs.applyMoneyBtn.onclick = () => {
+                const money = parseFinite(this.devInputs.setMoney ? this.devInputs.setMoney.value : '0');
+                if (money === null) {
+                    this.showToast('Invalid money value');
+                    return;
+                }
+                player.balance = Math.max(0, money);
+                this.syncDevToolsUI();
+                this.showToast('Money updated');
+            };
+        }
+
+        if (this.devInputs.infiniteMoney) {
+            this.devInputs.infiniteMoney.onchange = (e) => {
+                this.devInfiniteMoneyEnabled = !!e.target.checked;
+                if (this.devInfiniteMoneyEnabled) {
+                    player.balance = Math.max(player.balance, this.devInfiniteMoneyValue);
+                    settings.cheatMode = true;
+                    const devModeBtn = document.getElementById('btn-devmode');
+                    if (devModeBtn) {
+                        devModeBtn.innerText = 'DEV MODE: ON';
+                        devModeBtn.style.color = '#5cb85c';
+                    }
+                }
+            };
+        }
+
+        if (this.devInputs.applyValuesBtn) {
+            this.devInputs.applyValuesBtn.onclick = () => {
+                const heatingRate = parseFinite(this.devInputs.settingHeatingRate ? this.devInputs.settingHeatingRate.value : '');
+                const collisionProbability = parseFinite(this.devInputs.settingCollisionProb ? this.devInputs.settingCollisionProb.value : '');
+                const decayProbability = parseFinite(this.devInputs.settingDecayProb ? this.devInputs.settingDecayProb.value : '');
+                const moneyExponent = parseFinite(this.devInputs.settingMoneyExponent ? this.devInputs.settingMoneyExponent.value : '');
+                const waterFlowSpeed = parseFinite(this.devInputs.settingWaterFlow ? this.devInputs.settingWaterFlow.value : '');
+
+                const levelData = prestigeManager.ensureCurrentLevelData();
+                levelData.thresholds = levelData.thresholds || {};
+                levelData.bonuses = levelData.bonuses || {};
+
+                if (heatingRate !== null) settings.heatingRate = Math.max(0, heatingRate);
+                if (collisionProbability !== null) settings.collisionProbability = Math.max(0, collisionProbability);
+                if (decayProbability !== null) settings.decayProbability = Math.max(0, decayProbability);
+                if (moneyExponent !== null) settings.moneyExponent = Math.max(0, moneyExponent);
+                if (waterFlowSpeed !== null) {
+                    const min = player.waterFlowMin;
+                    const max = player.waterFlowMax;
+                    settings.waterFlowSpeed = Math.max(min, Math.min(max, waterFlowSpeed));
+                }
+
+                if (heatingRate !== null) levelData.bonuses.heatingRate = Math.max(0, heatingRate);
+                if (collisionProbability !== null) levelData.bonuses.collisionProbability = Math.max(0, collisionProbability);
+                if (decayProbability !== null) levelData.bonuses.decayProbability = Math.max(0, decayProbability);
+
+                const thresholdMoney = parseFinite(this.devInputs.thresholdMoney ? this.devInputs.thresholdMoney.value : '');
+                const thresholdPower = parseFinite(this.devInputs.thresholdPower ? this.devInputs.thresholdPower.value : '');
+                const bonusMaxHeat = parseFinite(this.devInputs.bonusMaxHeat ? this.devInputs.bonusMaxHeat.value : '');
+                const bonusMaxPower = parseFinite(this.devInputs.bonusMaxPower ? this.devInputs.bonusMaxPower.value : '');
+
+                if (thresholdMoney !== null) levelData.thresholds.money = Math.max(0, Math.floor(thresholdMoney));
+                if (thresholdPower !== null) levelData.thresholds.power = Math.max(0, Math.floor(thresholdPower));
+                if (bonusMaxHeat !== null) levelData.bonuses.maxHeatCap = Math.max(1, Math.floor(bonusMaxHeat));
+                if (bonusMaxPower !== null) levelData.bonuses.maxPowerCap = Math.max(1, Math.floor(bonusMaxPower));
+
+                prestigeManager.currentLevelData = levelData;
+                prestigeManager.applyCurrentLoopScaling();
+                if (player && typeof prestigeManager.saveToPlayer === 'function') {
+                    prestigeManager.saveToPlayer(player);
+                }
+
+                this.syncDevToolsUI();
+                this.showToast('Dev values applied');
+            };
+        }
+
+        if (this.devInputs.printConfigBtn) {
+            this.devInputs.printConfigBtn.onclick = () => {
+                const payload = {
+                    loopNumber: prestigeManager.loopNumber,
+                    currentLevelData: prestigeManager.ensureCurrentLevelData(),
+                    settings: {
+                        heatingRate: settings.heatingRate,
+                        collisionProbability: settings.collisionProbability,
+                        decayProbability: settings.decayProbability,
+                        moneyExponent: settings.moneyExponent,
+                        waterFlowSpeed: settings.waterFlowSpeed,
+                        cheatMode: settings.cheatMode
+                    }
+                };
+
+                console.log('DEV CONFIG:', JSON.stringify(payload, null, 2));
+                this.showToast('Configuration printed to console');
+            };
+        }
+    }
+
+    toggleDevToolsPanel() {
+        if (!this.devToolsPanel) return;
+        this.devToolsPanel.classList.toggle('hidden');
+        this.devToolsPanel.style.width = `${screenWidth}px`;
+        this.syncDevToolsUI();
+    }
+
+    syncDevToolsUI() {
+        const levelData = prestigeManager.ensureCurrentLevelData() || {};
+        const thresholds = levelData.thresholds || {};
+        const bonuses = levelData.bonuses || {};
+
+        if (this.devInputs.jumpLoop) this.devInputs.jumpLoop.value = Math.max(1, prestigeManager.loopNumber || 1);
+        if (this.devInputs.setMoney) this.devInputs.setMoney.value = Number.isFinite(player.balance) ? player.balance : 0;
+        if (this.devInputs.infiniteMoney) this.devInputs.infiniteMoney.checked = this.devInfiniteMoneyEnabled;
+
+        if (this.devInputs.settingHeatingRate) this.devInputs.settingHeatingRate.value = Number.isFinite(bonuses.heatingRate) ? bonuses.heatingRate : settings.heatingRate;
+        if (this.devInputs.settingCollisionProb) this.devInputs.settingCollisionProb.value = Number.isFinite(bonuses.collisionProbability) ? bonuses.collisionProbability : settings.collisionProbability;
+        if (this.devInputs.settingDecayProb) this.devInputs.settingDecayProb.value = Number.isFinite(bonuses.decayProbability) ? bonuses.decayProbability : settings.decayProbability;
+        if (this.devInputs.settingMoneyExponent) this.devInputs.settingMoneyExponent.value = settings.moneyExponent;
+        if (this.devInputs.settingWaterFlow) this.devInputs.settingWaterFlow.value = settings.waterFlowSpeed;
+
+        if (this.devInputs.thresholdMoney) this.devInputs.thresholdMoney.value = Number.isFinite(thresholds.money) ? thresholds.money : 0;
+        if (this.devInputs.thresholdPower) this.devInputs.thresholdPower.value = Number.isFinite(thresholds.power) ? thresholds.power : 0;
+        if (this.devInputs.bonusMaxHeat) this.devInputs.bonusMaxHeat.value = Number.isFinite(bonuses.maxHeatCap) ? bonuses.maxHeatCap : 200;
+        if (this.devInputs.bonusMaxPower) this.devInputs.bonusMaxPower.value = Number.isFinite(bonuses.maxPowerCap) ? bonuses.maxPowerCap : 200;
     }
 
     populateTitleSlotButtons() {
@@ -922,6 +1108,10 @@ class UICanvas {
         const iStat = document.getElementById('stat-income');
         mStat.innerText = formatLarge(player.getBalance(), CURRENCY_UNIT, 2);
         iStat.innerText = `${formatLarge(lastMoneyPerSecond, CURRENCY_UNIT, 2)}/s`;
+
+        if (this.devInfiniteMoneyEnabled) {
+            player.balance = Math.max(player.balance, this.devInfiniteMoneyValue);
+        }
         
         const min = player.waterFlowMin;
         const max = player.waterFlowMax;
@@ -937,6 +1127,10 @@ class UICanvas {
         
         if (this.shopOpen) {
             this.updateShopButtons();
+        }
+
+        if (this.devToolsPanel && !this.devToolsPanel.classList.contains('hidden')) {
+            this.devToolsPanel.style.width = `${screenWidth}px`;
         }
     }
 

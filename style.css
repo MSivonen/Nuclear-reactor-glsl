@@ -320,3 +320,67 @@ canvas {
 #ui-slot-menu button:hover {
   background: #666;
 }
+
+#dev-tools-panel {
+  width: 1067px;
+  box-sizing: border-box;
+  background: #141414;
+  color: #fff;
+  border-top: 1px solid #444;
+  padding: 10px;
+  font-family: 'UIFont1', monospace;
+}
+
+#dev-tools-panel h3 {
+  margin: 0 0 8px 0;
+  font-size: 20px;
+}
+
+.dev-tools-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.dev-tools-check {
+  margin-bottom: 12px;
+}
+
+.dev-tools-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.dev-tools-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+}
+
+#dev-tools-panel input,
+#dev-tools-panel button {
+  font-family: 'UIFont1', monospace;
+}
+
+#dev-tools-panel input[type="number"] {
+  background: #222;
+  color: #fff;
+  border: 1px solid #555;
+  padding: 4px 6px;
+}
+
+#dev-tools-panel button {
+  background: #333;
+  color: #fff;
+  border: 1px solid #666;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+#dev-tools-panel button:hover {
+  background: #4a4a4a;
+}

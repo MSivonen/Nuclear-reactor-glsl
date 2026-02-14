@@ -5,9 +5,9 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sketch</title>
-  <link rel="stylesheet" type="text/css" href="style.css?v=0.15">
-  <script src="libraries/p5.min.js?v=0.15"></script>
-  <script src="libraries/p5.sound.min.js?v=0.15"></script>
+  <link rel="stylesheet" type="text/css" href="style.css?v=0.16">
+  <script src="libraries/p5.min.js?v=0.16"></script>
+  <script src="libraries/p5.sound.min.js?v=0.16"></script>
 </head>
 
 <body>
@@ -148,39 +148,71 @@
     </div>
   </div>
 
-  <script src="loader.js?v=0.14"></script>
-  <script src="audio.js?v=0.19"></script>
-  <script src="gl.js?v=0.14"></script>
-  <script src="neutron.js?v=0.14"></script>
-  <script src="loadingTasks.js?v=0.141"></script>
-  <script src="sketch.js?v=0.17"></script>
-  <script src="reportSystem.js?v=0.141"></script>
-  <script src="sceneHelpers.js?v=0.18"></script>
-  <script src="grid.js?v=0.14"></script>
-  <script src="shop.js?v=0.14"></script>
-  <script src="upgrades.js?v=0.14"></script>
-  <script src="player.js?v=0.15"></script>
-  <script src="playerState.js?v=0.15"></script>
-  <script src="prestige.js?v=0.18"></script>
-  <script src="prestigeScreen.js?v=0.19"></script>
-  <script src="ui.js?v=0.19"></script>
-  <script src="uiOverlay.js?v=0.14"></script>
+  <div id="dev-tools-panel" class="hidden">
+    <h3>Dev Tools</h3>
+    <div class="dev-tools-row">
+      <label for="dev-jump-loop">Jump to Loop #</label>
+      <input id="dev-jump-loop" type="number" min="1" step="1" value="1">
+      <button id="dev-apply-loop">Apply</button>
+    </div>
+    <div class="dev-tools-row">
+      <label for="dev-set-money">Set Money</label>
+      <input id="dev-set-money" type="number" step="0.01" value="0">
+      <button id="dev-apply-money">Apply</button>
+    </div>
+    <div class="dev-tools-row dev-tools-check">
+      <label><input id="dev-infinite-money" type="checkbox"> Infinite Money</label>
+    </div>
+    <div class="dev-tools-grid">
+      <label>heatingRate <input id="dev-setting-heating-rate" type="number" step="0.1"></label>
+      <label>collisionProbability <input id="dev-setting-collision-prob" type="number" step="0.0001"></label>
+      <label>decayProbability <input id="dev-setting-decay-prob" type="number" step="0.000001"></label>
+      <label>moneyExponent <input id="dev-setting-money-exp" type="number" step="0.01"></label>
+      <label>waterFlowSpeed <input id="dev-setting-water-flow" type="number" step="0.01"></label>
+      <label>threshold.money <input id="dev-prestige-threshold-money" type="number" step="1"></label>
+      <label>threshold.power <input id="dev-prestige-threshold-power" type="number" step="1"></label>
+      <label>bonus.maxHeatCap <input id="dev-prestige-max-heat" type="number" step="1"></label>
+      <label>bonus.maxPowerCap <input id="dev-prestige-max-power" type="number" step="1"></label>
+    </div>
+    <div class="dev-tools-row">
+      <button id="dev-apply-values">Apply Values</button>
+      <button id="dev-print-config">Print Configuration</button>
+    </div>
+  </div>
+
+  <script src="loader.js?v=0.16"></script>
+  <script src="audio.js?v=0.16"></script>
+  <script src="gl.js?v=0.16"></script>
+  <script src="neutron.js?v=0.16"></script>
+  <script src="loadingTasks.js?v=0.16"></script>
+  <script src="sketch.js?v=0.16"></script>
+  <script src="reportSystem.js?v=0.16"></script>
+  <script src="sceneHelpers.js?v=0.16"></script>
+  <script src="grid.js?v=0.16"></script>
+  <script src="shop.js?v=0.16"></script>
+  <script src="upgrades.js?v=0.16"></script>
+  <script src="player.js?v=0.16"></script>
+  <script src="playerState.js?v=0.16"></script>
+  <script src="prestige.js?v=0.16"></script>
+  <script src="prestigeScreen.js?v=0.16"></script>
+  <script src="ui.js?v=0.16"></script>
+  <script src="uiOverlay.js?v=0.16"></script>
   <script src="uranium.js?v=0.16"></script>
-  <script src="controlrod.js?v=0.14"></script>
-  <script src="water.js?v=0.14"></script>
-  <script src="meters.js?v=0.14"></script>
+  <script src="controlrod.js?v=0.16"></script>
+  <script src="water.js?v=0.16"></script>
+  <script src="meters.js?v=0.16"></script>
   <script src="miscFunctions.js?v=0.16"></script>
-  <script src="shaderFunctions.js?v=0.14"></script>
-  <script src="atomsRenderer.js?v=0.14"></script>
-  <script src="titleRenderer.js?v=0.15"></script>
-  <script src="rodsRenderer.js?v=0.14"></script>
-  <script src="specialRenderer.js?v=0.14"></script>
-  <script src="steamRenderer.js?v=0.14"></script>
-  <script src="bubblesRenderer.js?v=0.14"></script>
-  <script src="waterLayer.js?v=0.14"></script>
-  <script src="plutonium.js?v=0.14"></script>
-  <script src="californium.js?v=0.14"></script>
-  <script src="input.js?v=0.15"></script>
+  <script src="shaderFunctions.js?v=0.16"></script>
+  <script src="atomsRenderer.js?v=0.16"></script>
+  <script src="titleRenderer.js?v=0.16"></script>
+  <script src="rodsRenderer.js?v=0.16"></script>
+  <script src="specialRenderer.js?v=0.16"></script>
+  <script src="steamRenderer.js?v=0.16"></script>
+  <script src="bubblesRenderer.js?v=0.16"></script>
+  <script src="waterLayer.js?v=0.16"></script>
+  <script src="plutonium.js?v=0.16"></script>
+  <script src="californium.js?v=0.16"></script>
+  <script src="input.js?v=0.16"></script>
 
 </body>
 
