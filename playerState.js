@@ -19,9 +19,7 @@ class PlayerState {
         const rawName = (arguments.length > 1 && typeof arguments[1] === 'string') ? String(arguments[1]).trim().substring(0, 12) : '';
         const name = rawName || `Slot ${slotIndex + 1}`;
 
-        if (prestigeManager && typeof prestigeManager.saveToPlayer === 'function') {
             prestigeManager.saveToPlayer(player);
-        }
 
         const saveData = {
             timestamp: new Date().toISOString(),

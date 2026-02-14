@@ -132,9 +132,7 @@ class ReportSystem {
         const activeGl = gl || glShit.simGL;
         if (!activeGl) return;
 
-        if (glShit.reportData && typeof glShit.reportData.fill === 'function') {
             glShit.reportData.fill(0);
-        }
 
         if (glShit.reportPBOSyncs && Array.isArray(glShit.reportPBOSyncs)) {
             for (let i = 0; i < glShit.reportPBOSyncs.length; i++) {

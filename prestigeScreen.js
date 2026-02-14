@@ -76,13 +76,11 @@ class PrestigeScreen {
     }
 
     clearOverlayCanvas() {
-        if (!ui || !ui.canvas || !ui.canvas.ctx) return;
         ui.canvas.ensureFrame();
         ui.canvas.ctx.clearRect(0, 0, screenWidth, screenHeight);
     }
 
     drawGreenOverlay(alpha = 1) {
-        if (!ui || !ui.canvas || !ui.canvas.ctx) return;
         const a = Math.max(0, Math.min(1, alpha));
         if (a <= 0) return;
         ui.canvas.ensureFrame();
@@ -95,7 +93,6 @@ class PrestigeScreen {
     }
 
     drawPrestigeScreen(alpha = 1) {
-        if (!ui || !ui.canvas || !ui.canvas.ctx) return;
         const a = Math.max(0, Math.min(1, alpha));
         if (a <= 0) return;
 

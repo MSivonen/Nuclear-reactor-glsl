@@ -227,17 +227,11 @@ class AudioManager {
             this.prevPaused = false;
         }
 
-        // If BOOM (Game Over), stopping ambience is fine, but we might want the boom sound to play!
-        // The original code muted ambience on boom.
         if (boom) {
             this.ambientTracks.forEach(track => {
                 track.targetVolume = 0;
                 track.update(0.2);
             });
-            // Don't return, allow alarm/boom logic potentially? 
-            // Actually original code returned. But playSfx('boom') is called in sketch.js.
-            // Let's keep existing boom behavior for now but respect pause.
-            // If boom is true, game is over.
             this.alarmIntensity = 0;
             if (this.sounds['alarm'].isPlaying()) {
                 this.fadeOutSfx('alarm', 0.2);
@@ -250,10 +244,8 @@ class AudioManager {
         // Drive game state logic for volumes
         this.updateMixLogic(settings, currentPower, maxPowerRef);
 
-        // Alarm SFX (ramped by intensity)
         this.updateAlarm(masterVol);
 
-        // Update all tracks
         this.ambientTracks.forEach(track => track.update(masterVol));
     }
 
@@ -281,14 +273,9 @@ class AudioManager {
         // Steam starts at 100C, full intensity at 80% of max temp (400C)
         const tempLimit = 500;
         const fadeStart = 80;
-        const fadeEnd = tempLimit * 0.6; // Full steam slightly before max temp
+        const fadeEnd = tempLimit * 0.8; // Full steam slightly before max temp
 
         const steamIntensity = constrain(map(window.avgTemp || 0, fadeStart, fadeEnd, 0, 1), 0, 1);
-
-        // steam_low (cool) -> steam_mid -> steam_high
-        // 0.0 - 0.4: Low
-        // 0.3 - 0.7: Mid
-        // 0.6 - 1.0: High
 
         let sLow = 0, sMid = 0, sHigh = 0, sBubbles = 0;
 
@@ -373,10 +360,7 @@ class AudioManager {
 
         if (!enabled || intensity <= 0) {
             if (s.isPlaying()) {
-                // Instant stop if disabled or 0 intensity (or fallback to quick fade if preferred, user said instant stop when pausing, but here it's logic update)
-                // If intensity is 0, we can stop or fade. Existing was fade.
-                // But user wants "all audio stop instantly when pausing". This logic runs when NOT paused.
-                // So fade here is fine for gameplay dynamic changes.
+                // Instant stop if disabled or 0 intensity, otherwise fade out
                 this.fadeOutSfx('alarm', 0.2);
             }
             return;

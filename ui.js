@@ -75,7 +75,6 @@ class UICanvas {
     }
 
     showToast(msg, duration = 2000) {
-        try {
             const container = document.getElementById('ui-toast-container');
             if (!container) return;
             const t = document.createElement('div');
@@ -90,7 +89,6 @@ class UICanvas {
                 setTimeout(() => { try { container.removeChild(t); } catch (e) {} }, 220);
             }, duration);
             this.toastTimeouts.push(timeout);
-        } catch (e) { console.error(e); }
     }
 
     initDOM() {
@@ -122,6 +120,19 @@ class UICanvas {
             <div id="stat-income" style="font-size: 14px; color: #777;">0€/s</div>
         `;
         this.sidebar.appendChild(statsDiv);
+ 
+        // Expose resetRodHandles on the instance so other code can call it
+        this.resetRodHandles = () => {
+                const slider = (typeof ui !== 'undefined' && ui) ? ui.controlSlider : null;
+                if (slider && Array.isArray(controlRods)) {
+                    slider.handleY = new Array(controlRods.length).fill(0);
+                    for (let i = 0; i < controlRods.length; i++) {
+                        slider.handleY[i] = clampControlRodHandleY(i, controlRods[i].initialY + controlRods[i].height);
+                    }
+                    slider.draggingIndex = -1;
+                    slider.ensureHandleLength();
+                }
+        };
 
         const controlsDiv = document.createElement('div');
         controlsDiv.style.background = '#444';
@@ -136,12 +147,18 @@ class UICanvas {
 
         const linkBtn = document.createElement('button');
         linkBtn.id = 'btn-link-rods';
-        linkBtn.innerText = `Link Rods: ${settings.linkRods ? 'ON' : 'OFF'}`;
         linkBtn.style.marginBottom = '15px';
+           this.linkRodsBtn = linkBtn;
+           this.updateLinkRodsButton = () => {
+              if (!this.linkRodsBtn) return;
+              this.linkRodsBtn.innerText = `Link Rods: ${settings.linkRods ? 'ON' : 'OFF'}`;
+              this.linkRodsBtn.style.background = settings.linkRods ? '#5cb85c' : '#d9534f';
+              this.linkRodsBtn.style.color = '#fff';
+           };
+           this.updateLinkRodsButton();
         linkBtn.onclick = () => {
              settings.linkRods = !settings.linkRods;
-             linkBtn.innerText = `Link Rods: ${settings.linkRods ? 'ON' : 'OFF'}`;
-             linkBtn.style.background = settings.linkRods ? '#5cb85c' : '#d9534f';
+               this.updateLinkRodsButton();
         };
            bindButtonSound(linkBtn);
         controlsDiv.appendChild(linkBtn);
@@ -307,23 +324,19 @@ class UICanvas {
                 }
                 
                 // Show loading/title overlay and slot selector
-                try {
                     const loadingScreen = document.getElementById('loading-screen');
-                    if (loadingScreen) loadingScreen.style.display = 'flex';
-                    if (this.showTitleSlotMenu) this.showTitleSlotMenu();
+                    loadingScreen.style.display = 'flex';
+                    this.showTitleSlotMenu();
                     
                     const loadingStart = document.getElementById('loading-start');
-                    if (loadingStart) {
                          loadingStart.style.bottom = '8%';
                          loadingStart.style.opacity = '1'; // Reset opacity
-                    }
                     
                     const startBtn = document.getElementById('loading-start-btn');
-                    if (startBtn) startBtn.disabled = false; // Re-enable
+                    startBtn.disabled = false; // Re-enable
 
                     // Fade back in to title
                     if (fadeOverlay) fadeOverlay.style.opacity = '0';
-                } catch (e) { console.error(e); }
             }, 1000);
         });
         ['btn-resume','btn-save','btn-load','btn-settings'].forEach(id => bindButtonSound(document.getElementById(id)));
@@ -361,7 +374,6 @@ class UICanvas {
         const titleDelete = document.getElementById('title-delete-btn');
         const titleSaveBtn = document.getElementById('title-save-btn');
         const titleSaveInput = document.getElementById('title-save-name');
-        if (titleStart) {
             titleStart.addEventListener('click', () => {
                 const slot = (playerState && typeof playerState.getSelectedSlot === 'function') ? playerState.getSelectedSlot() : 0;
                 if (playerState.hasSave(slot)) {
@@ -376,8 +388,6 @@ class UICanvas {
                 }
                 // Transition logic is handled by loader.js
             });
-        }
-        if (titleDelete) {
             titleDelete.onclick = () => {
                 const slot = (playerState && typeof playerState.getSelectedSlot === 'function') ? playerState.getSelectedSlot() : 0;
                 if (playerState.hasSave(slot)) {
@@ -390,9 +400,7 @@ class UICanvas {
                     this.showToast('No save in selected slot');
                 }
             };
-        }
 
-        if (titleSaveBtn && titleSaveInput) {
             titleSaveBtn.onclick = () => {
                 const slot = (playerState && typeof playerState.getSelectedSlot === 'function') ? playerState.getSelectedSlot() : 0;
                 let name = titleSaveInput.value ? String(titleSaveInput.value).trim().substring(0,12) : null;
@@ -407,7 +415,6 @@ class UICanvas {
                     audioManager.playSfx('click_fail');
                 }
             };
-        }
     }
 
     isScramComplete() {
@@ -563,7 +570,6 @@ class UICanvas {
 
     populateTitleSlotButtons() {
         const container = document.getElementById('title-slot-buttons');
-        if (!container || !playerState) return;
         container.innerHTML = '';
         for (let i = 0; i < 3; i++) {
             const btn = document.createElement('button');
@@ -606,23 +612,21 @@ class UICanvas {
         this.populateTitleSlotButtons();
         // Show the whole loading/title overlay so Start and slots are visible
         const loadingScreen = document.getElementById('loading-screen');
-        if (loadingScreen) loadingScreen.style.display = 'flex';
-        if (loadingStartBtn) loadingStartBtn.style.display = 'inline-block';
-        if (slotContainer) slotContainer.style.display = 'block';
+        loadingScreen.style.display = 'flex';
+        loadingStartBtn.style.display = 'inline-block';
+        slotContainer.style.display = 'block';
         // Also show the save name input and save/delete buttons which are hidden by default
         const saveInput = document.getElementById('title-save-name');
         const saveBtn = document.getElementById('title-save-btn');
         const deleteBtn = document.getElementById('title-delete-btn');
-        if (saveInput) saveInput.style.display = 'inline-block';
-        if (saveBtn) saveBtn.style.display = 'inline-block';
-        if (deleteBtn) deleteBtn.style.display = 'inline-block';
+        saveInput.style.display = 'inline-block';
+        saveBtn.style.display = 'inline-block';
+        deleteBtn.style.display = 'inline-block';
         // Fade in the title buttons when they are shown later than the initial loader fade.
-        if (loadingStart) {
             if (!loadingStart.style.transition) loadingStart.style.transition = 'opacity 1s ease-in-out';
             loadingStart.style.opacity = '0';
             loadingStart.getBoundingClientRect();
             setTimeout(() => { loadingStart.style.opacity = '1'; }, 50);
-        }
         // Prefill save name input with selected slot's name
         const nameInput = document.getElementById('title-save-name');
         try {
@@ -656,10 +660,8 @@ class UICanvas {
         }
 
         this.scramActive = true;
-        if (btn) {
             btn.classList.add('scram-active');
             btn.innerText = '!!SCRAM!!';
-        }
 
         try {
             const sfxEnabled = ui.canvas.uiSettings.audio.sfx.enabled;

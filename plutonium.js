@@ -9,13 +9,12 @@ class Plutonium {
     }
 
     resetPosition() {
-        // Start near bottom center of sim
         this.x = screenSimWidth / 5;
         this.y = screenHeight - 60*globalScale;
     }
 
     updateDimensions() {
-        this.radius = 21 * globalScale; // 0.7x of 30
+        this.radius = 21 * globalScale; 
         
         // Clamp position if out of bounds after resize
         this.x = Math.max(this.radius, Math.min(this.x, screenSimWidth - this.radius));
@@ -25,7 +24,6 @@ class Plutonium {
     update() {
         this.radius = 30 * globalScale;
 
-        // Interaction (Handle input here so it works when paused)
         const mPos = scaleMouse(mouseX, mouseY);
 
         if (mouseIsPressed) {

@@ -15,21 +15,13 @@ class BubblesRenderer {
         this.gl = simGL;
         this.maxInstances = maxInst || 100;
         this.instanceData = new Float32Array(this.maxInstances * this.instanceFloatCount);
-        
+
         // Initialize random data
         for (let i = 0; i < this.maxInstances; i++) {
             const idx = i * this.instanceFloatCount;
-            // startX: random across screen width (passed as prop or assumed)
-            // we will handle resolution in shader, so pass 0..1 normalized or 0..width? 
-            // Existing atoms use coordinates. I'll use 0..1 normalized for X to be resolution independent, 
-            // or match screen coordinates if that's the convention.
-            // Screen is 1067x600. Let's use screen coords to match others.
-            // Start X: random across the simulation area
-            // We are rendering into a VIEWPORT that matches the simulation size.
-            // So coordinates should be 0..screenSimWidth relative to that viewport.
-            // No offset needed.
+
             this.instanceData[idx + 0] = Math.random() * screenSimWidth;
-            
+
             // size: "small" -> 2..22
             const minSize = 2 * globalScale;
             const maxSize = 22 * globalScale;
@@ -45,14 +37,10 @@ class BubblesRenderer {
             const t = (size - minSize) / (maxSize - minSize);
             this.instanceData[idx + 1] = minSpeed + t * (maxSpeed - minSpeed);
 
-
             // offset
             this.instanceData[idx + 4] = 0;
         }
 
-        if (!vsSource || !fsSource) {
-            throw new Error('bubblesRenderer shader sources missing');
-        }
         this.program = createProgram(this.gl, vsSource, fsSource);
 
         const quad = new Float32Array([
@@ -93,24 +81,21 @@ class BubblesRenderer {
 
     render(width, height, time) {
         if (!this.gl || !this.program) return;
-        
+
         this.gl.useProgram(this.program);
         this.gl.bindVertexArray(this.vao);
 
-        // Enable blending
         this.gl.enable(this.gl.BLEND);
         this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
 
         const uRes = this.gl.getUniformLocation(this.program, "u_resolution");
         const uTime = this.gl.getUniformLocation(this.program, "u_time");
-        
-        // Pass SimWidth (width) and SimHeight (height) to u_resolution so particles scale correctly.
-        // We rely on external gl.viewport(SHOP_WIDTH, 0, width, height) being set.
-        this.gl.uniform2f(uRes, width, height); 
+
+        this.gl.uniform2f(uRes, width, height);
         this.gl.uniform1f(uTime, time);
 
         this.gl.drawArraysInstanced(this.gl.TRIANGLES, 0, 6, this.maxInstances);
-        
+
         this.gl.bindVertexArray(null);
         this.gl.disable(this.gl.BLEND);
     }

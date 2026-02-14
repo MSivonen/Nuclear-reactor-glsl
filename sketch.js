@@ -33,19 +33,18 @@ let controlRodPurchaseCount = 0;
 let controlRodUpgradeLevels = [];
 let waterCells = [];
 let grid;
-var boom = false;
-var boomStartTime = 0;
-var boomOutcome = 'NONE';
-var boomInputLocked = false;
-var boomPrestigePopupShown = false;
-var boomSetbackLoss = 0;
-var energyOutput = 0;
+let boom = false;
+let boomStartTime = 0;
+let boomOutcome = 'NONE';
+let boomInputLocked = false;
+let boomPrestigePopupShown = false;
+let boomSetbackLoss = 0;
+let energyOutput = 0;
 let energyThisFrame = 0;
-var energyOutputCounter = 0;
+let energyOutputCounter = 0;
 let lastMoneyPerSecond = 0;
 let paused = false;
-var renderTime = 0;
-// States: LOADING, TITLE, PLAYING, PRESTIGE_TRANSITION, PRESTIGE
+let renderTime = 0;
 let gameState = 'LOADING';
 let prestigeTransitionStartedAt = -1;
 let prestigeScreen = null;
@@ -237,13 +236,9 @@ function setup() {
       const loadingScreen = document.getElementById('loading-screen');
       if (loadingScreen) loadingScreen.style.display = 'none';
 
-      // Stop the title renderer/cleanup if needed?
-      // titleRenderer.cleanup(); 
-
       audioManager.startAmbience();
     });
 
-    // Tasks finished, now showing title screen while waiting for Start click
     gameState = 'TITLE';
     setUiVisibility(false);
     // Show title save-slot selection overlay

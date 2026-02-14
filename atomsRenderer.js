@@ -135,7 +135,6 @@ class AtomsRenderer {
             this.gl.uniform1i(uVectorLoc, 0);
         }
 
-        if (blendMode && blendMode !== 'none') {
             this.gl.enable(this.gl.BLEND);
             if (blendMode === 'alpha') {
                 if (this.gl.blendFuncSeparate) {
@@ -156,12 +155,9 @@ class AtomsRenderer {
                     this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE);
                 }
             }
-        }
 
         this.gl.drawArraysInstanced(this.gl.TRIANGLES, 0, 6, count);
-        if (blendMode && blendMode !== 'none') {
             this.gl.disable(this.gl.BLEND);
-        }
         this.gl.bindVertexArray(null);
         this.gl.useProgram(null);
     }
@@ -171,11 +167,6 @@ class AtomsRenderer {
         const gl2 = glShit.simGL;
 
         gl2.bindFramebuffer(gl2.FRAMEBUFFER, null);
-        // gl2.viewport(0, 0, glShit.simCanvas.width, glShit.simCanvas.height); // REMOVED
-        // We assume caller sets viewport. If renderImage is called standalone, it might break.
-        // gl2.clearColor(0, 0, 0, 0); // REMOVED
-        // gl2.clear(gl2.COLOR_BUFFER_BIT); // REMOVED
-
         this.draw(uraniumAtoms.length);
     }
 }

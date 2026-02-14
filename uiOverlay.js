@@ -69,7 +69,6 @@ class UiOverlay {
     }
 
     render(gl, canvasElement) {
-        if (!this.program) return;
 
         // Normal alpha blending for UI
         gl.enable(gl.BLEND);

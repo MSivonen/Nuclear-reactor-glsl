@@ -12,8 +12,6 @@ class Neutron {
         this.spawnCount = 0;
         this.spawnQueue.length = 0;
 
-        if (!gl || !glShit || !glShit.readTex || !glShit.writeTex) return;
-
         gl.bindTexture(gl.TEXTURE_2D, glShit.readTex);
         gl.texSubImage2D(
             gl.TEXTURE_2D,

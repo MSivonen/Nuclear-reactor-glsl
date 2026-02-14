@@ -28,10 +28,10 @@ function oncePerSecond() {
                 ui.autosaveCounter = 0;
                 if (playerState && typeof playerState.saveGame === 'function') {
                     playerState.saveGame(selected);
-                    try { if (ui && ui.canvas && typeof ui.canvas.showToast === 'function') ui.canvas.showToast(`Autosaved to slot ${selected + 1}`, 2000); } catch (e) {}
+                    try { if (ui && ui.canvas && typeof ui.canvas.showToast === 'function') ui.canvas.showToast(`Autosaved to slot ${selected + 1}`, 2000); } catch (e) { }
                 }
             }
-        } catch (e) { /* ignore autosave errors */ }
+        } catch (e) { console.log("Autosave error:", e); }
 
         if (energyOutput >= game.boomValue) triggerBoom();
 
@@ -48,23 +48,19 @@ function oncePerSecond() {
 
 function setBoomInputLock(isLocked) {
     boomInputLocked = !!isLocked;
-    if (ui && ui.canvas && ui.canvas.uiLayer) {
-        ui.canvas.uiLayer.style.pointerEvents = boomInputLocked ? 'none' : '';
-    }
+    ui.canvas.uiLayer.style.pointerEvents = boomInputLocked ? 'none' : '';
 }
 
 function resetThermalState() {
     for (let atom of uraniumAtoms) {
-        if (atom) {
-            atom.heat = 25;
-            atom.isHit = false;
-            atom.flash = 0;
-        }
+        atom.heat = 25;
+        atom.isHit = false;
+        atom.flash = 0;
     }
 
     if (waterSystem && waterSystem.waterCells) {
         for (let wc of waterSystem.waterCells) {
-            if (wc) wc.temperature = 25;
+            wc.temperature = 25;
         }
     }
     if (waterSystem && waterSystem.temperatureChanges && typeof waterSystem.temperatureChanges.fill === 'function') {
@@ -80,23 +76,22 @@ function triggerBoom() {
     boomPrestigePopupShown = false;
     setBoomInputLock(true);
 
-    if (typeof neutron !== 'undefined' && neutron && typeof neutron.reset === 'function') {
-        neutron.reset(glShit.simGL);
-    }
-    if (typeof reportSystem !== 'undefined' && reportSystem && typeof reportSystem.reset === 'function') {
-        reportSystem.reset(glShit.simGL);
-    }
+    neutron.reset(glShit.simGL);
+    reportSystem.reset(glShit.simGL);
     resetThermalState();
     ui.collisionsThisSecond = 0;
 
-    if (typeof controlRod !== 'undefined' && controlRod && typeof controlRod.resetAll === 'function') {
-        controlRod.resetAll();
-    }
-    if (typeof ui !== 'undefined' && ui && typeof ui.resetRodHandles === 'function') {
-        ui.resetRodHandles();
-    }
+    ui.canvas.resetRodHandles();
+
+    settings.linkRods = false;
+    ui.canvas.updateLinkRodsButton();
 
     audioManager.playSfx('boom');
+
+    controlRods.forEach((rod) => {
+        rod.y = rod.initialY;
+        rod.targetY = rod.initialY; // Ensure targets are reset
+    });
 
     const thresholds = (prestigeManager && typeof prestigeManager.getCurrentThresholds === 'function')
         ? prestigeManager.getCurrentThresholds()
@@ -124,17 +119,15 @@ function triggerBoom() {
                 ui.canvas.showToast(`Setback autosaved to slot ${selected + 1}`, 2200);
             }
         }
-    } catch (e) { /* ignore setback autosave errors */ }
+    } catch (e) { console.log("Setback autosave error:", e); }
 }
 
 function resetRunForPrestige() {
     if (!boom || boomOutcome !== 'PRESTIGE') return;
 
-    if (prestigeManager && typeof prestigeManager.advanceLoop === 'function') {
-        prestigeManager.advanceLoop();
-        if (player && typeof prestigeManager.saveToPlayer === 'function') {
-            prestigeManager.saveToPlayer(player);
-        }
+    prestigeManager.advanceLoop();
+    if (player && typeof prestigeManager.saveToPlayer === 'function') {
+        prestigeManager.saveToPlayer(player);
     }
 
     const freshPlayer = new Player();
@@ -143,9 +136,7 @@ function resetRunForPrestige() {
 
     player.deserialize(freshPlayer.serialize());
     player.prestige = nextPrestige;
-    if (prestigeManager && typeof prestigeManager.loadFromPlayer === 'function') {
-        prestigeManager.loadFromPlayer(player);
-    }
+    prestigeManager.loadFromPlayer(player);
 
     shop.deserialize(freshShop.serialize());
 
@@ -161,7 +152,7 @@ function resetRunForPrestige() {
                 ui.canvas.showToast(`Prestige autosaved to slot ${selected + 1}`, 2200);
             }
         }
-    } catch (e) { /* ignore prestige save errors */ }
+    } catch (e) { console.log("Prestige autosave error:", e); }
 
     if (typeof transitionToPlayingFromPrestige === 'function') {
         transitionToPlayingFromPrestige();
@@ -177,9 +168,7 @@ window.resetRunForPrestige = resetRunForPrestige;
 function rollbackSetback() {
     if (!boom || boomOutcome !== 'SETBACK') return;
 
-    if (player && typeof player.applySetbackPenalty === 'function') {
-        player.applySetbackPenalty(0.75);
-    }
+    player.applySetbackPenalty(0.75);
 
     try {
         const selected = (playerState && typeof playerState.getSelectedSlot === 'function') ? playerState.getSelectedSlot() : 0;
@@ -194,7 +183,7 @@ function rollbackSetback() {
     paused = false;
 }
 
-function formatLarge(amount, unit, decimals=2) {
+function formatLarge(amount, unit, decimals = 2) {
     const abs = Math.abs(amount);
     const sign = amount < 0 ? '-' : '';
     if (abs >= 1e9) return sign + (abs / 1e9).toFixed(decimals).replace(/\.00$/, '') + 'G' + unit;
@@ -206,12 +195,8 @@ function formatLarge(amount, unit, decimals=2) {
 function resetSimulation() {
     audioManager.fadeOutSfx('boom', 2.0);
 
-    if (typeof neutron !== 'undefined' && neutron && typeof neutron.reset === 'function') {
-        neutron.reset(glShit.simGL);
-    }
-    if (typeof reportSystem !== 'undefined' && reportSystem && typeof reportSystem.reset === 'function') {
-        reportSystem.reset(glShit.simGL);
-    }
+    neutron.reset(glShit.simGL);
+    reportSystem.reset(glShit.simGL);
 
     if (typeof plutonium !== 'undefined' && plutonium) {
         plutonium.resetPosition();
@@ -222,21 +207,26 @@ function resetSimulation() {
         californium.dragging = false;
         californium.spawnTimer = 0;
     }
-    
+
     resetThermalState();
-    controlRods.forEach((rod, i) => {
+    controlRods.forEach((rod) => {
         rod.y = rod.initialY;
         rod.targetY = rod.initialY;
     });
-    ui.controlSlider.draggingIndex = -1;
-    ui.controlSlider.ensureHandleLength();
+    if (ui && ui.canvas && typeof ui.canvas.resetRodHandles === 'function') {
+        ui.canvas.resetRodHandles();
+    } else if (ui && ui.controlSlider) {
+        ui.controlSlider.handleY = new Array(controlRods.length).fill(0);
+        for (let i = 0; i < controlRods.length; i++) {
+            ui.controlSlider.handleY[i] = clampControlRodHandleY(i, controlRods[i].initialY + controlRods[i].height);
+        }
+        ui.controlSlider.draggingIndex = -1;
+        ui.controlSlider.ensureHandleLength();
+    }
     settings = { ...defaultSettings };
     settings.waterFlowSpeed = player.waterFlowStart;
     settings.waterFlowSpeed = Math.max(player.waterFlowMin, Math.min(player.waterFlowMax, settings.waterFlowSpeed));
-    if (prestigeManager && typeof prestigeManager.applyCurrentLoopScaling === 'function') {
-        prestigeManager.applyCurrentLoopScaling();
-    }
-    // Initialize neutron size target to default scaled value
+    prestigeManager.applyCurrentLoopScaling();
     settings.neutronSize = defaultSettings.neutronSize * globalScale;
     settings.targetNeutronSize = settings.neutronSize;
     boom = false;

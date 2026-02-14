@@ -1,6 +1,5 @@
 function getRelativeMouseCoords() {
   const gameCanvas = document.getElementById('gameCanvas');
-  if (gameCanvas) {
     const rect = gameCanvas.getBoundingClientRect();
     const scaleX = gameCanvas.width / rect.width;
     const scaleY = gameCanvas.height / rect.height;
@@ -8,7 +7,6 @@ function getRelativeMouseCoords() {
       x: (mouseX - rect.left) * scaleX,
       y: (mouseY - rect.top) * scaleY
     };
-  }
   return { x: mouseX, y: mouseY };
 }
 

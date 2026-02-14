@@ -54,20 +54,14 @@ const prestigeManager = {
     applyCurrentLoopScaling() {
         const bonuses = this.getCurrentBonuses();
 
-        if (typeof game !== 'undefined' && game) {
-            game.boomValue = bonuses.maxPowerCap;
-        }
+        game.boomValue = bonuses.maxPowerCap;
 
-        if (typeof settings !== 'undefined' && settings) {
-            settings.heatingRate = bonuses.heatingRate;
-            settings.collisionProbability = bonuses.collisionProbability;
-            settings.decayProbability = bonuses.decayProbability;
-        }
+        settings.heatingRate = bonuses.heatingRate;
+        settings.collisionProbability = bonuses.collisionProbability;
+        settings.decayProbability = bonuses.decayProbability;
 
-        if (typeof ui !== 'undefined' && ui) {
-            if (ui.tempMeter) ui.tempMeter.max = bonuses.maxHeatCap;
-            if (ui.powerMeter) ui.powerMeter.max = bonuses.maxPowerCap;
-        }
+        if (ui.tempMeter) ui.tempMeter.max = bonuses.maxHeatCap;
+        if (ui.powerMeter) ui.powerMeter.max = bonuses.maxPowerCap;
     },
 
     advanceLoop() {
@@ -85,7 +79,6 @@ const prestigeManager = {
     },
 
     saveToPlayer(playerObj) {
-        if (!playerObj) return;
         playerObj.prestige = {
             loopNumber: this.loopNumber,
             currentLevelData: this.ensureCurrentLevelData()

@@ -59,7 +59,6 @@ class TitleRenderer {
         this.gl = gl;
         this.program = createProgram(gl, vsSource, fsSource);
         
-        // Create Texture
         this.fontTexture = gl.createTexture();
         gl.bindTexture(gl.TEXTURE_2D, this.fontTexture);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.fontImage);
@@ -68,13 +67,11 @@ class TitleRenderer {
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
         
-        // Setup VAO
         this.vao = gl.createVertexArray();
         gl.bindVertexArray(this.vao);
         
         this.vbo = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo);
-        // Size unknown initially
         
         // a_position (vec2), a_uv (vec2)
         const stride = 4 * 4; 
@@ -86,19 +83,15 @@ class TitleRenderer {
         
         gl.bindVertexArray(null);
         
-        // Init Neutrons
         this.initNeutrons();
         
-        // Create Mesh for title
         this.createFullTitleMesh();
         
-        // Setup Rock Shader
         this.rockProgram = createProgram(gl, rockVsSource, rockFsSource);
         this.rockVao = gl.createVertexArray();
         this.rockBuffer = gl.createBuffer();
         gl.bindVertexArray(this.rockVao);
         gl.bindBuffer(gl.ARRAY_BUFFER, this.rockBuffer);
-        // Quad -1..1
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
             -1, -1,  1, -1,  -1, 1,
             -1, 1,   1, -1,   1, 1
@@ -208,16 +201,7 @@ class TitleRenderer {
 
     update(dt, mx, my, width, height) {
         this.orbitTime += dt;
-        
-        // Update Electron Orbits (simulating special.frag logic in JS)
-        // We will store just the positions to pass to shader
-        // But actually the shader expects fixed count.
-        // We have `this.neutrons` array.
-        
         const scale = 200.0; // Orbit base size in pixels
-        
-        // logic from special.frag
-        // seed logic roughly: seed = 7.0 + i*17.31
         
         for(let i=0; i<this.neutronCount; i++) {
             // attach first neutron to mouse if mouse info is present
@@ -261,7 +245,6 @@ class TitleRenderer {
     }
 
     drawRockBackground(width, height) {
-        if (!this.rockProgram || !this.gl) return;
         const gl = this.gl;
         gl.useProgram(this.rockProgram);
         gl.bindVertexArray(this.rockVao);
@@ -283,7 +266,6 @@ class TitleRenderer {
     }
     
     draw(width, height) {
-        if (!this.program || !this.gl) return;
         const gl = this.gl;
         
         gl.disable(gl.CULL_FACE);

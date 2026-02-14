@@ -124,4 +124,6 @@ v    -Ability to give a name to savegame
 
 
 === Bugs/Fixes ===
-      ugly:      - Show text: "Atom's blessing granted - The Great Glow achieved." and a button "Go to level N"
+    feature: remove save and load buttons from pause menu
+    feature: rework the atom shop category, the existing group selection is clunky
+    feature: steam is ugly
