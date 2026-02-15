@@ -125,4 +125,3 @@ v    -Ability to give a name to savegame
 
 === Bugs/Fixes ===
     feature: rework the atom shop category, the existing group selection is clunky
-    feature: steam is ugly

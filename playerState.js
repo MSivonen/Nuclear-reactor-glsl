@@ -23,6 +23,10 @@ class PlayerState {
 
             prestigeManager.saveToPlayer(player);
 
+        const tutorialData = (window.tutorialManager && typeof window.tutorialManager.getSaveData === 'function')
+            ? window.tutorialManager.getSaveData()
+            : { tutorialEnabled: true, tutorialCompleted: {} };
+
         const saveData = {
             timestamp: new Date().toISOString(),
             name: name,
@@ -30,6 +34,11 @@ class PlayerState {
             shop: shop.serialize(),
             settings: { ...settings },
             uiSettings: ui.canvas.uiSettings,
+            tutorialEnabled: tutorialData.tutorialEnabled,
+            tutorialCompleted: tutorialData.tutorialCompleted,
+            tutorialShopUnlocked: tutorialData.tutorialShopUnlocked,
+            tutorialItemUnlocks: tutorialData.tutorialItemUnlocks,
+            tutorialFirstPowerAt: tutorialData.tutorialFirstPowerAt,
             version: GAME_VERSION
         };
 
@@ -58,6 +67,9 @@ class PlayerState {
             resetSimulation();
 
             player.deserialize(saveData.player);
+            if (typeof plutonium !== 'undefined' && plutonium && typeof plutonium.syncFromPlayer === 'function') {
+                plutonium.syncFromPlayer();
+            }
             if (prestigeManager && typeof prestigeManager.loadFromPlayer === 'function') {
                 prestigeManager.loadFromPlayer(player);
             }
@@ -67,6 +79,9 @@ class PlayerState {
                 settings.collisionProbability = defaultSettings.collisionProbability;
             }
             ui.canvas.uiSettings = saveData.uiSettings;
+            if (window.tutorialManager && typeof window.tutorialManager.loadFromSave === 'function') {
+                window.tutorialManager.loadFromSave(saveData);
+            }
 
             initializePlayerAtomGroups(player);
             initControlRodUpgrades();

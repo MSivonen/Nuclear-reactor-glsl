@@ -222,6 +222,9 @@ function setup() {
   prestigeScreen = (typeof PrestigeScreen !== 'undefined') ? new PrestigeScreen() : null;
   window.prestigeScreen = prestigeScreen;
   californium.updateDimensions();
+  if (typeof plutonium.syncFromPlayer === 'function') {
+    plutonium.syncFromPlayer();
+  }
   plutonium.updateDimensions();
   // Show loading screen after we've resized DOM to avoid tiny flicker
   const loadingScreen = document.getElementById('loading-screen');
@@ -237,6 +240,10 @@ function setup() {
       if (loadingScreen) loadingScreen.style.display = 'none';
 
       audioManager.startAmbience();
+
+      if (window.tutorialManager && typeof window.tutorialManager.onRunStarted === 'function') {
+        window.tutorialManager.onRunStarted();
+      }
     });
 
     gameState = 'TITLE';

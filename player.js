@@ -19,6 +19,11 @@ class Player {
         this.waterFlowMin = this.waterFlowStart;
         this.waterFlowMax = this.waterFlowStart;
         this.upgrades.waterFlow = 0;
+
+        this.plutoniumUpgradeMax = 12;
+        this.plutoniumUpgradeCount = 0;
+        this.upgrades.plutonium = 0;
+
         this.prestige = {
             loopNumber: 1,
             currentLevelData: null
@@ -72,6 +77,8 @@ class Player {
             waterFlowMaxLimit: this.waterFlowMaxLimit,
             waterFlowUpgradeMax: this.waterFlowUpgradeMax,
             waterFlowUpgradeCount: this.waterFlowUpgradeCount,
+            plutoniumUpgradeMax: this.plutoniumUpgradeMax,
+            plutoniumUpgradeCount: this.plutoniumUpgradeCount,
             prestige: this.prestige
         };
     }
@@ -90,6 +97,9 @@ class Player {
         this.waterFlowUpgradeMax = obj.waterFlowUpgradeMax ?? 20;
         this.waterFlowUpgradeCount = obj.waterFlowUpgradeCount ?? (this.upgrades.waterFlow || 0);
         this.upgrades.waterFlow = this.waterFlowUpgradeCount;
+        this.plutoniumUpgradeMax = obj.plutoniumUpgradeMax ?? 12;
+        this.plutoniumUpgradeCount = obj.plutoniumUpgradeCount ?? (this.upgrades.plutonium || 0);
+        this.upgrades.plutonium = this.plutoniumUpgradeCount;
         this.prestige = obj.prestige || {
             loopNumber: 1,
             currentLevelData: null

@@ -188,6 +188,7 @@ class UICanvas {
         
         const waterDiv = document.createElement('div');
         waterDiv.innerHTML = `<label>Water Flow</label>`;
+        this.waterControlDiv = waterDiv;
         const waterSlider = document.createElement('input');
         waterSlider.type = 'range';
         waterSlider.min = '1';
@@ -225,6 +226,7 @@ class UICanvas {
         this.sidebar.appendChild(controlsDiv);
 
         const shopBtn = document.createElement('button');
+        this.shopBtn = shopBtn;
         shopBtn.innerText = "Open Shop";
         shopBtn.onclick = () => {
             this.toggleShop();
@@ -481,6 +483,14 @@ class UICanvas {
     }
     
     syncSettingsDOM() {
+        const tutorialCheck = document.getElementById('chk-tutorial-enabled');
+        if (tutorialCheck && window.tutorialManager) {
+            tutorialCheck.checked = !!window.tutorialManager.isEnabled;
+            tutorialCheck.onchange = (e) => {
+                window.tutorialManager.setEnabled(!!e.target.checked);
+            };
+        }
+
         const audioKeys = ['master', 'sfx', 'ambience', 'steam', 'water', 'alarms', 'explosions', 'scram'];
         audioKeys.forEach(key => {
             const slider = document.getElementById(`set-audio-${key}`);
@@ -876,6 +886,7 @@ class UICanvas {
             const item = shop.items[key];
             const itemDiv = document.createElement('div');
             itemDiv.className = 'shop-item';
+            itemDiv.id = `shop-item-${key}`;
             
             const title = document.createElement('h3');
             title.id = `shop-title-${key}`;
@@ -973,9 +984,20 @@ class UICanvas {
         }
 
         Object.keys(shop.items).forEach(key => {
+            const itemDiv = document.getElementById(`shop-item-${key}`);
             const btn = document.getElementById(`shop-btn-${key}`);
             const title = document.getElementById(`shop-title-${key}`);
             const desc = document.getElementById(`shop-desc-${key}`);
+
+            const unlocked = shop.isItemUnlocked ? shop.isItemUnlocked(key) : true;
+            if (itemDiv) {
+                itemDiv.style.display = unlocked ? '' : 'none';
+            }
+
+            if (!unlocked) {
+                return;
+            }
+
             if (btn) {
                 // getPurchaseInfo uses internal shop.buyAmount
                 const info = shop.getPurchaseInfo(key); 
@@ -986,6 +1008,10 @@ class UICanvas {
                 if (key === 'waterFlow') {
                     const current = player.waterFlowUpgradeCount;
                     const max = player.waterFlowUpgradeMax;
+                    isMaxed = current >= max && max > 0;
+                } else if (key === 'plutonium') {
+                    const current = player.plutoniumUpgradeCount;
+                    const max = player.plutoniumUpgradeMax;
                     isMaxed = current >= max && max > 0;
                 } else if (key === 'controlRod') {
                     const current = controlRodPurchaseCount;
@@ -1038,6 +1064,10 @@ class UICanvas {
                     const current = player.waterFlowUpgradeCount;
                     const max = player.waterFlowUpgradeMax;
                     title.innerText = `Water flow ${current}/${max}`;
+                } else if (key === 'plutonium') {
+                    const current = player.plutoniumUpgradeCount;
+                    const max = player.plutoniumUpgradeMax;
+                    title.innerText = `Plutonium ${current}/${max}`;
                 } else if (key === 'controlRod') {
                     const current = controlRodPurchaseCount;
                     const max = getMaxControlRodPurchases();
@@ -1065,6 +1095,14 @@ class UICanvas {
     }
 
     toggleShop() {
+        const shopUnlocked = !(window.tutorialManager && typeof window.tutorialManager.isShopUnlocked === 'function')
+            || window.tutorialManager.isShopUnlocked();
+        if (!shopUnlocked) {
+            this.shopOpen = false;
+            this.shopOverlay.classList.add('hidden');
+            return;
+        }
+
         this.shopOpen = !this.shopOpen;
         if (this.shopOpen) {
             this.shopOverlay.classList.remove('hidden');
@@ -1075,6 +1113,8 @@ class UICanvas {
     }
 
     updateDOM() {
+        const tutorialActive = !!(window.tutorialManager && window.tutorialManager.isActive && window.tutorialManager.isActive());
+
         if (this.scramActive && this.isScramComplete()) {
             this.scramActive = false;
             const scramBtn = document.getElementById('btn-scram');
@@ -1084,11 +1124,18 @@ class UICanvas {
             }
             audioManager.fadeOutSfx('scram', 1);
         }
+
+        if (tutorialActive) {
+            this.pauseMenu.classList.add('hidden');
+            this.slotMenu.classList.add('hidden');
+            this.settingsMenu.classList.add('hidden');
+        }
+
         if (!paused) {
             this.pauseMenu.classList.add('hidden');
             this.slotMenu.classList.add('hidden');
             this.settingsMenu.classList.add('hidden');
-        } else {
+        } else if (!tutorialActive) {
             const pHidden = this.pauseMenu.classList.contains('hidden');
             const sHidden = this.slotMenu.classList.contains('hidden');
             const settHidden = this.settingsMenu.classList.contains('hidden');
@@ -1102,6 +1149,41 @@ class UICanvas {
         const iStat = document.getElementById('stat-income');
         mStat.innerText = formatLarge(player.getBalance(), CURRENCY_UNIT, 2);
         iStat.innerText = `${formatLarge(lastMoneyPerSecond, CURRENCY_UNIT, 2)}/s`;
+
+        const showMoneyStats = !window.tutorialManager
+            || !window.tutorialManager.hasCompleted
+            || window.tutorialManager.hasCompleted('first_power_10kw')
+            || (Number.isFinite(energyOutput) && energyOutput >= 10);
+        mStat.style.display = showMoneyStats ? '' : 'none';
+        iStat.style.display = showMoneyStats ? '' : 'none';
+
+        const linkRodsUnlocked = !window.tutorialManager
+            || !window.tutorialManager.isItemUnlocked
+            || window.tutorialManager.isItemUnlocked('controlRod');
+        const hasMultipleRods = Array.isArray(controlRods) && controlRods.length > 1;
+        const showLinkRods = linkRodsUnlocked && hasMultipleRods;
+        if (this.linkRodsBtn) {
+            this.linkRodsBtn.style.display = showLinkRods ? '' : 'none';
+            if (!showLinkRods && settings.linkRods) {
+                settings.linkRods = false;
+                this.updateLinkRodsButton();
+            }
+        }
+
+        const shopUnlocked = !(window.tutorialManager && typeof window.tutorialManager.isShopUnlocked === 'function')
+            || window.tutorialManager.isShopUnlocked();
+        if (this.shopBtn) {
+            this.shopBtn.style.display = shopUnlocked ? '' : 'none';
+        }
+        if (!shopUnlocked && this.shopOpen) {
+            this.shopOpen = false;
+            this.shopOverlay.classList.add('hidden');
+        }
+
+        const waterUnlocked = shop && typeof shop.isItemUnlocked === 'function' ? shop.isItemUnlocked('waterFlow') : true;
+        if (this.waterControlDiv) {
+            this.waterControlDiv.style.display = waterUnlocked ? '' : 'none';
+        }
 
         if (this.devInfiniteMoneyEnabled) {
             player.balance = Math.max(player.balance, this.devInfiniteMoneyValue);
@@ -1142,17 +1224,37 @@ class UICanvas {
         // Control rods moved to GL renderer
         // controlRods.forEach(r => r.draw(this.ctx, this.simXOffset));
 
-        ui.powerMeter.draw(this.ctx, this.simXOffset);
-        ui.tempMeter.draw(this.ctx, this.simXOffset);
+        const showPowerMeter = !window.tutorialManager
+            || !window.tutorialManager.hasCompleted
+            || window.tutorialManager.hasCompleted('first_power_10kw')
+            || (Number.isFinite(energyOutput) && energyOutput >= 10);
+        const showTempMeter = !window.tutorialManager
+            || !window.tutorialManager.hasCompleted
+            || window.tutorialManager.hasCompleted('first_heat_100c')
+            || (Number.isFinite(window.avgTemp) && window.avgTemp >= 100);
+
+        if (showPowerMeter) {
+            ui.powerMeter.draw(this.ctx, this.simXOffset);
+        }
+        if (showTempMeter) {
+            ui.tempMeter.draw(this.ctx, this.simXOffset);
+        }
 
         // Slider handles moved to GL renderer, but logic still needs to run
         ui.controlSlider.draw(this.ctx, this.simXOffset, true); // Added skipDraw flag
         
         drawFPS(this.ctx, this.simXOffset);
         gameOver(this.ctx, this.simXOffset);
+        if (window.tutorialManager && typeof window.tutorialManager.draw === 'function') {
+            window.tutorialManager.draw(this.ctx, this.simXOffset);
+        }
     }
 
     handleMouseClick(x, y) {
+        if (window.tutorialManager && window.tutorialManager.isActive && window.tutorialManager.isActive()) {
+            if (window.tutorialManager.handleMouseClick(x, y)) return;
+        }
+
         if (boomInputLocked) {
             this.handleBoomOverlayClick(x, y);
             return;
@@ -1180,7 +1282,9 @@ class UICanvas {
         }
 
         // Check plutonium
-        if (typeof plutonium !== 'undefined' && plutonium) {
+        const plutoniumUnlocked = !(window.tutorialManager && typeof window.tutorialManager.isItemUnlocked === 'function')
+            || window.tutorialManager.isItemUnlocked('plutonium');
+        if (plutoniumUnlocked && typeof plutonium !== 'undefined' && plutonium) {
             const dx = m.x - plutonium.x;
             const dy = m.y - plutonium.y;
             if (Math.sqrt(dx * dx + dy * dy) <= plutonium.radius) {
@@ -1193,7 +1297,9 @@ class UICanvas {
         }
 
         // Check californium as well so clicks capture it before draw methods
-        if (typeof californium !== 'undefined' && californium) {
+        const californiumUnlocked = !(window.tutorialManager && typeof window.tutorialManager.isItemUnlocked === 'function')
+            || window.tutorialManager.isItemUnlocked('californium');
+        if (californiumUnlocked && typeof californium !== 'undefined' && californium) {
             const dx2 = m.x - californium.x;
             const dy2 = m.y - californium.y;
             if (Math.sqrt(dx2 * dx2 + dy2 * dy2) <= californium.radius) {

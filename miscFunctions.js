@@ -41,6 +41,10 @@ function oncePerSecond() {
         settings.targetNeutronSize = defaultSettings.neutronSize * targetMultiplier * globalScale;
         // Reset the per-second collision counter so size can recover next second
         ui.collisionsThisSecond = 0;
+
+        if (window.tutorialManager && typeof window.tutorialManager.onSecondTick === 'function') {
+            window.tutorialManager.onSecondTick();
+        }
     } else {
         ui.framesCounted++;
     }
@@ -161,6 +165,10 @@ function resetRunForPrestige() {
         setUiVisibility(true);
         paused = false;
     }
+
+    if (window.tutorialManager && typeof window.tutorialManager.notifySuccessfulPrestige === 'function') {
+        window.tutorialManager.notifySuccessfulPrestige();
+    }
 }
 
 window.resetRunForPrestige = resetRunForPrestige;
@@ -181,6 +189,10 @@ function rollbackSetback() {
     initializePlayerAtomGroups(player);
     initControlRodUpgrades();
     paused = false;
+
+    if (window.tutorialManager && typeof window.tutorialManager.notifyFailedPrestige === 'function') {
+        window.tutorialManager.notifyFailedPrestige();
+    }
 }
 
 function formatLarge(amount, unit, decimals = 2) {
@@ -200,6 +212,9 @@ function resetSimulation() {
 
     if (typeof plutonium !== 'undefined' && plutonium) {
         plutonium.resetPosition();
+        if (typeof plutonium.syncFromPlayer === 'function') {
+            plutonium.syncFromPlayer();
+        }
         plutonium.dragging = false;
     }
     if (typeof californium !== 'undefined' && californium) {
@@ -238,6 +253,7 @@ function resetSimulation() {
     energyOutput = 0;
     energyOutputCounter = 0;
     ui.collisionsThisSecond = 0;
+    renderTime = 0;
 }
 
 function startFreshGame() {
@@ -246,12 +262,32 @@ function startFreshGame() {
 
     player.deserialize(defaultPlayer.serialize());
     shop.deserialize(defaultShop.serialize());
+    if (typeof plutonium !== 'undefined' && plutonium && typeof plutonium.syncFromPlayer === 'function') {
+        plutonium.syncFromPlayer();
+    }
 
     resetSimulation();
     initializePlayerAtomGroups(player);
     initControlRodUpgrades();
     if (prestigeManager && typeof prestigeManager.loadFromPlayer === 'function') {
         prestigeManager.loadFromPlayer(player);
+    }
+
+    if (window.tutorialManager && typeof window.tutorialManager.loadFromSave === 'function') {
+        window.tutorialManager.loadFromSave({
+            tutorialEnabled: true,
+            tutorialCompleted: {},
+            tutorialShopUnlocked: false,
+            tutorialItemUnlocks: {
+                atom: true,
+                group: false,
+                controlRod: false,
+                waterFlow: false,
+                californium: false,
+                plutonium: false
+            },
+            tutorialMode: 'new'
+        });
     }
 }
 

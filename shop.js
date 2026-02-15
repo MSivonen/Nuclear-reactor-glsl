@@ -20,10 +20,32 @@ class Shop {
                 name: "Water Flow",
                 basePrice: 100,
                 priceMult: 1.5
+            },
+            plutonium: {
+                name: "Plutonium",
+                basePrice: 150,
+                priceMult: 1.8
             }
+        };
+        this.itemUnlocked = {
+            atom: true,
+            group: true,
+            controlRod: true,
+            waterFlow: true,
+            plutonium: true
         };
         this.buyAmount = 1;
         this.targetAtomGroupIndex = 0;
+    }
+
+    setItemUnlocked(itemName, isUnlocked) {
+        if (!Object.prototype.hasOwnProperty.call(this.itemUnlocked, itemName)) return;
+        this.itemUnlocked[itemName] = !!isUnlocked;
+    }
+
+    isItemUnlocked(itemName) {
+        if (!Object.prototype.hasOwnProperty.call(this.itemUnlocked, itemName)) return true;
+        return !!this.itemUnlocked[itemName];
     }
 
     setBuyAmount(amount) {
@@ -50,6 +72,8 @@ class Shop {
                 return controlRodPurchaseCount;
             case 'waterFlow':
                 return player.waterFlowUpgradeCount;
+            case 'plutonium':
+                return player.plutoniumUpgradeCount;
             default:
                 return 0;
         }
@@ -58,6 +82,7 @@ class Shop {
     getPurchaseInfo(itemName) {
         const item = this.items[itemName];
         if (!item) return { count: 0, cost: 0 };
+        if (!this.isItemUnlocked(itemName)) return { count: 0, cost: 0 };
 
         const currentCount = this.getItemCount(itemName);
         let countToBuy = this.buyAmount;
@@ -66,12 +91,17 @@ class Shop {
 
         const maxRodPurchases = (itemName === 'controlRod') ? getMaxControlRodPurchases() : 0;
         const maxWaterFlowUpgrades = (itemName === 'waterFlow') ? player.waterFlowUpgradeMax : 0;
+        const maxPlutoniumUpgrades = (itemName === 'plutonium') ? player.plutoniumUpgradeMax : 0;
 
         if (itemName === 'controlRod' && currentCount >= maxRodPurchases) {
             return { count: 0, cost: 0 };
         }
 
         if (itemName === 'waterFlow' && currentCount >= maxWaterFlowUpgrades) {
+            return { count: 0, cost: 0 };
+        }
+
+        if (itemName === 'plutonium' && currentCount >= maxPlutoniumUpgrades) {
             return { count: 0, cost: 0 };
         }
 
@@ -98,6 +128,8 @@ class Shop {
                     countToBuy = Math.max(0, maxRodPurchases - currentCount);
                 } else if (itemName === 'waterFlow') {
                     countToBuy = Math.max(0, maxWaterFlowUpgrades - currentCount);
+                } else if (itemName === 'plutonium') {
+                    countToBuy = Math.max(0, maxPlutoniumUpgrades - currentCount);
                 } else if (itemName === 'group') {
                     const maxGroups = getAtomGroupCount();
                     countToBuy = Math.max(0, maxGroups - currentCount);
@@ -186,6 +218,21 @@ class Shop {
             }
         }
 
+        if (itemName === 'plutonium') {
+            const maxBuy = Math.max(0, maxPlutoniumUpgrades - currentCount);
+            if (countToBuy > maxBuy) {
+                countToBuy = maxBuy;
+                if (countToBuy <= 0) return { count: 0, cost: 0 };
+
+                if (item.priceMult === 1) {
+                    totalCost = item.basePrice * countToBuy;
+                } else {
+                    const firstCost = item.basePrice * Math.pow(item.priceMult, currentCount);
+                    totalCost = firstCost * (Math.pow(item.priceMult, countToBuy) - 1) / (item.priceMult - 1);
+                }
+            }
+        }
+
         if (itemName === 'group') {
             const maxGroups = getAtomGroupCount();
             const maxBuy = Math.max(0, maxGroups - currentCount);
@@ -249,13 +296,27 @@ class Shop {
                     settings.waterFlowSpeed = Math.max(player.waterFlowMin, Math.min(player.waterFlowMax, settings.waterFlowSpeed));
                 }
                 break;
+            case 'plutonium':
+                if (player.plutoniumUpgradeCount < player.plutoniumUpgradeMax) {
+                    player.plutoniumUpgradeCount += 1;
+                    player.upgrades.plutonium = player.plutoniumUpgradeCount;
+                    if (typeof plutonium !== 'undefined' && plutonium && typeof plutonium.syncFromPlayer === 'function') {
+                        plutonium.syncFromPlayer();
+                    }
+                }
+                break;
+        }
+
+        if (window.tutorialManager && typeof window.tutorialManager.notifyShopItem === 'function') {
+            window.tutorialManager.notifyShopItem(itemName);
         }
     }
 
     serialize() {
         return {
             buyAmount: this.buyAmount,
-            targetAtomGroupIndex: this.targetAtomGroupIndex
+            targetAtomGroupIndex: this.targetAtomGroupIndex,
+            itemUnlocked: { ...this.itemUnlocked }
         };
     }
 
@@ -263,6 +324,14 @@ class Shop {
         if (!obj) return;
         this.buyAmount = obj.buyAmount || 1;
         this.targetAtomGroupIndex = obj.targetAtomGroupIndex ?? 0;
+        this.itemUnlocked = {
+            atom: true,
+            group: true,
+            controlRod: true,
+            waterFlow: true,
+            plutonium: true,
+            ...(obj.itemUnlocked || {})
+        };
     }
 }
 window.Shop = Shop;

@@ -109,15 +109,18 @@ MILESTONE 5: TUTORIAL SYSTEM
             * supports multiple consecutive windows, and actions after each window.
         *   Optional: Highlights a UI element (red circle or blinking border or blinking graphics layer).
 [ ] Planned Tutorials (Trigger points):
-    [ ] Start of Game (Welcome).
-    [ ] Timer 2min. (Notice the reactor is useless shit, give plutonium)
-    [ ] First bit of Heat generated.
-    [ ] First bit of Power generated.
-    [ ] Each item Unlock (Shop).
-    [ ] First Prestige available.
-    [ ] Failed Prestige.
-    [ ] Successful Prestige.
-    [ ] Tutorial prestiges done, going endless.
+    [ ] Start of Game (Welcome). The player has inherited an old building from their goofy Ukranian granpa. Bla bla bla, make a short story.
+    [ ] Timer 1min. The player has noticed the weird building is a old nuclear reactor.
+    [ ] Timer 2min. Notice the reactor is useless shit, give plutonium.
+    [ ] First bit of Heat generated (100c). Show temp meter.
+    [ ] First bit of Power and money generated (10kW). The player hears a low hum as the reactor is brought back to life. Play ambient sounds at this point.
+    [ ] Timer 1min after previous tutorial. The player wonders if he can sell the generated power. Show money stats.
+    [ ] 10 money earned, unlock the shop.
+    [ ] Each item Unlock (Shop) triggers a tutorial, and gives an explanation what the item in question does. Also some short bit of bg lore.
+    [ ] First Prestige available. Some explanation and a bit of lore. There is some weird thing that looks like [describe a flux capacitor but don't mention it's name], bla bla.
+    [ ] Failed Prestige. Some lore that hints something vague about back to the future.
+    [ ] Successful Prestige. Lore and explanation.
+    [ ] Tutorial prestiges done, going endless. Some text, idk.
 
 MILESTONE 6: SAVE/LOAD REFINEMENTS
 [x] Title Screen Slots

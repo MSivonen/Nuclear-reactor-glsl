@@ -35,6 +35,7 @@ function mousePressed() {
 
 function mouseDragged() {
   if (gameState === 'PRESTIGE' || gameState === 'PRESTIGE_TRANSITION') return;
+  if (window.tutorialManager && window.tutorialManager.isActive && window.tutorialManager.isActive()) return;
   if (boomInputLocked) return;
   const coords = getRelativeMouseCoords();
   ui.canvas.handleMouseDrag(coords.x, coords.y);
@@ -42,12 +43,14 @@ function mouseDragged() {
 
 function mouseReleased() {
   if (gameState === 'PRESTIGE' || gameState === 'PRESTIGE_TRANSITION') return;
+  if (window.tutorialManager && window.tutorialManager.isActive && window.tutorialManager.isActive()) return;
   if (boomInputLocked) return;
   ui.canvas.handleMouseRelease();
 }
 
 function keyPressed() {
   if (gameState === 'PRESTIGE' || gameState === 'PRESTIGE_TRANSITION') return;
+  if (window.tutorialManager && window.tutorialManager.isActive && window.tutorialManager.isActive()) return;
   if (boomInputLocked) return;
   if (key === 'p' || key === 'P' || keyCode === ESCAPE) {
     paused = !paused;

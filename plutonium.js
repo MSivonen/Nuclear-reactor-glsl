@@ -1,5 +1,11 @@
 class Plutonium {
     constructor() {
+        this.baseRadius = 15;
+        this.maxRadius = 30;
+        this.baseHeatPerSecond = 6000;
+        this.maxUpgradeLevel = 12;
+        this.upgradeLevel = 0;
+        this.heatPerSecond = this.baseHeatPerSecond;
         this.resetPosition();
         this.radius = 15; // Set in updateDimensions
         this.dragging = false;
@@ -14,16 +20,36 @@ class Plutonium {
     }
 
     updateDimensions() {
-        this.radius = 21 * globalScale; 
+        this.applyUpgradeLevel(this.upgradeLevel);
         
         // Clamp position if out of bounds after resize
         this.x = Math.max(this.radius, Math.min(this.x, screenSimWidth - this.radius));
         this.y = Math.max(this.radius, Math.min(this.y, screenHeight - this.radius));
     }
 
-    update() {
-        this.radius = 30 * globalScale;
+    applyUpgradeLevel(level) {
+        const maxLevel = Number.isFinite(this.maxUpgradeLevel) && this.maxUpgradeLevel > 0 ? this.maxUpgradeLevel : 1;
+        this.upgradeLevel = Math.max(0, Math.min(level || 0, maxLevel));
+        const t = this.upgradeLevel / maxLevel;
 
+        const baseRadiusScaled = this.baseRadius * globalScale;
+        const maxRadiusScaled = this.maxRadius * globalScale;
+        this.radius = baseRadiusScaled + (maxRadiusScaled - baseRadiusScaled) * t;
+
+        const heatMultiplier = 1 + 1.2 * t;
+        this.heatPerSecond = this.baseHeatPerSecond * heatMultiplier;
+    }
+
+    syncFromPlayer() {
+        if (typeof player !== 'undefined' && player) {
+            const level = Number.isFinite(player.plutoniumUpgradeCount) ? player.plutoniumUpgradeCount : 0;
+            this.applyUpgradeLevel(level);
+        } else {
+            this.applyUpgradeLevel(0);
+        }
+    }
+
+    update() {
         const mPos = scaleMouse(mouseX, mouseY);
 
         if (mouseIsPressed) {
@@ -63,15 +89,13 @@ class Plutonium {
                  let index = gy * uraniumAtomsCountX + gx;
                  if (waterSystem.waterCells[index]) {
                      const dt = deltaTime / 1000.0;
-                     waterSystem.waterCells[index].temperature += 20000 * dt;
+                     waterSystem.waterCells[index].temperature += this.heatPerSecond * dt;
                  }
              }
         }
     }
 
     draw(ctx, offsetX) {
-        this.radius = 15 * globalScale;
-        
         const drawX = this.x + offsetX;
         const drawY = this.y;
         // Compute transparency based on overlap with meters
