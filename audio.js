@@ -173,7 +173,8 @@ class AudioManager {
     }
 
     playSfx(key) {
-        if (this.prevPaused && key !== 'click' && key !== 'click_fail') return;
+        const isGamePaused = (typeof paused !== 'undefined') ? !!paused : false;
+        if (this.prevPaused && isGamePaused && key !== 'click' && key !== 'click_fail') return;
 
         let sfxEnabled = true;
         let sfxVol = ui.canvas.uiSettings.audio.sfx.vol;

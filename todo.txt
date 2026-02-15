@@ -124,4 +124,16 @@ v    -Ability to give a name to savegame
 
 
 === Bugs/Fixes ===
-    feature: rework the atom shop category, the existing group selection is clunky
+    feature: rework the atom shop category, the existing group selection is clunky. Make it compact and place it next to the buy button. Or something like that.
+    tweak: reduce the timer to show the plutonium unlock tutorial
+    -remove devmode on/off button, it's not needed with the new devtools button.
+    bug: plutonium should have number of electrons based on it's level. One electron with lowest level, one more per upgrade.
+    tweak: make the atoms start glowing at higher temperature. Move all the glow values up by 50%.
+    tweak: change temp gauge unlock+tutorial to 55C
+    tweak: set the neutron tutorial to be 10sec after plutonium unlock
+    feature: make the shit explode on overheat. Same mechanic as overpower.
+    bug: make the devtools print button print the whole objecs in the same format they are in code, for easy copypaste.
+    tweak: starting collision probability 0.071
+    tweak: shop unlocks at 5 money earned
+    tweak: plutonium upgrades should start at 5 money
+    bug/change: remove the tutorial for first failed prestige. Put the text on the boom screen instead, in addition of the default boom text. Only on first failure!

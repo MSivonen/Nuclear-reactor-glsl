@@ -70,57 +70,53 @@ MILESTONE 4: LOOP CONTENT & PROGRESSION
     [ ] Loop 1 Data:
         *   Low thresholds.
         *   No Californium available.
+        *   Plutonium unlocks at tutorial point
         *   Water Valve: Locked.
         *   Nothing in shop at start (tutorial will unlock shop items to be purchaseable, and these unlocks persist always)
     [ ] Loop 2 Data:
         *   Higher thresholds.
-        *   Unlock: Californium.
+        *   Unlock: Californium via tutorial.
         *   Tutorial event: unlock uranium in shop
     [ ] Loop 3 Data:
         *   Unlock: Water Valve manual control.
         *   Tutorial event: unlock uranium groups in shop
     [ ] Loop 4 Data:
-        *   Unlock: Buy more control rods in shop.
+        *   Unlock: Buy more control rods in shop.  //NOT IMPLEMENTED, rods are always available now, needs fix
         *   Tutorial event: unlock control rod upgrades in shop
-        *   Tutorial event: link control rod upgrades in shop, trigger when buying 3rd rod
+        *   Tutorial event: link control rods button in shop, trigger when buying 3rd rod
     [ ] Loop N (Procedural):
         *   Algorithm to scale Money/Power requirements exponentially (e.g., 1.5x previous).
         *   And make the game harder
 [ ] UI Conditional Visibility
     [ ] Modify `ui.js`:
-        *   Check `prestigeManager.loopNumber` OR `player.totalLifetimeMoney`.
+        *   Check `prestigeManager.loopNumber`.
         *   Hook up Gauge/Meter max values to `prestige.js` scaling factors.
-        *   Hide Water Valve until the control of it is unlocked.
-[ ] Shop Unlocks implementation
-    [ ] `checkShopRequirements()`:
-        *   Plutonium: Unlock > Loop 1.
-        *   Californium: Unlock > Loop 2.
 
 
 MILESTONE 5: TUTORIAL SYSTEM
-[ ] Tutorial Manager
-    [ ] Create `TutorialManager` class/object.
-    [ ] State: boolean `isEnabled` (stored in settings/save). Default: TRUE for new saves.
-    [ ] Menu: Add toggle in Options to disable tutorials.
-[ ] Tutorial Functionality
-    [ ] `showTutorial(title, text, highlightTarget)`
+[x] Tutorial Manager
+    [x] Create `TutorialManager` class/object.
+    [x] State: boolean `isEnabled` (stored in settings/save). Default: TRUE for new saves.
+    [x] Menu: Add toggle in Options to disable tutorials.
+[x] Tutorial Functionality //needs to be refactored for easier tutorial text storage and function calling
+    [x] `showTutorial(title, text, highlightTarget)`
         *   Pauses game.
         *   Draws window with text. Window position can be edited per tutorial item.
             * supports multiple consecutive windows, and actions after each window.
         *   Optional: Highlights a UI element (red circle or blinking border or blinking graphics layer).
 [ ] Planned Tutorials (Trigger points):
-    [ ] Start of Game (Welcome). The player has inherited an old building from their goofy Ukranian granpa. Bla bla bla, make a short story.
-    [ ] Timer 1min. The player has noticed the weird building is a old nuclear reactor.
-    [ ] Timer 2min. Notice the reactor is useless shit, give plutonium.
-    [ ] First bit of Heat generated (100c). Show temp meter.
-    [ ] First bit of Power and money generated (10kW). The player hears a low hum as the reactor is brought back to life. Play ambient sounds at this point.
-    [ ] Timer 1min after previous tutorial. The player wonders if he can sell the generated power. Show money stats.
+    [x] Start of Game (Welcome). The player has inherited an old building from their goofy Ukranian granpa. Bla bla bla, make a short story.
+    [x] Timer 30sec. The player has noticed the weird building is a old nuclear reactor.
+    [x] Timer 30sec after previous. Notice the reactor is useless shit, give plutonium.
+    [x] First bit of Heat generated (50c). Show temp meter.
+    [ ] First bit of Power generated (20kW). The player hears a low hum as the reactor is brought back to life. Play ambient sounds at this point.
+    [ ] Timer 1min after power tutorial. The player wonders if he can sell the generated power. Show money stats.
     [ ] 10 money earned, unlock the shop.
-    [ ] Each item Unlock (Shop) triggers a tutorial, and gives an explanation what the item in question does. Also some short bit of bg lore.
-    [ ] First Prestige available. Some explanation and a bit of lore. There is some weird thing that looks like [describe a flux capacitor but don't mention it's name], bla bla.
-    [ ] Failed Prestige. Some lore that hints something vague about back to the future.
-    [ ] Successful Prestige. Lore and explanation.
-    [ ] Tutorial prestiges done, going endless. Some text, idk.
+    [x] Each item Unlock (Shop) triggers a tutorial, and gives an explanation what the item in question does. Also some short bit of bg lore.
+    [x] First Prestige available. Some explanation and a bit of lore. There is some weird thing that looks like [describe a flux capacitor but don't mention it's name], bla bla.
+    [x] Failed Prestige. Some lore that hints something vague about back to the future.
+    [x] Successful Prestige. Lore and explanation.
+    [x] Tutorial prestiges done, going endless. Some text, idk.
 
 MILESTONE 6: SAVE/LOAD REFINEMENTS
 [x] Title Screen Slots

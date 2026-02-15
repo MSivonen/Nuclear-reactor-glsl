@@ -23,10 +23,6 @@ class TutorialManager {
     }
 
     loadFromSave(saveData) {
-        const hasTimestamp = !!(saveData && saveData.timestamp);
-        const newGameMode = !!(saveData && saveData.tutorialMode === 'new');
-        const legacySave = hasTimestamp && typeof saveData.tutorialShopUnlocked !== 'boolean';
-
         this.isEnabled = saveData && typeof saveData.tutorialEnabled === 'boolean'
             ? saveData.tutorialEnabled
             : true;
@@ -37,7 +33,7 @@ class TutorialManager {
 
         this.completed = { ...loadedCompleted };
 
-        const defaultUnlocked = legacySave || !newGameMode;
+        const defaultUnlocked = true;
         this.shopUnlocked = (saveData && typeof saveData.tutorialShopUnlocked === 'boolean')
             ? saveData.tutorialShopUnlocked
             : defaultUnlocked;
@@ -140,16 +136,102 @@ class TutorialManager {
         return Math.sin(t * 8.5) > -0.15;
     }
 
+    getTutorialPagesById(id) {
+        const pages = window.TUTORIAL_PAGES || {};
+        const sequences = window.TUTORIAL_SEQUENCES || {};
+        if (!id || typeof id !== 'string') return [];
+
+        if (Array.isArray(sequences[id])) {
+            return sequences[id]
+                .map((pageId) => pages[pageId])
+                .filter((page) => page && typeof page === 'object')
+                .map((page) => ({ ...page }));
+        }
+
+        const page = pages[id];
+        if (page && typeof page === 'object') {
+            return [{ ...page }];
+        }
+
+        return [];
+    }
+
+    normalizeTutorialInput(idOrIdsOrSteps, stepsOrOptions, maybeOptions) {
+        let entryId = null;
+        let steps = [];
+        let options = {};
+        let completionIds = [];
+
+        const isDirectStepsCall = typeof idOrIdsOrSteps === 'string' && Array.isArray(stepsOrOptions);
+        if (isDirectStepsCall) {
+            entryId = idOrIdsOrSteps;
+            steps = stepsOrOptions.map((step) => ({ ...step }));
+            options = (maybeOptions && typeof maybeOptions === 'object') ? maybeOptions : {};
+            completionIds = [entryId];
+            return { entryId, steps, options, completionIds };
+        }
+
+        if (typeof idOrIdsOrSteps === 'string') {
+            entryId = idOrIdsOrSteps;
+            steps = this.getTutorialPagesById(idOrIdsOrSteps);
+            options = (stepsOrOptions && typeof stepsOrOptions === 'object') ? stepsOrOptions : {};
+            completionIds = [entryId];
+            return { entryId, steps, options, completionIds };
+        }
+
+        if (Array.isArray(idOrIdsOrSteps)) {
+            const optionsInput = (stepsOrOptions && typeof stepsOrOptions === 'object') ? stepsOrOptions : {};
+            options = optionsInput;
+            const ids = [];
+
+            idOrIdsOrSteps.forEach((entry) => {
+                if (typeof entry === 'string') {
+                    ids.push(entry);
+                    const resolved = this.getTutorialPagesById(entry);
+                    steps.push(...resolved);
+                } else if (entry && typeof entry === 'object') {
+                    steps.push({ ...entry });
+                }
+            });
+
+            completionIds = ids.length ? Array.from(new Set(ids)) : [];
+            entryId = typeof options.sequenceId === 'string' && options.sequenceId
+                ? options.sequenceId
+                : (completionIds.length
+                    ? completionIds.join('__')
+                    : `custom_sequence_${Date.now()}_${Math.floor(Math.random() * 9999)}`);
+
+            return { entryId, steps, options, completionIds };
+        }
+
+        return { entryId: null, steps: [], options: {}, completionIds: [] };
+    }
+
     queueTutorial(id, steps, options = {}) {
+        return this.showTutorial(id, steps, options);
+    }
+
+    showTutorial(idOrIdsOrSteps, stepsOrOptions, maybeOptions) {
         if (!this.isEnabled) return false;
+
+        const normalized = this.normalizeTutorialInput(idOrIdsOrSteps, stepsOrOptions, maybeOptions);
+        const id = normalized.entryId;
+        const steps = normalized.steps;
+        const options = normalized.options;
+        const completionIds = normalized.completionIds;
+
         if (!id || !Array.isArray(steps) || steps.length === 0) return false;
-        if (!options.allowRepeat && this.hasCompleted(id)) return false;
+
+        const repeatable = !!options.allowRepeat;
+        if (!repeatable && completionIds.length > 0 && completionIds.every((completedId) => this.hasCompleted(completedId))) {
+            return false;
+        }
 
         const inQueue = this.queue.some(entry => entry.id === id);
         const isActive = this.activeSequence && this.activeSequence.id === id;
         if (inQueue || isActive) return false;
 
-        this.queue.push({ id, steps, options });
+        this.queue.push({ id, steps, options, completionIds });
         this.tryOpenNext();
         return true;
     }
@@ -184,9 +266,13 @@ class TutorialManager {
 
     finishActiveSequence() {
         if (!this.activeSequence) return;
-        const { id, options } = this.activeSequence;
+        const { id, options, completionIds } = this.activeSequence;
         if (!options.allowRepeat) {
-            this.markCompleted(id);
+            if (Array.isArray(completionIds) && completionIds.length > 0) {
+                completionIds.forEach((completionId) => this.markCompleted(completionId));
+            } else {
+                this.markCompleted(id);
+            }
         }
         if (typeof options.onComplete === 'function') {
             options.onComplete();
@@ -203,18 +289,14 @@ class TutorialManager {
     }
 
     setUiInteractivityForTutorial(isTutorialActive) {
-        if (!window.ui || !ui.canvas) return;
+        if (typeof ui === 'undefined' || !ui.canvas) return;
 
-        if (ui.canvas.canvas) {
-            ui.canvas.canvas.style.zIndex = isTutorialActive ? '80' : '15';
+        if (ui.canvas.shopOverlay) {
+            ui.canvas.shopOverlay.style.pointerEvents = isTutorialActive ? 'none' : 'auto';
         }
 
         if (ui.canvas.sidebar) {
             ui.canvas.sidebar.style.pointerEvents = isTutorialActive ? 'none' : 'auto';
-        }
-
-        if (ui.canvas.shopOverlay) {
-            ui.canvas.shopOverlay.style.pointerEvents = isTutorialActive ? 'none' : 'auto';
         }
     }
 
@@ -234,19 +316,13 @@ class TutorialManager {
 
     onRunStarted() {
         this.applyUnlocksToShop();
-        this.queueTutorial('start_welcome', [
-            {
-                title: 'Decayed history',
-                text: 'You bought a strange industrial building from an Ukrainian auction. As you arrive there, you notice a Swedish car branded Tserno outside. It emits an eerie hum... Or are your ears playing tricks on you? You don\'t waste many thoughts on the car, and step inside the building.',
-                windowLayout: { x: 0.5, y: 0.44, width: 0.72, height: 0.30, relative: 'sim' }
-            },
-            {
-                title: 'What does the inside of your nose smell like?',
-                text: 'Inside the old building is some weird stuff that you don\'t recognize. It has a weird smell of ozone and burnt metal lingering in the air. You go in to explore.',
-                highlightTarget: { type: 'panel', panel: 'controls' },
-                windowLayout: { x: 0.5, y: 0.56, width: 0.72, height: 0.30, relative: 'sim' }
-            }
-        ]);
+        this.showTutorial('start_welcome');
+    }
+
+    onScramPressed() {
+        if (!this.hasCompleted('scram_intro')) {
+            this.showTutorial('scram_intro');
+        }
     }
 
     onSecondTick() {
@@ -257,7 +333,10 @@ class TutorialManager {
 
         if (typeof gameState !== 'undefined' && gameState !== 'PLAYING') return;
         if (typeof paused !== 'undefined' && paused) return;
-        if (typeof boom !== 'undefined' && boom) return;
+        if (typeof boom !== 'undefined' && boom) {
+            this.notifyFailedPrestige();
+            return;
+        }
 
         const currentLoop = (typeof prestigeManager !== 'undefined' && prestigeManager && Number.isFinite(prestigeManager.loopNumber))
             ? prestigeManager.loopNumber
@@ -266,137 +345,37 @@ class TutorialManager {
         const money = (typeof player !== 'undefined' && player && typeof player.getBalance === 'function') ? player.getBalance() : 0;
 
         if (!this.shopUnlocked && money >= 10) {
-            this.queueTutorial('shop_unlock_10_money', [{
-                title: 'Shop Online',
-                text: 'You earned your first money. A dusty terminal unlocks and shows reactor upgrades for sale.',
-                windowLayout: { x: 0.5, y: 0.30, width: 0.68, height: 0.28, relative: 'sim' }
-            }], {
-                onComplete: () => {
-                    this.setShopUnlocked(true);
-                }
-            });
+            this.setShopUnlocked(true);
+            if (!this.hasCompleted('shop_unlock_10_money')) {
+                this.showTutorial([ 'shop_unlock_10_money', 'shop_unlock_10_money_2', 'shop_unlock_10_money_3' ]);
+            }
         }
 
-        if (!this.isItemUnlocked('atom') && currentLoop >= 2) {
-            this.queueTutorial('unlock_atom', [{
-                title: 'Uranium Unlocked',
-                text: 'Uranium can now be bought. More uranium means more targets for neutron hits and stronger chain reactions.',
-                blinkLayer: 'uranium'
-            }], {
-                onComplete: () => {
-                    this.setItemUnlocked('atom', true);
-                }
-            });
-        }
+        if (!this.isItemUnlocked('plutonium') && typeof renderTime === 'number' && renderTime >= 60) this.setItemUnlocked('plutonium', true);
+        if (!this.isItemUnlocked('atom') && currentLoop >= 2) this.setItemUnlocked('atom', true);
+        if (!this.isItemUnlocked('californium') && currentLoop >= 2) this.setItemUnlocked('californium', true);
+        if (!this.isItemUnlocked('group') && currentLoop >= 3) this.setItemUnlocked('group', true);
+        if (!this.isItemUnlocked('waterFlow') && currentLoop >= 3) this.setItemUnlocked('waterFlow', true);
+        if (!this.isItemUnlocked('controlRod') && currentLoop >= 4) this.setItemUnlocked('controlRod', true);
 
-        if (!this.isItemUnlocked('californium') && currentLoop >= 2) {
-            this.queueTutorial('unlock_californium', [{
-                title: 'Californium Unlocked',
-                text: 'Californium can now be used. It emits neutrons and helps kickstart stronger fission activity.',
-                blinkLayer: 'neutrons'
-            }], {
-                onComplete: () => {
-                    this.setItemUnlocked('californium', true);
-                }
-            });
-        }
-
-        if (!this.isItemUnlocked('group') && currentLoop >= 3) {
-            this.queueTutorial('unlock_group', [{
-                title: 'Uranium Groups Unlocked',
-                text: 'You can now expand the reactor with whole uranium groups. Expansion increases both output and risk.',
-                blinkLayer: 'uranium'
-            }], {
-                onComplete: () => {
-                    this.setItemUnlocked('group', true);
-                }
-            });
-        }
-
-        if (!this.isItemUnlocked('waterFlow') && currentLoop >= 3) {
-            this.queueTutorial('unlock_water_flow', [{
-                title: 'Water Valve Control',
-                text: 'Manual water flow control is now unlocked. Flow speed directly affects cooling and power behavior.'
-            }], {
-                onComplete: () => {
-                    this.setItemUnlocked('waterFlow', true);
-                }
-            });
-        }
-
-        if (!this.isItemUnlocked('controlRod') && currentLoop >= 4) {
-            this.queueTutorial('unlock_control_rod', [{
-                title: 'Control Rod Upgrades',
-                text: 'Additional control rods are now available. Use them to tame neutron growth and stabilize the core.',
-                blinkLayer: 'rods'
-            }], {
-                onComplete: () => {
-                    this.setItemUnlocked('controlRod', true);
-                }
-            });
-        }
-
-        if (!this.hasCompleted('timer_1m') && typeof renderTime === 'number' && renderTime >= 30) {
-            this.queueTutorial('timer_1m', [{
-                title: 'What Is This Place?',
-                text: 'The weird building starts to make sense. This is a retired nuclear reactor facility. Probably unsafe. Definitely useful. You push a button labeled "Don\'t push" and the lights flicker on. A console blinks to life, displaying a single line of text: "Reactor core functional"',
-                windowLayout: { x: 0.5, y: 0.40, width: 0.70, height: 0.30, relative: 'sim' }
-            }]);
-        }
-
-        if (this.hasCompleted('timer_1m') && !this.hasCompleted('timer_2m_plutonium') && typeof renderTime === 'number' && renderTime >= 60) {
+        if (this.hasCompleted('scram_intro') && !this.hasCompleted('plutonium_intro') && typeof renderTime === 'number' && renderTime >= 60) {
             if (!this.isItemUnlocked('plutonium')) {
                 this.setItemUnlocked('plutonium', true);
             }
-            this.queueTutorial('timer_2m_plutonium', [{
-                title: 'Too Weak to Matter',
-                text: 'This reactor is currently useless, it generates little to no power. You find a strange glowing green rock, and throw it into the reactor. Some water starts to boil instantly.',
-                highlightTarget: { type: 'sim-object', object: 'plutonium' }
-            }, {
-                title: 'Plutonium',
-                text: 'This is plutonium, a highly radioactive element that can\'t sustain a chain reaction. It\'s just a heat source, and doesn\'t emit any neutrons.',
-                highlightTarget: { type: 'sim-object', object: 'plutonium' }
-            }]);
+            this.showTutorial('plutonium_intro');
         }
 
         const avgTempValue = Number.isFinite(window.avgTemp) ? window.avgTemp : 0;
-        if (!this.hasCompleted('first_heat_100c') && avgTempValue >= 100) {
-            this.queueTutorial('first_heat_100c', [{
-                title: 'Heat Rising',
-                text: 'Average core temperature passed 100°C. Monitor the temperature to avoid an expensive and fiery life lesson.',
-                highlightTarget: { type: 'sim-object', object: 'temp_meter' }
-            }, {
-                title: 'Tempting',
-                text: 'You feel tempted to push the limits.'
-            }]);
+        if (!this.hasCompleted('heat_warning') && avgTempValue >= 100) {
+            this.showTutorial('heat_warning');
         }
 
-        if (!this.hasCompleted('first_power_10kw') && powerValue >= 10) {
-            this.queueTutorial('first_power_10kw', [{
-                title: 'First Output',
-                text: 'Power reached 10 kW. A low hum fills the hall as the reactor begins to feel alive. You notice a power meter. It\'s a simple dial, but it gives you a sense of accomplishment. You wonder how high it can go.',
-                highlightTarget: { type: 'sim-object', object: 'power_meter' }
-            }], {
-                onComplete: () => {
-                    this.firstPowerTutorialAt = Number.isFinite(renderTime) ? renderTime : 0;
-                }
-            });
+        if (!this.hasCompleted('first_power_output') && powerValue >= 10) {
+            this.showTutorial(['first_power_output', 'income_intro']);
         }
 
         if (powerValue >= 10 && !this.hasCompleted('neutron_intro')) {
             this.notifyNeutronTutorial();
-        }
-
-        if (
-            this.firstPowerTutorialAt !== null &&
-            !this.hasCompleted('money_followup_1m') &&
-            Number.isFinite(renderTime) &&
-            renderTime >= this.firstPowerTutorialAt + 30
-        ) {
-            this.queueTutorial('money_followup_1m', [{
-                title: 'Sell the Output',
-                text: 'If this machine makes power, it can make money. Time to get rich.'
-            }]);
         }
 
         if (!this.hasCompleted('first_prestige_available')) {
@@ -404,11 +383,7 @@ class TutorialManager {
                 ? prestigeManager.getCurrentThresholds()
                 : { money: Infinity, power: Infinity };
             if (money >= thresholds.money && powerValue >= thresholds.power) {
-                this.queueTutorial('first_prestige_available', [{
-                    title: 'A Strange Device',
-                    text: 'Near the reactor wall you spot a Y-shaped rig with three glowing channels and a pulsing central chamber. It looks home made and clumsy, but seems to be functional. This might have been a good time to find it.',
-                    windowLayout: { x: 0.5, y: 0.36, width: 0.75, height: 0.30, relative: 'sim' }
-                }]);
+                this.showTutorial('first_prestige_available');
             }
         }
 
@@ -417,10 +392,7 @@ class TutorialManager {
             this.lastKnownLoop < this.endlessLoopStart &&
             !this.hasCompleted('endless_mode_start')
         ) {
-            this.queueTutorial('endless_mode_start', [{
-                title: 'Endless Phase',
-                text: 'The Great Glow has taken control of you. You will do this over and over again, without end. May the Atom\'s blessings be upon you.'
-            }]);
+            this.showTutorial('endless_mode_start');
         }
 
         this.lastKnownLoop = currentLoop;
@@ -444,71 +416,45 @@ class TutorialManager {
     notifyShopItem(itemName) {
         if (!this.isEnabled) return;
         if (itemName === 'atom' && !this.hasCompleted('shop_atom_purchase')) {
-            this.queueTutorial('shop_atom_purchase', [{
-                title: 'Uranium Columns',
-                text: 'Uranium pieces are your reactor body. More pieces means more targets for neutrons to hit.',
-                blinkLayer: 'uranium'
-            }]);
+            this.showTutorial('shop_atom_purchase');
         }
 
         if (itemName === 'group' && !this.hasCompleted('shop_group_purchase')) {
-            this.queueTutorial('shop_group_purchase', [{
-                title: 'New Uranium Group',
-                text: 'A new group increases reactor footprint and potential output. Expand carefully to keep cooling in control.',
-                blinkLayer: 'uranium'
-            }]);
+            this.showTutorial('shop_group_purchase');
         }
 
         if (itemName === 'controlRod' && !this.hasCompleted('shop_control_rod_purchase')) {
-            this.queueTutorial('shop_control_rod_purchase', [{
-                title: 'Control Rod Added',
-                text: 'Control rods are used to slow down neutrons and make them more probable to hit uranium atoms.',
-                blinkLayer: 'rods'
-            }]);
+            this.showTutorial('shop_control_rod_purchase');
         }
 
         if (itemName === 'waterFlow' && !this.hasCompleted('shop_water_flow_purchase')) {
-            this.queueTutorial('shop_water_flow_purchase', [{
-                title: 'Water Valve',
-                text: 'Control the water flow to keep the reactor hot, but not overheating.'
-            }]);
+            this.showTutorial('shop_water_flow_purchase');
         }
 
         if (itemName === 'plutonium' && !this.hasCompleted('shop_plutonium_purchase')) {
-            this.queueTutorial('shop_plutonium_purchase', [{
-                title: 'Denser Heat Source',
-                text: 'Upgrading plutonium increases its heating power and size. Use it carefully to push output without tripping into runaway temperatures.',
-                highlightTarget: { type: 'sim-object', object: 'plutonium' }
-            }]);
+            this.showTutorial('shop_plutonium_purchase');
         }
     }
 
     notifyNeutronTutorial() {
         if (!this.hasCompleted('neutron_intro')) {
-            this.queueTutorial('neutron_intro', [{
-                title: 'Neutron Dynamics',
-                text: 'Uranium atoms spontaneously decay, releasing some neutrons slowly. When those neutrons hit other uranium atoms, they can cause them to decay on hit, and release two more neutrons. If there is enough uranium around, this will cause a (controlled) chain reaction.',
-                blinkLayer: 'neutrons',
-                windowLayout: { x: 0.5, y: 0.30, width: 0.70, height: 0.30, relative: 'sim' }
-            }]);
+            this.showTutorial('neutron_intro');
         }
     }
 
     notifyFailedPrestige() {
         if (!this.hasCompleted('failed_prestige')) {
-            this.queueTutorial('failed_prestige', [{
-                title: 'Not so great glow',
-                text: 'You have failed the Atom\'s calling. The device you found earlier, flickers and the timeline snaps a bit back but not cleanly. You lose part of your progress.'
-            }]);
+            this.showTutorial('failed_prestige');
         }
+    }
+
+    on88MphBackwardsButtonPress() {
+        this.notifyFailedPrestige();
     }
 
     notifySuccessfulPrestige() {
         if (!this.hasCompleted('successful_prestige')) {
-            this.queueTutorial('successful_prestige', [{
-                title: 'Prestigeous!',
-                text: 'The reactor collapses and reforms around a stronger baseline. You return stronger. You feel a glow inside you.'
-            }]);
+            this.showTutorial('successful_prestige');
         }
     }
 
@@ -525,7 +471,7 @@ class TutorialManager {
         const boxH = rect.h;
 
         ctx.save();
-
+        ctx.globalCompositeOperation = 'source-over'; // Ensure tutorial is drawn on top
         ctx.fillStyle = 'rgba(18, 18, 18, 0.93)';
         ctx.strokeStyle = 'rgba(150, 255, 150, 0.9)';
         ctx.lineWidth = 1.5 * globalScale;
@@ -601,7 +547,8 @@ class TutorialManager {
         let x = cx - width * anchorX;
         let y = cy - height * anchorY;
 
-        x = Math.max(areaX + 8 * globalScale, Math.min(x, areaX + areaW - width - 8 * globalScale));
+        const leftBound = Math.max(areaX + 8 * globalScale, simXOffset + 8 * globalScale);
+        x = Math.max(leftBound, Math.min(x, areaX + areaW - width - 8 * globalScale));
         y = Math.max(areaY + 8 * globalScale, Math.min(y, areaY + areaH - height - 8 * globalScale));
 
         return { x, y, w: width, h: height };

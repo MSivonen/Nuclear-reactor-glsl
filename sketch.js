@@ -59,6 +59,10 @@ function setUiVisibility(visible) {
   if (uiLayer) {
     uiLayer.style.display = visible ? 'block' : 'none';
   }
+  const shopOverlay = document.getElementById('ui-shop-overlay');
+  if (shopOverlay) {
+    shopOverlay.style.display = visible ? '' : 'none';
+  }
   const uiCanvas = document.getElementById('UI-Canvas');
   if (uiCanvas) {
     uiCanvas.style.display = visible ? 'block' : 'none';

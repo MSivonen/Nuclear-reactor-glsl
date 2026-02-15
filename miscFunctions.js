@@ -75,6 +75,30 @@ function resetThermalState() {
 function triggerBoom() {
     if (boom) return;
 
+    const thresholds = (prestigeManager && typeof prestigeManager.getCurrentThresholds === 'function')
+        ? prestigeManager.getCurrentThresholds()
+        : { money: Infinity, power: Infinity };
+
+    const moneyThreshold = Number.isFinite(thresholds.money) ? thresholds.money : Infinity;
+    const powerThreshold = Number.isFinite(thresholds.power) ? thresholds.power : Infinity;
+    const currentMoney = (player && typeof player.getBalance === 'function') ? player.getBalance() : 0;
+    const currentPower = Number.isFinite(energyOutput) ? energyOutput : 0;
+    const qualifiesForPrestige = currentMoney >= moneyThreshold && currentPower >= powerThreshold;
+
+    if (!qualifiesForPrestige && window.tutorialManager && typeof window.tutorialManager.showTutorial === 'function') {
+        const shouldShow = !window.tutorialManager.hasCompleted || !window.tutorialManager.hasCompleted('failed_prestige');
+        if (shouldShow) {
+            const opened = window.tutorialManager.showTutorial('failed_prestige', {
+                onComplete: () => {
+                    triggerBoom();
+                }
+            });
+            if (opened) {
+                return;
+            }
+        }
+    }
+
     boom = true;
     boomStartTime = renderTime;
     boomPrestigePopupShown = false;
@@ -88,6 +112,7 @@ function triggerBoom() {
     ui.canvas.resetRodHandles();
 
     settings.linkRods = false;
+
     ui.canvas.updateLinkRodsButton();
 
     audioManager.playSfx('boom');
@@ -97,16 +122,7 @@ function triggerBoom() {
         rod.targetY = rod.initialY; // Ensure targets are reset
     });
 
-    const thresholds = (prestigeManager && typeof prestigeManager.getCurrentThresholds === 'function')
-        ? prestigeManager.getCurrentThresholds()
-        : { money: Infinity, power: Infinity };
-
-    const moneyThreshold = Number.isFinite(thresholds.money) ? thresholds.money : Infinity;
-    const powerThreshold = Number.isFinite(thresholds.power) ? thresholds.power : Infinity;
-    const currentMoney = (player && typeof player.getBalance === 'function') ? player.getBalance() : 0;
-    const currentPower = Number.isFinite(energyOutput) ? energyOutput : 0;
-
-    if (currentMoney >= moneyThreshold && currentPower >= powerThreshold) {
+    if (qualifiesForPrestige) {
         boomOutcome = 'PRESTIGE';
         boomSetbackLoss = 0;
         return;
@@ -124,6 +140,7 @@ function triggerBoom() {
             }
         }
     } catch (e) { console.log("Setback autosave error:", e); }
+
 }
 
 function resetRunForPrestige() {

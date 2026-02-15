@@ -37,13 +37,17 @@ class UICanvas {
         this.canvas.style.position = 'absolute';
         this.canvas.style.left = '0';
         this.canvas.style.top = '0';
-        this.canvas.style.zIndex = '15'; 
         this.canvas.style.pointerEvents = 'none';
         this.canvas.style.display = 'none'; // Initially hidden
         this.canvas.id = "UI-Canvas";
 
+        const tutorialLayer = document.getElementById('layer-tutorial');
         const container = document.getElementById('canvas-container');
-        container.appendChild(this.canvas);
+        if (tutorialLayer) {
+            tutorialLayer.appendChild(this.canvas);
+        } else if (container) {
+            container.appendChild(this.canvas);
+        }
 
         this.ctx = this.canvas.getContext('2d');
         
@@ -347,6 +351,12 @@ class UICanvas {
             setTimeout(() => {
                 audioManager.stopAllImmediate && audioManager.stopAllImmediate();
                 resetSimulation();
+                this.pauseMenu.classList.add('hidden');
+                this.slotMenu.classList.add('hidden');
+                this.settingsMenu.classList.add('hidden');
+                this.shopOpen = false;
+                this.shopOverlay.classList.add('hidden');
+                paused = false;
                 setUiVisibility(false);
                 gameState = 'TITLE';
                 if (window.titleRenderer && typeof window.titleRenderer.resetNeutrons === 'function') {
@@ -415,6 +425,9 @@ class UICanvas {
                 } else {
                     // Start a fresh game in the selected slot
                     startFreshGame();
+                }
+                if (window.tutorialManager && typeof window.tutorialManager.onRunStarted === 'function') {
+                    window.tutorialManager.onRunStarted();
                 }
                 // Transition logic is handled by loader.js
             });
@@ -853,6 +866,10 @@ class UICanvas {
             btn.classList.add('scram-active');
             btn.innerText = '!!SCRAM!!';
 
+        if (window.tutorialManager && typeof window.tutorialManager.onScramPressed === 'function') {
+            window.tutorialManager.onScramPressed();
+        }
+
         try {
             const sfxEnabled = ui.canvas.uiSettings.audio.sfx.enabled;
             const sfxVol = ui.canvas.uiSettings.audio.sfx.vol;
@@ -1152,7 +1169,7 @@ class UICanvas {
 
         const showMoneyStats = !window.tutorialManager
             || !window.tutorialManager.hasCompleted
-            || window.tutorialManager.hasCompleted('first_power_10kw')
+            || window.tutorialManager.hasCompleted('first_power_output')
             || (Number.isFinite(energyOutput) && energyOutput >= 10);
         mStat.style.display = showMoneyStats ? '' : 'none';
         iStat.style.display = showMoneyStats ? '' : 'none';
@@ -1226,11 +1243,11 @@ class UICanvas {
 
         const showPowerMeter = !window.tutorialManager
             || !window.tutorialManager.hasCompleted
-            || window.tutorialManager.hasCompleted('first_power_10kw')
+            || window.tutorialManager.hasCompleted('first_power_output')
             || (Number.isFinite(energyOutput) && energyOutput >= 10);
         const showTempMeter = !window.tutorialManager
             || !window.tutorialManager.hasCompleted
-            || window.tutorialManager.hasCompleted('first_heat_100c')
+            || window.tutorialManager.hasCompleted('heat_warning')
             || (Number.isFinite(window.avgTemp) && window.avgTemp >= 100);
 
         if (showPowerMeter) {
@@ -1357,6 +1374,11 @@ class UICanvas {
 }
 
 function drawBorders(ctx, offsetX = 0) {
+    const uiLayer = document.getElementById('ui-layer');
+    const sidebar = document.getElementById('ui-sidebar');
+    const sidebarVisible = !!(uiLayer && uiLayer.style.display !== 'none' && sidebar);
+    if (sidebarVisible) return;
+
     ctx.save();
     ctx.fillStyle = 'black';
     // Fill anything to the left of simulation (already covered by sidebar usually, but keep for safety)

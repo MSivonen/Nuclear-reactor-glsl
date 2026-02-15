@@ -23,6 +23,9 @@ const loader = {
     const startBtn = document.getElementById('loading-start-btn');
     const loadingStartDiv = document.getElementById('loading-start');
     const fadeOverlay = document.getElementById('fade-overlay');
+    const rootStyles = getComputedStyle(document.documentElement);
+    const fadeBaseZ = rootStyles.getPropertyValue('--z-system-fade').trim() || '2000';
+    const fadeTopZ = rootStyles.getPropertyValue('--z-system-fade-top').trim() || '3000';
 
     // Prepare Fade In
     loadingStartDiv.style.opacity = '0';
@@ -60,7 +63,7 @@ const loader = {
       
       // Start Fade Out (Title -> Black)
       if (fadeOverlay) {
-        fadeOverlay.style.zIndex = '3000';
+        fadeOverlay.style.zIndex = fadeTopZ;
         fadeOverlay.style.opacity = '1';
       }
 
@@ -74,7 +77,7 @@ const loader = {
         // Start Fade In (Black -> Game)
         setTimeout(() => {
             if (fadeOverlay) {
-              fadeOverlay.style.zIndex = '2000';
+              fadeOverlay.style.zIndex = fadeBaseZ;
               fadeOverlay.style.opacity = '0';
             }
         }, 100);

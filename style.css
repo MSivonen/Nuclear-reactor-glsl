@@ -3,6 +3,17 @@ html, body {
   padding: 0;
 }
 
+:root {
+  --z-game: 10;
+  --z-sidebar: 20;
+  --z-shop: 30;
+  --z-tutorial: 40;
+  --z-pause: 50;
+  --z-system-fade: 2000;
+  --z-system-loading: 2100;
+  --z-system-fade-top: 3000;
+}
+
 @font-face {
   font-family: 'UIFont1';
   src: url('assets/SpecialElite-Regular.ttf');
@@ -23,6 +34,40 @@ html, body {
   isolation: isolate;
 }
 
+.layer-root {
+  position: absolute;
+  inset: 0;
+}
+
+#layer-game {
+  z-index: var(--z-game);
+}
+
+#layer-sidebar {
+  z-index: var(--z-sidebar);
+  pointer-events: none;
+}
+
+#layer-shop {
+  z-index: var(--z-shop);
+  pointer-events: none;
+}
+
+#layer-tutorial {
+  z-index: var(--z-tutorial);
+  pointer-events: none;
+}
+
+#layer-pause {
+  z-index: var(--z-pause);
+  pointer-events: none;
+}
+
+#layer-system {
+  z-index: var(--z-system-fade);
+  pointer-events: none;
+}
+
 /* Background for the simulation area (matches `waterColor` in sketch.js) */
 #canvas-container {
   background: rgb(0, 0, 0);
@@ -30,6 +75,12 @@ html, body {
 
 canvas {
   display: block;
+}
+
+#gameCanvas {
+  position: absolute;
+  left: 0;
+  top: 0;
 }
 
 /* UI Overlay Styles */
@@ -40,7 +91,6 @@ canvas {
   width: 100%;
   height: 100%;
   pointer-events: none; /* Let clicks pass through to canvas */
-  z-index: 20;
   display: flex;
 }
 
@@ -97,7 +147,6 @@ canvas {
   display: flex;
   flex-direction: column;
   font-family: 'UIFont1', monospace;
-  z-index: 60;
   overflow-y: auto;
   box-shadow: 0 0 10px rgba(0,0,0,0.5);
 }
@@ -276,7 +325,20 @@ canvas {
   text-align: center;
   font-family: 'UIFont1', monospace;
   pointer-events: auto;
-  z-index: 40;
+}
+
+#ui-slot-menu,
+#ui-settings-menu {
+  pointer-events: auto;
+}
+
+#loading-screen {
+  z-index: var(--z-system-loading);
+  pointer-events: auto;
+}
+
+#fade-overlay {
+  z-index: var(--z-system-fade);
 }
 
 #ui-pause-menu h2 {
