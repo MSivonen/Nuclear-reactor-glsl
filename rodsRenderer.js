@@ -73,6 +73,7 @@ class RodsRenderer {
         
         // Rods first
         for (let i = 0; i < rods.length; i++) {
+            if (typeof isControlRodActive === 'function' && !isControlRodActive(i)) continue;
             const r = rods[i];
 
             // 1. The Rod Cylinder

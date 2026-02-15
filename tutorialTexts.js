@@ -1,13 +1,12 @@
 const TUTORIAL_PAGES = {
     start_welcome_1: {
         title: 'Decayed history',
-        text: 'You bought a strange industrial building from an Ukrainian auction. As you arrive there, you notice a Swedish car branded Tserno outside. It emits an eerie hum... Or are your ears playing tricks on you? You don\'t waste many thoughts on the car, and step inside the building.',
+        text: 'You won a strange industrial building from an East European lottery. As you arrive there, you notice a Swedish car branded Tserno outside. It emits an eerie hum... Or are your ears playing tricks on you? You don\'t waste many thoughts on the car, and step inside the building.',
         windowLayout: { x: 0.5, y: 0.44, width: 0.72, height: 0.30, relative: 'sim' }
     },
     start_welcome_2: {
         title: 'What does the inside of your nose smell like?',
-        text: 'Inside the old building is some weird stuff that you don\'t recognize. It has a weird smell of ozone and burnt metal lingering in the air. You go in to explore.',
-        highlightTarget: { type: 'panel', panel: 'controls' },
+        text: 'Inside the old building is some weird stuff that you don\'t recognize. It has a slightly repulsive smell of ozone and burnt metal lingering in the air. You go in to explore.',
         windowLayout: { x: 0.5, y: 0.56, width: 0.72, height: 0.30, relative: 'sim' }
     },
     shop_unlock_10_money: {
@@ -15,14 +14,14 @@ const TUTORIAL_PAGES = {
         text: 'You earned your first money. A dusty vending machine powers up and shows reactor upgrades for sale.',
         windowLayout: { x: 0.5, y: 0.30, width: 0.68, height: 0.28, relative: 'sim' }
     },
-        shop_unlock_10_money_2: {
+    shop_unlock_10_money_2: {
         title: 'Shop?',
-        text: 'Really? A vending machine? Who the hell designs a vending machine for a nuclear reactor? You can\'t help but feel that this is some kind of a joke.',
+        text: 'Really? A vending machine? Who the hell thought it\'d be a good idea to have a vending machine for nuclear reactor parts? You can\'t help but feel this is some kind of a joke.',
         windowLayout: { x: 0.5, y: 0.30, width: 0.68, height: 0.28, relative: 'sim' }
     },
-        shop_unlock_10_money_3: {
-        title: 'Oh really...',
-        text: 'Just for curiosity\'s sake, you search a trashcan, a ventilation shaft, and a kitchen cabinet. In disappointment, you do not find any ammo, coins, or stimpaks...',
+    shop_unlock_10_money_3: {
+        title: 'Wanna play a game? Sure, let\'s play a game.',
+        text: 'Just for curiosity\'s sake, you search a trashcan, a ventilation shaft, and a kitchen cabinet. In disappointment, you do not find any ammo, coins, or stimpaks... Only a common rock.',
         windowLayout: { x: 0.5, y: 0.30, width: 0.68, height: 0.28, relative: 'sim' }
     },
     unlock_atom: {
@@ -32,8 +31,7 @@ const TUTORIAL_PAGES = {
     },
     unlock_californium: {
         title: 'Californium Unlocked',
-        text: 'Californium can now be used. It emits neutrons and helps kickstart stronger fission activity.',
-        blinkLayer: 'neutrons'
+        text: 'Californium can now be purchased. It emits neutrons that can spark stronger uranium chain reactions.',
     },
     unlock_group: {
         title: 'Uranium Groups Unlocked',
@@ -42,36 +40,36 @@ const TUTORIAL_PAGES = {
     },
     unlock_water_flow: {
         title: 'Water Valve Control',
-        text: 'Manual water flow control is now unlocked. Flow speed directly affects cooling and power behavior.'
+        text: 'Manual water flow control is now unlocked. Flow speed directly affects cooling and power behavior. And yes, for some reason there exists a valve that must be upgraded with money. How does that even work?'
     },
     unlock_control_rod: {
         title: 'Control Rod Upgrades',
-        text: 'Additional control rods are now available. Use them to tame neutron growth and stabilize the core.',
+        text: 'Additional control rods are now available and upgradeable. Use them to tame neutron growth and stabilize the core.',
         blinkLayer: 'rods'
     },
     scram_intro: {
         title: 'What Is This Place?',
-        text: 'You push a button labeled "Don\'t push" and the lights flicker on. A console blinks to life, displaying a single line of text: "Reactor core functional". The weird building starts to make sense. This is a retired nuclear reactor facility. Probably unsafe. Definitely useful.',
+        text: 'You push a button labeled "Don\'t push" and the lights flicker on. A console blinks to life, displaying a single line of text: "Reactor core functional". The weird building starts to make sense. This is a retired nuclear reactor facility. Probably unsafe. Definitely interesting.',
         windowLayout: { x: 0.5, y: 0.40, width: 0.70, height: 0.30, relative: 'sim' }
     },
     plutonium_intro_1: {
         title: 'Too Weak to Matter',
-        text: 'This reactor is currently useless, it generates little to no power. You find a strange glowing green rock, and throw it into the reactor. Some water starts to boil instantly.',
+        text: 'This reactor is currently useless - it generates little to no power. The rock in your pocket is getting a bit warm, and emits an eerie green glow. You decide to not store it close to your man-parts, and throw it into the reactor instead. Some water starts to boil instantly.',
         highlightTarget: { type: 'sim-object', object: 'plutonium' }
     },
     plutonium_intro_2: {
-        title: 'Plutonium',
-        text: 'This is plutonium, a highly radioactive element that can\'t sustain a chain reaction. It\'s just a heat source, and doesn\'t emit any neutrons.',
+        title: 'Warm rock',
+        text: 'This is plutonium, a highly radioactive element. When thrown into a reactor, it\'s just a heat source, and doesn\'t emit any neutrons that would help sustain a chain reaction.',
         highlightTarget: { type: 'sim-object', object: 'plutonium' }
     },
     heat_warning_1: {
         title: 'Heat Rising',
-        text: 'An old thermometer flickers to life. Monitor the temperature to avoid an expensive and fiery life lesson.',
+        text: 'An old thermometer flickers to life. Bit by bit the building feels to wake up from it\'s decades-long hibernation. You feel a slight glow inside you. Must be the heat. You have to be careful not to overheat the core.',
         highlightTarget: { type: 'sim-object', object: 'temp_meter' }
     },
     heat_warning_2: {
         title: 'Tempting',
-        text: 'On the other hand, you do feel tempted to push the limits.'
+        text: 'On the other hand, you do feel it\'s important to push the limits.'
     },
     first_power_output: {
         title: 'First Output',
@@ -79,18 +77,23 @@ const TUTORIAL_PAGES = {
         highlightTarget: { type: 'sim-object', object: 'power_meter' }
     },
     income_intro: {
-        title: 'Sell the Output',
+        title: 'Greed',
         text: 'If this machine makes power, it can make money. Time to get rich.'
     },
     neutron_intro: {
-        title: 'Neutrons',
-        text: 'Uranium atoms spontaneously decay, releasing some neutrons slowly. When those neutrons hit other uranium atoms, they can cause them to decay on hit, and release two more neutrons. If there is enough uranium around, this will cause a (controlled) chain reaction.',
+        title: 'Yo science!',
+        text: 'Uranium atoms spontaneously decay, releasing some neutrons slowly. When those neutrons hit other uranium atoms, they can cause them to decay on hit, and release two more neutrons. If there is enough uranium around, this will cause a controlled(?) chain reaction.',
         blinkLayer: 'neutrons',
         windowLayout: { x: 0.5, y: 0.30, width: 0.70, height: 0.30, relative: 'sim' }
     },
+    found_a_weird_device: {
+        title: 'A Strange Device',
+        text: 'Near the reactor wall you spot a Y-shaped rig with three dimly glowing channels and a pulsing central chamber. It looks home made and clumsy, but seems to be intact.',
+        windowLayout: { x: 0.5, y: 0.36, width: 0.75, height: 0.30, relative: 'sim' }
+    },
     first_prestige_available: {
         title: 'A Strange Device',
-        text: 'Near the reactor wall you spot a Y-shaped rig with three glowing channels and a pulsing central chamber. It looks home made and clumsy, but seems to be functional. This might have been a good time to find it.',
+        text: 'The device on the reactor wall has it\'s channels glowing brighter and the central chamber glowing bright. You feel the glow inside you warmer than ever.',
         windowLayout: { x: 0.5, y: 0.36, width: 0.75, height: 0.30, relative: 'sim' }
     },
     endless_mode_start: {
@@ -108,8 +111,8 @@ const TUTORIAL_PAGES = {
         blinkLayer: 'uranium'
     },
     shop_control_rod_purchase: {
-        title: 'Control Rod Added',
-        text: 'Control rods are used to slow down neutrons and make them more probable to hit uranium atoms.',
+        title: 'Control Rod Controls',
+        text: 'Now drag a control rod handle to move rods. Push them deeper to absorb more neutrons and calm the chain reaction.',
         blinkLayer: 'rods'
     },
     shop_water_flow_purchase: {
@@ -120,6 +123,11 @@ const TUTORIAL_PAGES = {
         title: 'Denser Heat Source',
         text: 'Upgrading plutonium increases its heating power and size. Yay, your warm rock is now a bit warmer.',
         highlightTarget: { type: 'sim-object', object: 'plutonium' }
+    },
+    shop_californium_purchase: {
+        title: 'Neutron Source',
+        text: 'Upgrading californium increases its size, electron count, and neutron emission output.',
+        highlightTarget: { type: 'sim-object', object: 'californium' }
     },
     failed_prestige: {
         title: 'Not so great glow',

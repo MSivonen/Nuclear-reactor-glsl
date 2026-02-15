@@ -33,7 +33,11 @@ function oncePerSecond() {
             }
         } catch (e) { console.log("Autosave error:", e); }
 
-        if (energyOutput >= game.boomValue) triggerBoom();
+        const tempLimit = (ui && ui.tempMeter && Number.isFinite(ui.tempMeter.max))
+            ? ui.tempMeter.max
+            : 500;
+        const avgTempValue = Number.isFinite(window.avgTemp) ? window.avgTemp : 0;
+        if (energyOutput >= game.boomValue || avgTempValue >= tempLimit) triggerBoom();
 
         const collisionFactor = Math.min(1, collisionsThisSecond / settings.neutronsDownSizeMaxAmount); // 0 at 0 collisions, 1 at 500+
         const targetMultiplier = 1 - (collisionFactor * 0.7); // 1.0 to 0.3
@@ -85,20 +89,6 @@ function triggerBoom() {
     const currentPower = Number.isFinite(energyOutput) ? energyOutput : 0;
     const qualifiesForPrestige = currentMoney >= moneyThreshold && currentPower >= powerThreshold;
 
-    if (!qualifiesForPrestige && window.tutorialManager && typeof window.tutorialManager.showTutorial === 'function') {
-        const shouldShow = !window.tutorialManager.hasCompleted || !window.tutorialManager.hasCompleted('failed_prestige');
-        if (shouldShow) {
-            const opened = window.tutorialManager.showTutorial('failed_prestige', {
-                onComplete: () => {
-                    triggerBoom();
-                }
-            });
-            if (opened) {
-                return;
-            }
-        }
-    }
-
     boom = true;
     boomStartTime = renderTime;
     boomPrestigePopupShown = false;
@@ -130,6 +120,14 @@ function triggerBoom() {
 
     boomOutcome = 'SETBACK';
     boomSetbackLoss = Math.max(0, currentMoney * 0.25);
+
+    boomShowFailedPrestigeLore = false;
+    if (window.tutorialManager && typeof window.tutorialManager.hasCompleted === 'function' && typeof window.tutorialManager.markCompleted === 'function') {
+        if (!window.tutorialManager.hasCompleted('failed_prestige_story_seen')) {
+            boomShowFailedPrestigeLore = true;
+            window.tutorialManager.markCompleted('failed_prestige_story_seen');
+        }
+    }
 
     try {
         const selected = (playerState && typeof playerState.getSelectedSlot === 'function') ? playerState.getSelectedSlot() : 0;
@@ -207,9 +205,6 @@ function rollbackSetback() {
     initControlRodUpgrades();
     paused = false;
 
-    if (window.tutorialManager && typeof window.tutorialManager.notifyFailedPrestige === 'function') {
-        window.tutorialManager.notifyFailedPrestige();
-    }
 }
 
 function formatLarge(amount, unit, decimals = 2) {
@@ -236,6 +231,9 @@ function resetSimulation() {
     }
     if (typeof californium !== 'undefined' && californium) {
         californium.resetPosition();
+        if (typeof californium.syncFromPlayer === 'function') {
+            californium.syncFromPlayer();
+        }
         californium.dragging = false;
         californium.spawnTimer = 0;
     }
@@ -266,6 +264,7 @@ function resetSimulation() {
     boomOutcome = 'NONE';
     boomPrestigePopupShown = false;
     boomSetbackLoss = 0;
+    boomShowFailedPrestigeLore = false;
     setBoomInputLock(false);
     energyOutput = 0;
     energyOutputCounter = 0;

@@ -30,6 +30,137 @@ class ControlRod {
     }
 }
 
+const CONTROL_ROD_SLOT_ORDER = [2, 1, 3, 0, 4];
+const CONTROL_ROD_UPGRADE_SEQUENCE = [1, 3, 0, 4];
+const CONTROL_ROD_STEP = 0.05;
+const CONTROL_ROD_SIDE_BASE = 0.25;
+const CONTROL_ROD_SIDE_CAP = 1.0;
+
+function getControlRodCenterIndex() {
+    return Math.floor(controlRodCount / 2);
+}
+
+function isControlRodActive(index) {
+    if (index < 0 || index >= controlRodCount) return false;
+    const activeCount = Math.max(1, Math.min(controlRodPurchaseCount || 1, controlRodCount));
+    for (let i = 0; i < activeCount; i++) {
+        if (CONTROL_ROD_SLOT_ORDER[i] === index) return true;
+    }
+    return false;
+}
+
+function getControlRodActiveIndices() {
+    const indices = [];
+    for (let i = 0; i < controlRodCount; i++) {
+        if (isControlRodActive(i)) indices.push(i);
+    }
+    return indices;
+}
+
+function getControlRodMaxPercent(index) {
+    const centerIndex = getControlRodCenterIndex();
+    if (index === centerIndex) return 1.0;
+    const level = controlRodUpgradeLevels[index] || 0;
+    return Math.min(CONTROL_ROD_SIDE_CAP, CONTROL_ROD_SIDE_BASE + level * CONTROL_ROD_STEP);
+}
+
+function clampControlRodHandleY(index, desiredY) {
+    if (!isControlRodActive(index)) return 0;
+    const maxPercent = getControlRodMaxPercent(index);
+    const maxY = screenHeight * maxPercent;
+    const clamped = Math.min(Math.max(desiredY, 0), maxY);
+    return clamped;
+}
+
+function getMaxControlRodPurchases() {
+    return controlRodCount;
+}
+
+function getMaxControlRodUpgradePurchases() {
+    const maxPerRod = Math.max(0, Math.floor((CONTROL_ROD_SIDE_CAP - CONTROL_ROD_SIDE_BASE) / CONTROL_ROD_STEP));
+    return (controlRodCount - 1) * maxPerRod;
+}
+
+function getNextControlRodUpgradeIndex(startOffset = 0) {
+    const centerIndex = getControlRodCenterIndex();
+    const maxPerRod = Math.max(0, Math.floor((CONTROL_ROD_SIDE_CAP - CONTROL_ROD_SIDE_BASE) / CONTROL_ROD_STEP));
+    const seq = CONTROL_ROD_UPGRADE_SEQUENCE;
+    if (!seq.length) return -1;
+
+    for (let i = 0; i < seq.length; i++) {
+        const idx = seq[(startOffset + i) % seq.length];
+        if (idx < 0 || idx >= controlRodCount) continue;
+        if (idx === centerIndex) continue;
+        if (!isControlRodActive(idx)) continue;
+        const level = controlRodUpgradeLevels[idx] || 0;
+        if (level < maxPerRod) return idx;
+    }
+
+    return -1;
+}
+
+function applyControlRodPurchase() {
+    const maxPurchases = getMaxControlRodPurchases();
+    const current = controlRodPurchaseCount || 0;
+    if (current >= maxPurchases) return false;
+
+    controlRodPurchaseCount = current + 1;
+    player.rodCount = controlRodPurchaseCount;
+    if (ui.controlSlider && typeof ui.controlSlider.ensureHandleLength === 'function') {
+        ui.controlSlider.ensureHandleLength();
+    }
+    return true;
+}
+
+function applyControlRodUpgradePurchase() {
+    const maxPurchases = getMaxControlRodUpgradePurchases();
+    if ((controlRodUpgradePurchaseCount || 0) >= maxPurchases) return false;
+    if (!CONTROL_ROD_UPGRADE_SEQUENCE.length) return false;
+
+    if (!controlRodUpgradeLevels || controlRodUpgradeLevels.length !== controlRodCount) {
+        controlRodUpgradeLevels = new Array(controlRodCount).fill(0);
+    }
+    const seqIndex = (controlRodUpgradePurchaseCount || 0) % CONTROL_ROD_UPGRADE_SEQUENCE.length;
+    const rodIndex = getNextControlRodUpgradeIndex(seqIndex);
+    if (rodIndex === -1) return false;
+
+    controlRodUpgradeLevels[rodIndex] = (controlRodUpgradeLevels[rodIndex] || 0) + 1;
+    controlRodUpgradePurchaseCount = (controlRodUpgradePurchaseCount || 0) + 1;
+
+    if (ui.controlSlider && typeof ui.controlSlider.ensureHandleLength === 'function') {
+        ui.controlSlider.ensureHandleLength();
+    }
+
+    return true;
+}
+
+function initControlRodUpgrades() {
+    controlRodUpgradeLevels = new Array(controlRodCount).fill(0);
+
+    const requestedRods = Math.max(1, Math.min(player.rodCount || 1, getMaxControlRodPurchases()));
+    controlRodPurchaseCount = requestedRods;
+    player.rodCount = requestedRods;
+
+    const requestedUpgradePurchases = Math.min(player.rodUpgradeCount || 0, getMaxControlRodUpgradePurchases());
+    controlRodUpgradePurchaseCount = 0;
+
+    if (CONTROL_ROD_UPGRADE_SEQUENCE.length) {
+        for (let i = 0; i < requestedUpgradePurchases; i++) {
+            const seqIndex = controlRodUpgradePurchaseCount % CONTROL_ROD_UPGRADE_SEQUENCE.length;
+            const rodIndex = getNextControlRodUpgradeIndex(seqIndex);
+            if (rodIndex === -1) break;
+            controlRodUpgradeLevels[rodIndex] = (controlRodUpgradeLevels[rodIndex] || 0) + 1;
+            controlRodUpgradePurchaseCount++;
+        }
+    }
+
+    player.rodUpgradeCount = controlRodUpgradePurchaseCount;
+
+    if (ui.controlSlider && typeof ui.controlSlider.ensureHandleLength === 'function') {
+        ui.controlSlider.ensureHandleLength();
+    }
+}
+
 
 class ControlRodsSlider {
     constructor() {
@@ -46,6 +177,12 @@ class ControlRodsSlider {
         this.handleY = new Array(controlRods.length).fill(null);
         for (let i = 0; i < controlRods.length; i++) {
             const rod = controlRods[i];
+            if (!isControlRodActive(i)) {
+                this.handleY[i] = 0;
+                rod.y = rod.initialY;
+                rod.targetY = rod.initialY;
+                continue;
+            }
             const prevVal = prev[i];
             const rawHandle = (typeof prevVal === 'number') ? prevVal : (rod.y + rod.height);
             const clampedHandle = clampControlRodHandleY(i, rawHandle);
@@ -63,13 +200,17 @@ class ControlRodsSlider {
         ctx.save();
 
         const scramActive = ui.canvas.scramActive;
+        const scramPressedOnce = !!(window.tutorialManager
+            && typeof window.tutorialManager.hasCompleted === 'function'
+            && window.tutorialManager.hasCompleted('scram_pressed_once'));
         if (scramActive && this.draggingIndex !== -1) {
             this.draggingIndex = -1;
         }
 
         if (mouseIsPressed && this.draggingIndex === -1 && (!ui.canvas.activeDrag || ui.canvas.activeDrag.type === 'controlRod')) {
-            if (!paused && !scramActive) {
+            if (!paused && !scramActive && scramPressedOnce) {
                 for (let i = 0; i < controlRods.length; i++) {
+                    if (!isControlRodActive(i)) continue;
                     const rod = controlRods[i];
                     const handleX = rod.x + rod.width / 2;
                     const handleY = (typeof this.handleY[i] === 'number') ? this.handleY[i] : (rod.y + rod.height);
@@ -78,6 +219,9 @@ class ControlRodsSlider {
                     if (Math.sqrt(dx * dx + dy * dy) <= HANDLE_RADIUS + 4 * globalScale) { //grab the balls
                         this.draggingIndex = i;
                         ui.canvas.activeDrag = { type: 'controlRod', index: i };
+                        if (window.tutorialManager && typeof window.tutorialManager.onControlRodDragged === 'function') {
+                            window.tutorialManager.onControlRodDragged();
+                        }
                         break;
                     }
                 }
@@ -96,6 +240,7 @@ class ControlRodsSlider {
 
             if (linked) {
                 for (let j = 0; j < this.handleY.length; j++) {
+                    if (!isControlRodActive(j)) continue;
                     this.handleY[j] = clampControlRodHandleY(j, newY);
                     controlRods[j].targetY = this.handleY[j] - controlRods[j].height;
                 }
@@ -116,6 +261,7 @@ class ControlRodsSlider {
         }
 
         for (let i = 0; i < controlRods.length; i++) {
+            if (!isControlRodActive(i)) continue;
             const rod = controlRods[i];
             const drawX = offsetX + rod.x + rod.width / 2;
             const drawY = (typeof this.handleY[i] === 'number') ? this.handleY[i] : (rod.y + rod.height);
@@ -131,98 +277,11 @@ class ControlRodsSlider {
         ctx.restore();
     }
 }
-const CONTROL_ROD_UPGRADE_SEQUENCE = [1, 3, 1, 3, 0, 4];
-const CONTROL_ROD_STEP = 0.05;
-const CONTROL_ROD_SIDE_BASE = 0.25;
-const CONTROL_ROD_SIDE_CAP = 1.0;
-
-function getControlRodCenterIndex() {
-    return Math.floor(controlRodCount / 2);
-}
-
-function getControlRodMaxPercent(index) {
-    const centerIndex = getControlRodCenterIndex();
-    if (index === centerIndex) return 1.0;
-    const level = controlRodUpgradeLevels[index] || 0;
-    return Math.min(CONTROL_ROD_SIDE_CAP, CONTROL_ROD_SIDE_BASE + level * CONTROL_ROD_STEP);
-}
-
-function clampControlRodHandleY(index, desiredY) {
-    const maxPercent = getControlRodMaxPercent(index);
-    const maxY = screenHeight * maxPercent;
-    const clamped = Math.min(Math.max(desiredY, 0), maxY);
-    return clamped;
-}
-
-function getMaxControlRodPurchases() {
-    const centerIndex = getControlRodCenterIndex();
-    const maxPerRod = Math.max(0, Math.floor((CONTROL_ROD_SIDE_CAP - CONTROL_ROD_SIDE_BASE) / CONTROL_ROD_STEP));
-    return (controlRodCount - 1) * maxPerRod;
-}
-
-function getNextControlRodUpgradeIndex(startOffset = 0) {
-    const centerIndex = getControlRodCenterIndex();
-    const maxPerRod = Math.max(0, Math.floor((CONTROL_ROD_SIDE_CAP - CONTROL_ROD_SIDE_BASE) / CONTROL_ROD_STEP));
-    const seq = CONTROL_ROD_UPGRADE_SEQUENCE;
-    if (!seq.length) return -1;
-
-    for (let i = 0; i < seq.length; i++) {
-        const idx = seq[(startOffset + i) % seq.length];
-        if (idx < 0 || idx >= controlRodCount) continue;
-        if (idx === centerIndex) continue;
-        const level = controlRodUpgradeLevels[idx] || 0;
-        if (level < maxPerRod) return idx;
-    }
-
-    return -1;
-}
-
-function applyControlRodPurchase() {
-    const maxPurchases = getMaxControlRodPurchases();
-    if (controlRodPurchaseCount >= maxPurchases) return false;
-    if (!CONTROL_ROD_UPGRADE_SEQUENCE.length) return false;
-
-    if (!controlRodUpgradeLevels || controlRodUpgradeLevels.length !== controlRodCount) {
-        controlRodUpgradeLevels = new Array(controlRodCount).fill(0);
-    }
-    const seqIndex = controlRodPurchaseCount % CONTROL_ROD_UPGRADE_SEQUENCE.length;
-    const rodIndex = getNextControlRodUpgradeIndex(seqIndex);
-    if (rodIndex === -1) return false;
-
-    controlRodUpgradeLevels[rodIndex] = (controlRodUpgradeLevels[rodIndex] || 0) + 1;
-    controlRodPurchaseCount++;
-
-    player.rodCount = controlRodPurchaseCount;
-    ui.controlSlider.ensureHandleLength();
-
-    return true;
-}
-
-function initControlRodUpgrades() {
-    controlRodUpgradeLevels = new Array(controlRodCount).fill(0);
-    const maxPurchases = getMaxControlRodPurchases();
-    const requestedPurchases = Math.min(player.rodCount || 0, maxPurchases);
-    controlRodPurchaseCount = 0;
-
-    if (!CONTROL_ROD_UPGRADE_SEQUENCE.length) {
-        player.rodCount = controlRodPurchaseCount;
-        ui.controlSlider.ensureHandleLength();
-        return;
-    }
-
-    for (let i = 0; i < requestedPurchases; i++) {
-        const seqIndex = controlRodPurchaseCount % CONTROL_ROD_UPGRADE_SEQUENCE.length;
-        const rodIndex = getNextControlRodUpgradeIndex(seqIndex);
-        if (rodIndex === -1) break;
-        controlRodUpgradeLevels[rodIndex] = (controlRodUpgradeLevels[rodIndex] || 0) + 1;
-        controlRodPurchaseCount++;
-    }
-
-    player.rodCount = controlRodPurchaseCount;
-
-    ui.controlSlider.ensureHandleLength();
-}
 
 window.applyControlRodPurchase = applyControlRodPurchase;
+window.applyControlRodUpgradePurchase = applyControlRodUpgradePurchase;
 window.initControlRodUpgrades = initControlRodUpgrades;
 window.getMaxControlRodPurchases = getMaxControlRodPurchases;
+window.getMaxControlRodUpgradePurchases = getMaxControlRodUpgradePurchases;
+window.isControlRodActive = isControlRodActive;
+window.getControlRodActiveIndices = getControlRodActiveIndices;

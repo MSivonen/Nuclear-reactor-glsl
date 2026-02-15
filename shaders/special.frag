@@ -184,7 +184,11 @@ void main() {
     vec3 colElectronBehind = vec3(0.0);
     float alphaElectronBehind = 0.0;
     
-    for (int i = 0; i < 8; i++) { // 8 electrons
+    int electronCount = int(clamp(floor(vFlash + 0.5), 1.0, 16.0));
+    for (int i = 0; i < 16; i++) {
+         if (i >= electronCount) {
+             continue;
+         }
          float fi = float(i) + seed;
          float eSeed = seed + fi * 12.34;
          

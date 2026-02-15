@@ -257,17 +257,6 @@ class UICanvas {
         bindButtonSound(sideSetBtn);
         this.sidebar.appendChild(sideSetBtn);
 
-        const devBtn = document.createElement('button');
-        devBtn.id = 'btn-devmode';
-        devBtn.innerText = settings.cheatMode ? "DEV MODE: ON" : "DEV MODE: OFF";
-        devBtn.onclick = () => {
-            settings.cheatMode = !settings.cheatMode;
-            devBtn.innerText = settings.cheatMode ? "DEV MODE: ON" : "DEV MODE: OFF";
-            devBtn.style.color = settings.cheatMode ? '#5cb85c' : 'white';
-        };
-        bindButtonSound(devBtn);
-        this.sidebar.appendChild(devBtn);
-
         const devToolsBtn = document.createElement('button');
         devToolsBtn.id = 'btn-dev-tools';
         devToolsBtn.innerText = 'Dev Tools';
@@ -294,27 +283,7 @@ class UICanvas {
             };
         });
 
-        const amountControls = document.getElementById('shop-amount-controls');
-        const groupControls = document.createElement('div');
-        groupControls.id = 'shop-group-controls';
-        groupControls.style.marginBottom = '15px';
-        groupControls.style.display = 'flex';
-        groupControls.style.flexDirection = 'column';
-        groupControls.style.gap = '6px';
-
-        const groupLabel = document.createElement('span');
-        groupLabel.innerText = 'Uranium Group:';
-        groupControls.appendChild(groupLabel);
-
-        const groupRadios = document.createElement('div');
-        groupRadios.id = 'ui-atom-group-radios';
-        groupRadios.style.display = 'flex';
-        groupRadios.style.flexWrap = 'wrap';
-        groupRadios.style.gap = '8px';
-        groupControls.appendChild(groupRadios);
-
-        amountControls.insertAdjacentElement('afterend', groupControls);
-        this.atomGroupRadiosContainer = groupRadios;
+        this.atomGroupSelect = null;
 
         const onKeyChange = (e) => {
             if (e.key !== 'Shift' && e.key !== 'Control') return;
@@ -462,6 +431,7 @@ class UICanvas {
 
     isScramComplete() {
         for (let i = 0; i < controlRods.length; i++) {
+            if (typeof isControlRodActive === 'function' && !isControlRodActive(i)) continue;
             const rod = controlRods[i];
             const topY = -rod.height;
             if (Math.abs(rod.y - topY) > 1 || Math.abs(rod.targetY - topY) > 1) {
@@ -666,11 +636,6 @@ class UICanvas {
                 if (this.devInfiniteMoneyEnabled) {
                     player.balance = Math.max(player.balance, this.devInfiniteMoneyValue);
                     settings.cheatMode = true;
-                    const devModeBtn = document.getElementById('btn-devmode');
-                    if (devModeBtn) {
-                        devModeBtn.innerText = 'DEV MODE: ON';
-                        devModeBtn.style.color = '#5cb85c';
-                    }
                 }
             };
         }
@@ -737,7 +702,12 @@ class UICanvas {
                     }
                 };
 
-                console.log('DEV CONFIG:', JSON.stringify(payload, null, 2));
+                const toJsLiteral = (obj) => {
+                    const json = JSON.stringify(obj, null, 2);
+                    return json.replace(/"([a-zA-Z_$][\w$]*)":/g, '$1:');
+                };
+
+                console.log('DEV CONFIG (copy/paste):\nconst DEV_CONFIG = ' + toJsLiteral(payload) + ';');
                 this.showToast('Configuration printed to console');
             };
         }
@@ -932,7 +902,30 @@ class UICanvas {
                     audioManager.playSfx('click');
                 }
             });
-            itemDiv.appendChild(btn);
+            if (key === 'atom') {
+                const row = document.createElement('div');
+                row.style.display = 'flex';
+                row.style.gap = '8px';
+                row.style.alignItems = 'center';
+
+                const groupSelect = document.createElement('select');
+                groupSelect.id = 'ui-atom-group-select';
+                groupSelect.style.flex = '1 1 auto';
+                groupSelect.style.minWidth = '96px';
+                groupSelect.style.height = '34px';
+                groupSelect.onchange = (e) => {
+                    shop.setTargetAtomGroup(e.target.value);
+                    this.updateShopButtons();
+                };
+                this.atomGroupSelect = groupSelect;
+
+                btn.style.flex = '1 1 auto';
+                row.appendChild(groupSelect);
+                row.appendChild(btn);
+                itemDiv.appendChild(row);
+            } else {
+                itemDiv.appendChild(btn);
+            }
 
             this.shopItemsContainer.appendChild(itemDiv);
         });
@@ -942,40 +935,24 @@ class UICanvas {
     }
 
     renderAtomGroupRadios() {
-        if (!this.atomGroupRadiosContainer) return;
+        if (!this.atomGroupSelect) return;
 
-        const maxGroups = getAtomGroupCount();
         const owned = new Set(player.ownedGroups);
         const ownedIndices = Array.from(owned).sort((a,b) => a - b);
 
-        this.atomGroupRadiosContainer.innerHTML = '';
-
+        this.atomGroupSelect.innerHTML = '';
         for (let idx of ownedIndices) {
-            const label = document.createElement('label');
-            label.style.display = 'flex';
-            label.style.alignItems = 'center';
-            label.style.gap = '4px';
-
-            const input = document.createElement('input');
-            input.type = 'radio';
-            input.name = 'atomGroupRadio';
-            input.value = String(idx);
-            input.onchange = (e) => {
-                shop.setTargetAtomGroup(e.target.value);
-                this.updateShopButtons();
-            };
-
-            const text = document.createElement('span');
-            text.innerText = `Group ${idx + 1}`;
-
-            label.appendChild(input);
-            label.appendChild(text);
-            this.atomGroupRadiosContainer.appendChild(label);
+            const option = document.createElement('option');
+            option.value = String(idx);
+            option.text = `G${idx + 1}`;
+            this.atomGroupSelect.appendChild(option);
         }
 
-        // Set the initial selected
-        const selected = this.atomGroupRadiosContainer.querySelector(`input[value="${String(shop.targetAtomGroupIndex)}"]`);
-        if (selected) selected.checked = true;
+        const hasTarget = ownedIndices.includes(Number(shop.targetAtomGroupIndex));
+        if (!hasTarget && ownedIndices.length > 0) {
+            shop.setTargetAtomGroup(ownedIndices[0]);
+        }
+        this.atomGroupSelect.value = String(shop.targetAtomGroupIndex);
     }
 
     updateShopButtons() {
@@ -986,18 +963,16 @@ class UICanvas {
         // Update atom group radios if owned groups changed
         const owned = new Set(player.ownedGroups);
         const ownedIndices = Array.from(owned).sort((a,b) => a - b);
-        if (this.atomGroupRadiosContainer && this.atomGroupRadiosContainer.children.length !== ownedIndices.length) {
+        if (this.atomGroupSelect && this.atomGroupSelect.options.length !== ownedIndices.length) {
             this.renderAtomGroupRadios();
-        } else if (this.atomGroupRadiosContainer) {
+        } else if (this.atomGroupSelect) {
             // Ensure current target is one of the owned indices (compare as numbers)
             const targetNum = Number(shop.targetAtomGroupIndex);
             if (ownedIndices.length > 0 && !ownedIndices.includes(targetNum)) {
                 const firstOwned = ownedIndices[0];
                 shop.setTargetAtomGroup(firstOwned);
             }
-            // Update selection
-            const selected = this.atomGroupRadiosContainer.querySelector(`input[value="${String(shop.targetAtomGroupIndex)}"]`);
-            if (selected) selected.checked = true;
+            this.atomGroupSelect.value = String(shop.targetAtomGroupIndex);
         }
 
         Object.keys(shop.items).forEach(key => {
@@ -1007,11 +982,13 @@ class UICanvas {
             const desc = document.getElementById(`shop-desc-${key}`);
 
             const unlocked = shop.isItemUnlocked ? shop.isItemUnlocked(key) : true;
+            const rodUpgradeVisible = key !== 'controlRodUpgrade' || controlRodPurchaseCount > 1;
+            const showItem = unlocked && rodUpgradeVisible;
             if (itemDiv) {
-                itemDiv.style.display = unlocked ? '' : 'none';
+                itemDiv.style.display = showItem ? '' : 'none';
             }
 
-            if (!unlocked) {
+            if (!showItem) {
                 return;
             }
 
@@ -1030,9 +1007,17 @@ class UICanvas {
                     const current = player.plutoniumUpgradeCount;
                     const max = player.plutoniumUpgradeMax;
                     isMaxed = current >= max && max > 0;
+                } else if (key === 'californium') {
+                    const current = player.californiumUpgradeCount;
+                    const max = player.californiumUpgradeMax;
+                    isMaxed = current >= max && max > 0;
                 } else if (key === 'controlRod') {
                     const current = controlRodPurchaseCount;
                     const max = getMaxControlRodPurchases();
+                    isMaxed = current >= max && max > 0;
+                } else if (key === 'controlRodUpgrade') {
+                    const current = controlRodUpgradePurchaseCount;
+                    const max = getMaxControlRodUpgradePurchases();
                     isMaxed = current >= max && max > 0;
                 } else if (key === 'group') {
                     const current = player.ownedGroups.length;
@@ -1085,10 +1070,18 @@ class UICanvas {
                     const current = player.plutoniumUpgradeCount;
                     const max = player.plutoniumUpgradeMax;
                     title.innerText = `Plutonium ${current}/${max}`;
+                } else if (key === 'californium') {
+                    const current = player.californiumUpgradeCount;
+                    const max = player.californiumUpgradeMax;
+                    title.innerText = `Californium ${current}/${max}`;
                 } else if (key === 'controlRod') {
                     const current = controlRodPurchaseCount;
                     const max = getMaxControlRodPurchases();
                     title.innerText = `Control Rod ${current}/${max}`;
+                } else if (key === 'controlRodUpgrade') {
+                    const current = controlRodUpgradePurchaseCount;
+                    const max = getMaxControlRodUpgradePurchases();
+                    title.innerText = `Control Rod Upgrade ${current}/${max}`;
                 } else if (key === 'group') {
                     const current = player.ownedGroups.length;
                     const max = getAtomGroupCount();
@@ -1177,8 +1170,11 @@ class UICanvas {
         const linkRodsUnlocked = !window.tutorialManager
             || !window.tutorialManager.isItemUnlocked
             || window.tutorialManager.isItemUnlocked('controlRod');
-        const hasMultipleRods = Array.isArray(controlRods) && controlRods.length > 1;
-        const showLinkRods = linkRodsUnlocked && hasMultipleRods;
+        const hasMultipleRods = Number.isFinite(controlRodPurchaseCount) && controlRodPurchaseCount > 1;
+        const scramCompleted = !window.tutorialManager
+            || !window.tutorialManager.hasCompleted
+            || window.tutorialManager.hasCompleted('scram_pressed_once');
+        const showLinkRods = linkRodsUnlocked && scramCompleted && hasMultipleRods;
         if (this.linkRodsBtn) {
             this.linkRodsBtn.style.display = showLinkRods ? '' : 'none';
             if (!showLinkRods && settings.linkRods) {
@@ -1248,7 +1244,7 @@ class UICanvas {
         const showTempMeter = !window.tutorialManager
             || !window.tutorialManager.hasCompleted
             || window.tutorialManager.hasCompleted('heat_warning')
-            || (Number.isFinite(window.avgTemp) && window.avgTemp >= 100);
+            || (Number.isFinite(window.avgTemp) && window.avgTemp >= 55);
 
         if (showPowerMeter) {
             ui.powerMeter.draw(this.ctx, this.simXOffset);
@@ -1281,16 +1277,24 @@ class UICanvas {
         // Clicks outside simulation area are ignored
         if (m.x < 0) return;
 
+        const scramCompleted = !!(window.tutorialManager
+            && typeof window.tutorialManager.hasCompleted === 'function'
+            && window.tutorialManager.hasCompleted('scram_pressed_once'));
+
         // Check control rod handles first (highest priority)
         const HANDLE_RADIUS = 10 * globalScale;
-        if (controlRods && ui.controlSlider) {
+        if (scramCompleted && controlRods && ui.controlSlider) {
             for (let i = 0; i < controlRods.length; i++) {
+                if (typeof isControlRodActive === 'function' && !isControlRodActive(i)) continue;
                 const rod = controlRods[i];
                 const handleX = rod.x + rod.width / 2;
                 const handleY = (typeof ui.controlSlider.handleY[i] === 'number') ? ui.controlSlider.handleY[i] : (rod.y + rod.height);
                 const dx = m.x - handleX;
                 const dy = m.y - handleY;
                 if (Math.sqrt(dx * dx + dy * dy) <= HANDLE_RADIUS + 4 * globalScale) {
+                    if (window.tutorialManager && typeof window.tutorialManager.onControlRodDragged === 'function') {
+                        window.tutorialManager.onControlRodDragged();
+                    }
                     this.activeDrag = { type: 'controlRod', index: i };
                     ui.controlSlider.draggingIndex = i;
                     return;
@@ -1460,10 +1464,18 @@ function gameOver(ctx, offsetX = 0) {
         ctx.font = `${24 * globalScale}px UIFont1, sans-serif`;
         ctx.fillText('Reactor Melted - Progress Lost', centerX, centerY + 85 * globalScale);
 
+        if (typeof boomShowFailedPrestigeLore !== 'undefined' && boomShowFailedPrestigeLore) {
+            ctx.fillStyle = `rgba(200, 245, 200, ${fadeInAlpha})`;
+            ctx.font = `${16 * globalScale}px UIFont1, sans-serif`;
+            ctx.fillText('You have failed the Atom\'s calling, the reactor is melting.', centerX, centerY - 220 * globalScale);
+            ctx.fillText('You grab the device you found earlier and run to the car. You must escape.', centerX, centerY - 200 * globalScale);
+            ctx.fillText('The clock of the car flickers and it snaps a bit backwards.', centerX, centerY - 180 * globalScale);
+        }
+
         const lossText = `Setback loss: -${formatLarge(boomSetbackLoss || 0, CURRENCY_UNIT, 2)}`;
         ctx.fillStyle = `rgba(255, 180, 180, ${fadeInAlpha})`;
         ctx.font = `${18 * globalScale}px UIFont1, sans-serif`;
-        ctx.fillText(lossText, centerX, centerY + 115 * globalScale);
+        ctx.fillText(lossText, centerX, centerY + 112 * globalScale);
 
         ctx.fillStyle = hoverButton ? `rgba(45, 45, 45, ${fadeInAlpha})` : `rgba(22, 22, 22, ${fadeInAlpha})`;
         ctx.strokeStyle = `rgba(255, 255, 255, ${fadeInAlpha})`;

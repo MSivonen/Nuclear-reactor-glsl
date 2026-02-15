@@ -16,6 +16,11 @@ class Shop {
                 basePrice: 10,
                 priceMult: 1.3
             },
+            controlRodUpgrade: {
+                name: "Control Rod Upgrade",
+                basePrice: 50,
+                priceMult: 1.2
+            },
             waterFlow: {
                 name: "Water Flow",
                 basePrice: 100,
@@ -23,7 +28,12 @@ class Shop {
             },
             plutonium: {
                 name: "Plutonium",
-                basePrice: 150,
+                basePrice: 5,
+                priceMult: 1.8
+            },
+            californium: {
+                name: "Californium",
+                basePrice: 15,
                 priceMult: 1.8
             }
         };
@@ -31,8 +41,10 @@ class Shop {
             atom: true,
             group: true,
             controlRod: true,
+            controlRodUpgrade: true,
             waterFlow: true,
-            plutonium: true
+            plutonium: true,
+            californium: true
         };
         this.buyAmount = 1;
         this.targetAtomGroupIndex = 0;
@@ -70,10 +82,14 @@ class Shop {
                 return player.ownedGroups.length;
             case 'controlRod':
                 return controlRodPurchaseCount;
+            case 'controlRodUpgrade':
+                return controlRodUpgradePurchaseCount;
             case 'waterFlow':
                 return player.waterFlowUpgradeCount;
             case 'plutonium':
                 return player.plutoniumUpgradeCount;
+            case 'californium':
+                return player.californiumUpgradeCount;
             default:
                 return 0;
         }
@@ -90,10 +106,20 @@ class Shop {
         let totalCost = 0;
 
         const maxRodPurchases = (itemName === 'controlRod') ? getMaxControlRodPurchases() : 0;
+        const maxRodUpgradePurchases = (itemName === 'controlRodUpgrade') ? getMaxControlRodUpgradePurchases() : 0;
         const maxWaterFlowUpgrades = (itemName === 'waterFlow') ? player.waterFlowUpgradeMax : 0;
         const maxPlutoniumUpgrades = (itemName === 'plutonium') ? player.plutoniumUpgradeMax : 0;
+        const maxCaliforniumUpgrades = (itemName === 'californium') ? player.californiumUpgradeMax : 0;
 
         if (itemName === 'controlRod' && currentCount >= maxRodPurchases) {
+            return { count: 0, cost: 0 };
+        }
+
+        if (itemName === 'controlRodUpgrade' && controlRodPurchaseCount <= 1) {
+            return { count: 0, cost: 0 };
+        }
+
+        if (itemName === 'controlRodUpgrade' && currentCount >= maxRodUpgradePurchases) {
             return { count: 0, cost: 0 };
         }
 
@@ -102,6 +128,10 @@ class Shop {
         }
 
         if (itemName === 'plutonium' && currentCount >= maxPlutoniumUpgrades) {
+            return { count: 0, cost: 0 };
+        }
+
+        if (itemName === 'californium' && currentCount >= maxCaliforniumUpgrades) {
             return { count: 0, cost: 0 };
         }
 
@@ -126,10 +156,14 @@ class Shop {
                     countToBuy = getGroupAvailableSlots(groupIndex);
                 } else if (itemName === 'controlRod') {
                     countToBuy = Math.max(0, maxRodPurchases - currentCount);
+                } else if (itemName === 'controlRodUpgrade') {
+                    countToBuy = Math.max(0, maxRodUpgradePurchases - currentCount);
                 } else if (itemName === 'waterFlow') {
                     countToBuy = Math.max(0, maxWaterFlowUpgrades - currentCount);
                 } else if (itemName === 'plutonium') {
                     countToBuy = Math.max(0, maxPlutoniumUpgrades - currentCount);
+                } else if (itemName === 'californium') {
+                    countToBuy = Math.max(0, maxCaliforniumUpgrades - currentCount);
                 } else if (itemName === 'group') {
                     const maxGroups = getAtomGroupCount();
                     countToBuy = Math.max(0, maxGroups - currentCount);
@@ -203,6 +237,21 @@ class Shop {
             }
         }
 
+        if (itemName === 'controlRodUpgrade') {
+            const maxBuy = Math.max(0, maxRodUpgradePurchases - currentCount);
+            if (countToBuy > maxBuy) {
+                countToBuy = maxBuy;
+                if (countToBuy <= 0) return { count: 0, cost: 0 };
+
+                if (item.priceMult === 1) {
+                    totalCost = item.basePrice * countToBuy;
+                } else {
+                    const firstCost = item.basePrice * Math.pow(item.priceMult, currentCount);
+                    totalCost = firstCost * (Math.pow(item.priceMult, countToBuy) - 1) / (item.priceMult - 1);
+                }
+            }
+        }
+
         if (itemName === 'waterFlow') {
             const maxBuy = Math.max(0, maxWaterFlowUpgrades - currentCount);
             if (countToBuy > maxBuy) {
@@ -220,6 +269,21 @@ class Shop {
 
         if (itemName === 'plutonium') {
             const maxBuy = Math.max(0, maxPlutoniumUpgrades - currentCount);
+            if (countToBuy > maxBuy) {
+                countToBuy = maxBuy;
+                if (countToBuy <= 0) return { count: 0, cost: 0 };
+
+                if (item.priceMult === 1) {
+                    totalCost = item.basePrice * countToBuy;
+                } else {
+                    const firstCost = item.basePrice * Math.pow(item.priceMult, currentCount);
+                    totalCost = firstCost * (Math.pow(item.priceMult, countToBuy) - 1) / (item.priceMult - 1);
+                }
+            }
+        }
+
+        if (itemName === 'californium') {
+            const maxBuy = Math.max(0, maxCaliforniumUpgrades - currentCount);
             if (countToBuy > maxBuy) {
                 countToBuy = maxBuy;
                 if (countToBuy <= 0) return { count: 0, cost: 0 };
@@ -288,6 +352,14 @@ class Shop {
             case 'controlRod':
                 applyControlRodPurchase();
                 break;
+            case 'controlRodUpgrade':
+                if (controlRodPurchaseCount > 1) {
+                    const ok = applyControlRodUpgradePurchase();
+                    if (ok) {
+                        player.rodUpgradeCount = controlRodUpgradePurchaseCount;
+                    }
+                }
+                break;
             case 'waterFlow':
                 if (player.waterFlowUpgradeCount < player.waterFlowUpgradeMax) {
                     player.waterFlowUpgradeCount += 1;
@@ -302,6 +374,15 @@ class Shop {
                     player.upgrades.plutonium = player.plutoniumUpgradeCount;
                     if (typeof plutonium !== 'undefined' && plutonium && typeof plutonium.syncFromPlayer === 'function') {
                         plutonium.syncFromPlayer();
+                    }
+                }
+                break;
+            case 'californium':
+                if (player.californiumUpgradeCount < player.californiumUpgradeMax) {
+                    player.californiumUpgradeCount += 1;
+                    player.upgrades.californium = player.californiumUpgradeCount;
+                    if (typeof californium !== 'undefined' && californium && typeof californium.syncFromPlayer === 'function') {
+                        californium.syncFromPlayer();
                     }
                 }
                 break;
@@ -328,8 +409,10 @@ class Shop {
             atom: true,
             group: true,
             controlRod: true,
+            controlRodUpgrade: true,
             waterFlow: true,
             plutonium: true,
+            californium: true,
             ...(obj.itemUnlocked || {})
         };
     }

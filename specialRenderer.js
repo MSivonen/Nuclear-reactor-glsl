@@ -77,17 +77,8 @@ class SpecialRenderer {
             this.instanceData[base + 5] = item.seed; // Pass seed in alpha channel
             this.instanceData[base + 6] = item.radius * 3.0; // quad size large enough for orbit/glow
             
-            // Interaction State: 0.0=Idle, 1.0=Grabbed, 2.0=Dragging(Moving)
-            let interactionState = 0.0;
-            if (item.dragging) {
-                interactionState = 1.0;
-                // Check if mouse is moving (using p5.js globals)
-                const mouseSpeed = Math.abs(mouseX - pmouseX) + Math.abs(mouseY - pmouseY);
-                if (mouseSpeed > 0.1) {
-                    interactionState = 2.0;
-                }
-            }
-            this.instanceData[base + 7] = interactionState;
+            const electronCount = Number.isFinite(item.electronCount) ? item.electronCount : 8;
+            this.instanceData[base + 7] = electronCount;
             
             count++;
         }

@@ -7,7 +7,7 @@ let globalScale = screenHeight / 600;
 
 const defaultSettings = {
   neutronSpeed: 5,
-  collisionProbability: 0.055,
+  collisionProbability: 0.071,
   decayProbability: 0.0001,
   controlRodAbsorptionProbability: 0.1,
   controlRodHitProbability: 0.325,
@@ -30,6 +30,7 @@ let uraniumAtoms = [];
 let controlRods = [];
 let controlRodSlotXs = [];
 let controlRodPurchaseCount = 0;
+let controlRodUpgradePurchaseCount = 0;
 let controlRodUpgradeLevels = [];
 let waterCells = [];
 let grid;
@@ -39,6 +40,7 @@ let boomOutcome = 'NONE';
 let boomInputLocked = false;
 let boomPrestigePopupShown = false;
 let boomSetbackLoss = 0;
+let boomShowFailedPrestigeLore = false;
 let energyOutput = 0;
 let energyThisFrame = 0;
 let energyOutputCounter = 0;
@@ -228,6 +230,9 @@ function setup() {
   californium.updateDimensions();
   if (typeof plutonium.syncFromPlayer === 'function') {
     plutonium.syncFromPlayer();
+  }
+  if (typeof californium.syncFromPlayer === 'function') {
+    californium.syncFromPlayer();
   }
   plutonium.updateDimensions();
   // Show loading screen after we've resized DOM to avoid tiny flicker

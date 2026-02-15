@@ -8,6 +8,7 @@ class TutorialManager {
         this.activeStep = null;
         this.buttonRect = null;
         this.firstPowerTutorialAt = null;
+        this.plutoniumIntroAt = null;
         this.endlessLoopStart = 6;
         this.lastKnownLoop = 1;
 
@@ -82,6 +83,7 @@ class TutorialManager {
         this.activeStepIndex = -1;
         this.activeStep = null;
         this.buttonRect = null;
+        this.plutoniumIntroAt = null;
         this.setUiInteractivityForTutorial(false);
     }
 
@@ -111,9 +113,13 @@ class TutorialManager {
 
     setItemUnlocked(itemName, unlocked) {
         if (!Object.prototype.hasOwnProperty.call(this.itemUnlocks, itemName)) return;
+        const wasUnlocked = !!this.itemUnlocks[itemName];
         this.itemUnlocks[itemName] = !!unlocked;
         if (itemName === 'plutonium' && this.itemUnlocks[itemName] && typeof plutonium !== 'undefined' && plutonium && typeof plutonium.syncFromPlayer === 'function') {
             plutonium.syncFromPlayer();
+        }
+        if (itemName === 'californium' && !wasUnlocked && this.itemUnlocks[itemName] && !this.hasCompleted('unlock_californium')) {
+            this.showTutorial('unlock_californium');
         }
         this.applyUnlocksToShop();
     }
@@ -320,8 +326,19 @@ class TutorialManager {
     }
 
     onScramPressed() {
+        if (!this.hasCompleted('scram_pressed_once')) {
+            this.markCompleted('scram_pressed_once');
+        }
         if (!this.hasCompleted('scram_intro')) {
             this.showTutorial('scram_intro');
+        }
+    }
+
+    onControlRodDragged() {
+        if (!this.isEnabled) return;
+        if (!this.hasCompleted('scram_pressed_once')) return;
+        if (!this.hasCompleted('shop_control_rod_purchase')) {
+            this.showTutorial('shop_control_rod_purchase');
         }
     }
 
@@ -333,10 +350,7 @@ class TutorialManager {
 
         if (typeof gameState !== 'undefined' && gameState !== 'PLAYING') return;
         if (typeof paused !== 'undefined' && paused) return;
-        if (typeof boom !== 'undefined' && boom) {
-            this.notifyFailedPrestige();
-            return;
-        }
+        if (typeof boom !== 'undefined' && boom) return;
 
         const currentLoop = (typeof prestigeManager !== 'undefined' && prestigeManager && Number.isFinite(prestigeManager.loopNumber))
             ? prestigeManager.loopNumber
@@ -344,29 +358,44 @@ class TutorialManager {
         const powerValue = Number.isFinite(energyOutput) ? energyOutput : 0;
         const money = (typeof player !== 'undefined' && player && typeof player.getBalance === 'function') ? player.getBalance() : 0;
 
-        if (!this.shopUnlocked && money >= 10) {
+        if (!this.shopUnlocked && money >= 5) {
             this.setShopUnlocked(true);
             if (!this.hasCompleted('shop_unlock_10_money')) {
                 this.showTutorial([ 'shop_unlock_10_money', 'shop_unlock_10_money_2', 'shop_unlock_10_money_3' ]);
             }
         }
 
-        if (!this.isItemUnlocked('plutonium') && typeof renderTime === 'number' && renderTime >= 60) this.setItemUnlocked('plutonium', true);
-        if (!this.isItemUnlocked('atom') && currentLoop >= 2) this.setItemUnlocked('atom', true);
-        if (!this.isItemUnlocked('californium') && currentLoop >= 2) this.setItemUnlocked('californium', true);
+        if (!this.isItemUnlocked('plutonium') && typeof renderTime === 'number' && renderTime >= 30) this.setItemUnlocked('plutonium', true);
+        if (!this.isItemUnlocked('atom') && currentLoop >= 2) {
+            this.setItemUnlocked('atom', true);
+            if (!this.hasCompleted('unlock_atom')) {
+                this.showTutorial('unlock_atom');
+            }
+        }
+        if (!this.isItemUnlocked('californium') && currentLoop >= 2) {
+            this.setItemUnlocked('californium', true);
+        }
         if (!this.isItemUnlocked('group') && currentLoop >= 3) this.setItemUnlocked('group', true);
         if (!this.isItemUnlocked('waterFlow') && currentLoop >= 3) this.setItemUnlocked('waterFlow', true);
         if (!this.isItemUnlocked('controlRod') && currentLoop >= 4) this.setItemUnlocked('controlRod', true);
 
-        if (this.hasCompleted('scram_intro') && !this.hasCompleted('plutonium_intro') && typeof renderTime === 'number' && renderTime >= 60) {
+        if (this.hasCompleted('scram_intro') && !this.hasCompleted('plutonium_intro') && typeof renderTime === 'number' && renderTime >= 30) {
             if (!this.isItemUnlocked('plutonium')) {
                 this.setItemUnlocked('plutonium', true);
             }
-            this.showTutorial('plutonium_intro');
+            this.showTutorial('plutonium_intro', {
+                onComplete: () => {
+                    this.plutoniumIntroAt = Number.isFinite(renderTime) ? renderTime : 0;
+                }
+            });
+        }
+
+        if (this.hasCompleted('plutonium_intro') && this.plutoniumIntroAt === null && Number.isFinite(renderTime)) {
+            this.plutoniumIntroAt = renderTime;
         }
 
         const avgTempValue = Number.isFinite(window.avgTemp) ? window.avgTemp : 0;
-        if (!this.hasCompleted('heat_warning') && avgTempValue >= 100) {
+        if (!this.hasCompleted('heat_warning') && avgTempValue >= 55) {
             this.showTutorial('heat_warning');
         }
 
@@ -374,8 +403,14 @@ class TutorialManager {
             this.showTutorial(['first_power_output', 'income_intro']);
         }
 
-        if (powerValue >= 10 && !this.hasCompleted('neutron_intro')) {
-            this.notifyNeutronTutorial();
+        if (!this.hasCompleted('neutron_intro')) {
+            const introAt = Number.isFinite(this.plutoniumIntroAt) ? this.plutoniumIntroAt : null;
+            const shouldShowNeutron = introAt !== null
+                && Number.isFinite(renderTime)
+                && renderTime >= (introAt + 10);
+            if (shouldShowNeutron) {
+                this.notifyNeutronTutorial();
+            }
         }
 
         if (!this.hasCompleted('first_prestige_available')) {
@@ -404,8 +439,8 @@ class TutorialManager {
             : 1;
         const money = (typeof player !== 'undefined' && player && typeof player.getBalance === 'function') ? player.getBalance() : 0;
 
-        if (!this.shopUnlocked && money >= 10) this.setShopUnlocked(true);
-        if (!this.isItemUnlocked('plutonium') && typeof renderTime === 'number' && renderTime >= 60) this.setItemUnlocked('plutonium', true);
+        if (!this.shopUnlocked && money >= 5) this.setShopUnlocked(true);
+        if (!this.isItemUnlocked('plutonium') && typeof renderTime === 'number' && renderTime >= 30) this.setItemUnlocked('plutonium', true);
         if (!this.isItemUnlocked('atom') && currentLoop >= 2) this.setItemUnlocked('atom', true);
         if (!this.isItemUnlocked('californium') && currentLoop >= 2) this.setItemUnlocked('californium', true);
         if (!this.isItemUnlocked('group') && currentLoop >= 3) this.setItemUnlocked('group', true);
@@ -423,8 +458,8 @@ class TutorialManager {
             this.showTutorial('shop_group_purchase');
         }
 
-        if (itemName === 'controlRod' && !this.hasCompleted('shop_control_rod_purchase')) {
-            this.showTutorial('shop_control_rod_purchase');
+        if (itemName === 'controlRod' && !this.hasCompleted('unlock_control_rod')) {
+            this.showTutorial('unlock_control_rod');
         }
 
         if (itemName === 'waterFlow' && !this.hasCompleted('shop_water_flow_purchase')) {
@@ -433,6 +468,10 @@ class TutorialManager {
 
         if (itemName === 'plutonium' && !this.hasCompleted('shop_plutonium_purchase')) {
             this.showTutorial('shop_plutonium_purchase');
+        }
+
+        if (itemName === 'californium' && !this.hasCompleted('shop_californium_purchase')) {
+            this.showTutorial('shop_californium_purchase');
         }
     }
 
@@ -443,9 +482,7 @@ class TutorialManager {
     }
 
     notifyFailedPrestige() {
-        if (!this.hasCompleted('failed_prestige')) {
-            this.showTutorial('failed_prestige');
-        }
+        return;
     }
 
     on88MphBackwardsButtonPress() {

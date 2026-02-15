@@ -103,9 +103,10 @@ class Neutron {
         gl.useProgram(glShit.simProgram);
 
         const rodCount = controlRods.length;
-        const rodYs = new Float32Array(rodCount || 1);
+        const rodYs = new Float32Array(Math.max(1, rodCount));
         for (let i = 0; i < rodCount; i++) {
-            rodYs[i] = controlRods[i].y;
+            const isActive = (typeof isControlRodActive === 'function') ? isControlRodActive(i) : true;
+            rodYs[i] = isActive ? controlRods[i].y : -100000.0;
         }
         const uRodsLoc = gl.getUniformLocation(glShit.simProgram, "u_controlRods");
         gl.uniform1fv(uRodsLoc, rodYs);

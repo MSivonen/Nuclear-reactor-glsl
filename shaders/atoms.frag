@@ -39,8 +39,8 @@ void main(){
 
     // Determine glow strength from color intensity (less temp -> less glow)
     float maxc = max(max(vColor.r, vColor.g), vColor.b);
-    // below ~0.05 -> no glow, near 1.0 -> full glow
-    float glowScale = smoothstep(0.00, 0.95, maxc);
+    // Delay glow onset: start later, ramp later
+    float glowScale = smoothstep(0.30, 1.0, maxc);
     glow *= 11.2;
     glow *= glowScale;
 

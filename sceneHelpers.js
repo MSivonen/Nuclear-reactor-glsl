@@ -131,6 +131,7 @@ function initSimulationObjects() {
     controlRodSlotXs = [];
     controlRods = new Array(controlRodCount).fill(null);
     controlRodPurchaseCount = 0;
+    controlRodUpgradePurchaseCount = 0;
     controlRodUpgradeLevels = [];
 
     for (let y = 0; y < uraniumAtomsCountY; y++) {
@@ -213,7 +214,10 @@ function updateScene() {
     });
         window.avgTemp = waterCells.length > 0 ? totalHeat / waterCells.length : 0;
 
-    controlRods.forEach(rod => rod.update());
+    controlRods.forEach((rod, index) => {
+        if (typeof isControlRodActive === 'function' && !isControlRodActive(index)) return;
+        rod.update();
+    });
     const plutoniumUnlocked = !(window.tutorialManager && typeof window.tutorialManager.isItemUnlocked === 'function')
         || window.tutorialManager.isItemUnlocked('plutonium');
     if (plutoniumUnlocked && plutonium) plutonium.update();
@@ -243,10 +247,12 @@ function updateScene() {
 
 function drawScene() {
     const gl = glShit.waterGL; // They are all the same now
+    const scramCompleted = !(window.tutorialManager && typeof window.tutorialManager.hasCompleted === 'function')
+        || window.tutorialManager.hasCompleted('scram_pressed_once');
 
     // 1. Generate Light Map from Neutrons
     const vidSettings = ui.canvas.uiSettings.video;
-    const lightingEnabled = !!vidSettings.lighting;
+    const lightingEnabled = !!vidSettings.lighting && scramCompleted;
     if (lightingEnabled) {
         neutron.drawLightPass(gl);
         glShit.lightingPrev = true;
@@ -279,30 +285,36 @@ function drawScene() {
     const simW = screenSimWidth;
     const simH = screenHeight;
 
-    if (vidSettings.waterEffect) {
+    if (scramCompleted && vidSettings.waterEffect) {
         gl.viewport(simX, 0, simW, simH);
         gl.disable(gl.BLEND);
         renderWaterLayer();
     }
     
-    const showUraniumLayer = !(window.tutorialManager && typeof window.tutorialManager.shouldRenderLayer === 'function')
-        || window.tutorialManager.shouldRenderLayer('uranium');
+    const showUraniumLayer = scramCompleted && (
+        !(window.tutorialManager && typeof window.tutorialManager.shouldRenderLayer === 'function')
+        || window.tutorialManager.shouldRenderLayer('uranium')
+    );
     if (showUraniumLayer) {
         gl.viewport(simX, 0, simW, simH);
         renderAtomCoreLayer();
     }
 
-    gl.viewport(simX, 0, simW, simH);
-    renderSpecialLayer();
+    if (scramCompleted) {
+        gl.viewport(simX, 0, simW, simH);
+        renderSpecialLayer();
+    }
 
-    const showRodLayer = !(window.tutorialManager && typeof window.tutorialManager.shouldRenderLayer === 'function')
-        || window.tutorialManager.shouldRenderLayer('rods');
+    const showRodLayer = scramCompleted && (
+        !(window.tutorialManager && typeof window.tutorialManager.shouldRenderLayer === 'function')
+        || window.tutorialManager.shouldRenderLayer('rods')
+    );
     if (showRodLayer) {
         gl.viewport(simX, 0, simW, simH);
         renderRodsLayer();
     }
 
-    if (vidSettings.bubbles) {
+    if (scramCompleted && vidSettings.bubbles) {
         gl.viewport(simX, 0, simW, simH);
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
@@ -310,18 +322,18 @@ function drawScene() {
     }
 
 
-    if (vidSettings.steam) {
+    if (scramCompleted && vidSettings.steam) {
         gl.viewport(simX, 0, simW, simH);
         renderSteamLayer();
     }
 
-    if (vidSettings.atomGlow && showUraniumLayer) {
+    if (scramCompleted && vidSettings.atomGlow && showUraniumLayer) {
         gl.viewport(simX, 0, simW, simH);
         gl.blendFunc(gl.ONE, gl.ONE);
         renderAtomGlowLayer();
     }
 
-    const showNeutrons = vidSettings.neutrons && vidSettings.neutrons.enabled;
+    const showNeutrons = scramCompleted && vidSettings.neutrons && vidSettings.neutrons.enabled;
     const showNeutronLayer = !(window.tutorialManager && typeof window.tutorialManager.shouldRenderLayer === 'function')
         || window.tutorialManager.shouldRenderLayer('neutrons');
     if (showNeutrons && showNeutronLayer) {

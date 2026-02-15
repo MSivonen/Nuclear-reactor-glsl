@@ -6,6 +6,7 @@ class Plutonium {
         this.maxUpgradeLevel = 12;
         this.upgradeLevel = 0;
         this.heatPerSecond = this.baseHeatPerSecond;
+        this.electronCount = 1;
         this.resetPosition();
         this.radius = 15; // Set in updateDimensions
         this.dragging = false;
@@ -38,6 +39,7 @@ class Plutonium {
 
         const heatMultiplier = 1 + 1.2 * t;
         this.heatPerSecond = this.baseHeatPerSecond * heatMultiplier;
+        this.electronCount = 1 + this.upgradeLevel;
     }
 
     syncFromPlayer() {

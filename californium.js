@@ -1,5 +1,13 @@
 class Californium {
     constructor() {
+        this.baseRadius = 15;
+        this.maxRadius = 30;
+        this.maxUpgradeLevel = 12;
+        this.upgradeLevel = 0;
+        this.baseSpawnInterval = 0.02;
+        this.minSpawnInterval = 0.006;
+        this.spawnBurstCount = 1;
+        this.electronCount = 1;
         this.resetPosition();
         this.radius = 15; // Set in updateDimensions
         this.dragging = false;
@@ -7,7 +15,7 @@ class Californium {
         this.color = { r: 200, g: 200, b: 200 }; // Light Grau / Metallic
         this.seed = Math.random() * 1000.0;
         this.spawnTimer = 0;
-        this.spawnInterval = 0.01; // Seconds between spawns
+        this.spawnInterval = this.baseSpawnInterval; // Seconds between spawns
     }
 
     resetPosition() {
@@ -17,15 +25,38 @@ class Californium {
     }
 
     updateDimensions() {
-        this.radius = 21 * globalScale; // 0.7x of 30
+        this.applyUpgradeLevel(this.upgradeLevel);
         
         // Clamp position if out of bounds after resize
         this.x = Math.max(this.radius, Math.min(this.x, screenSimWidth - this.radius));
         this.y = Math.max(this.radius, Math.min(this.y, screenHeight - this.radius));
     }
 
+    applyUpgradeLevel(level) {
+        const maxLevel = Number.isFinite(this.maxUpgradeLevel) && this.maxUpgradeLevel > 0 ? this.maxUpgradeLevel : 1;
+        this.upgradeLevel = Math.max(0, Math.min(level || 0, maxLevel));
+        const t = this.upgradeLevel / maxLevel;
+
+        const baseRadiusScaled = this.baseRadius * globalScale;
+        const maxRadiusScaled = this.maxRadius * globalScale;
+        this.radius = baseRadiusScaled + (maxRadiusScaled - baseRadiusScaled) * t;
+
+        this.spawnInterval = this.baseSpawnInterval + (this.minSpawnInterval - this.baseSpawnInterval) * t;
+        this.spawnBurstCount = 1 + Math.floor(this.upgradeLevel / 3);
+        this.electronCount = 1 + this.upgradeLevel;
+    }
+
+    syncFromPlayer() {
+        if (typeof player !== 'undefined' && player) {
+            const level = Number.isFinite(player.californiumUpgradeCount) ? player.californiumUpgradeCount : 0;
+            this.applyUpgradeLevel(level);
+        } else {
+            this.applyUpgradeLevel(0);
+        }
+    }
+
     update() {
-        this.radius = 30 * globalScale;
+        this.applyUpgradeLevel(this.upgradeLevel);
 
         // Interaction (Handle input here so it works when paused)
         const mPos = scaleMouse(mouseX, mouseY);
@@ -61,16 +92,18 @@ class Californium {
         if (this.spawnTimer >= this.spawnInterval) {
             this.spawnTimer = 0;
             if (window.neutron) {
-                const randAngle = Math.random() * .2 - .1;
-                const randPosY = globalScale * Math.random() * 20 - 10;
-                const randPosX = globalScale * Math.random() * 20 - 10;
-                neutron.spawn(this.x + randPosX, this.y + randPosY, this.radius / 2, randAngle);
+                for (let i = 0; i < this.spawnBurstCount; i++) {
+                    const randAngle = Math.random() * .2 - .1;
+                    const randPosY = globalScale * Math.random() * 20 - 10;
+                    const randPosX = globalScale * Math.random() * 20 - 10;
+                    neutron.spawn(this.x + randPosX, this.y + randPosY, this.radius / 2, randAngle);
+                }
             }
         }
     }
 
     draw(ctx, offsetX) {
-        this.radius = 15 * globalScale;
+        this.applyUpgradeLevel(this.upgradeLevel);
 
         const drawX = this.x + offsetX;
         const drawY = this.y;
