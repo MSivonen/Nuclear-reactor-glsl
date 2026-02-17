@@ -9,6 +9,8 @@ class TutorialManager {
         this.buttonRect = null;
         this.firstPowerTutorialAt = null;
         this.plutoniumIntroAt = null;
+        this.plutoniumScheduledAt = Infinity;
+        this.neutronScheduledAt = Infinity;
         this.endlessLoopStart = 6;
         this.lastKnownLoop = 1;
 
@@ -19,7 +21,7 @@ class TutorialManager {
             controlRod: true,
             waterFlow: true,
             californium: true,
-            plutonium: true
+            plutonium: false
         };
     }
 
@@ -49,7 +51,7 @@ class TutorialManager {
             controlRod: loadedItemUnlocks && typeof loadedItemUnlocks.controlRod === 'boolean' ? loadedItemUnlocks.controlRod : defaultUnlocked,
             waterFlow: loadedItemUnlocks && typeof loadedItemUnlocks.waterFlow === 'boolean' ? loadedItemUnlocks.waterFlow : defaultUnlocked,
             californium: loadedItemUnlocks && typeof loadedItemUnlocks.californium === 'boolean' ? loadedItemUnlocks.californium : defaultUnlocked,
-            plutonium: loadedItemUnlocks && typeof loadedItemUnlocks.plutonium === 'boolean' ? loadedItemUnlocks.plutonium : defaultUnlocked
+            plutonium: loadedItemUnlocks && typeof loadedItemUnlocks.plutonium === 'boolean' ? loadedItemUnlocks.plutonium : false
         };
 
         this.firstPowerTutorialAt = Number.isFinite(saveData && saveData.tutorialFirstPowerAt) ? saveData.tutorialFirstPowerAt : null;
@@ -84,6 +86,8 @@ class TutorialManager {
         this.activeStep = null;
         this.buttonRect = null;
         this.plutoniumIntroAt = null;
+        this.plutoniumScheduledAt = Infinity;
+        this.neutronScheduledAt = Infinity;
         this.setUiInteractivityForTutorial(false);
     }
 
@@ -284,6 +288,21 @@ class TutorialManager {
             options.onComplete();
         }
 
+        // Schedule chained tutorial timings when a sequence is finished
+        try {
+            const finishedIds = Array.isArray(completionIds) && completionIds.length > 0 ? completionIds : [id];
+            // scram -> plutonium after 30s
+            if (finishedIds.includes('scram_intro')) {
+                this.plutoniumScheduledAt = Number.isFinite(renderTime) ? (renderTime + 30) : Infinity;
+            }
+            // plutonium -> neutron after 10s
+            if (finishedIds.includes('plutonium_intro')) {
+                this.neutronScheduledAt = Number.isFinite(renderTime) ? (renderTime + 10) : Infinity;
+            }
+        } catch (e) {
+            // renderTime or other globals may be undefined in some contexts; fail silently
+        }
+
         this.activeSequence = null;
         this.activeStep = null;
         this.activeStepIndex = -1;
@@ -365,7 +384,7 @@ class TutorialManager {
             }
         }
 
-        if (!this.isItemUnlocked('plutonium') && typeof renderTime === 'number' && renderTime >= 30) this.setItemUnlocked('plutonium', true);
+        if (!this.isItemUnlocked('plutonium') && Number.isFinite(this.plutoniumScheduledAt) && Number.isFinite(renderTime) && renderTime >= this.plutoniumScheduledAt) this.setItemUnlocked('plutonium', true);
         if (!this.isItemUnlocked('atom') && currentLoop >= 2) {
             this.setItemUnlocked('atom', true);
             if (!this.hasCompleted('unlock_atom')) {
@@ -379,7 +398,7 @@ class TutorialManager {
         if (!this.isItemUnlocked('waterFlow') && currentLoop >= 3) this.setItemUnlocked('waterFlow', true);
         if (!this.isItemUnlocked('controlRod') && currentLoop >= 4) this.setItemUnlocked('controlRod', true);
 
-        if (this.hasCompleted('scram_intro') && !this.hasCompleted('plutonium_intro') && typeof renderTime === 'number' && renderTime >= 30) {
+        if (this.hasCompleted('scram_intro') && !this.hasCompleted('plutonium_intro') && Number.isFinite(this.plutoniumScheduledAt) && Number.isFinite(renderTime) && renderTime >= this.plutoniumScheduledAt) {
             if (!this.isItemUnlocked('plutonium')) {
                 this.setItemUnlocked('plutonium', true);
             }
@@ -388,10 +407,6 @@ class TutorialManager {
                     this.plutoniumIntroAt = Number.isFinite(renderTime) ? renderTime : 0;
                 }
             });
-        }
-
-        if (this.hasCompleted('plutonium_intro') && this.plutoniumIntroAt === null && Number.isFinite(renderTime)) {
-            this.plutoniumIntroAt = renderTime;
         }
 
         const avgTempValue = Number.isFinite(window.avgTemp) ? window.avgTemp : 0;
@@ -403,14 +418,8 @@ class TutorialManager {
             this.showTutorial(['first_power_output', 'income_intro']);
         }
 
-        if (!this.hasCompleted('neutron_intro')) {
-            const introAt = Number.isFinite(this.plutoniumIntroAt) ? this.plutoniumIntroAt : null;
-            const shouldShowNeutron = introAt !== null
-                && Number.isFinite(renderTime)
-                && renderTime >= (introAt + 10);
-            if (shouldShowNeutron) {
-                this.notifyNeutronTutorial();
-            }
+        if (!this.hasCompleted('neutron_intro') && Number.isFinite(this.neutronScheduledAt) && Number.isFinite(renderTime) && renderTime >= this.neutronScheduledAt) {
+            this.notifyNeutronTutorial();
         }
 
         if (!this.hasCompleted('first_prestige_available')) {
@@ -440,7 +449,7 @@ class TutorialManager {
         const money = (typeof player !== 'undefined' && player && typeof player.getBalance === 'function') ? player.getBalance() : 0;
 
         if (!this.shopUnlocked && money >= 5) this.setShopUnlocked(true);
-        if (!this.isItemUnlocked('plutonium') && typeof renderTime === 'number' && renderTime >= 30) this.setItemUnlocked('plutonium', true);
+        if (!this.isItemUnlocked('plutonium') && Number.isFinite(this.plutoniumScheduledAt) && Number.isFinite(renderTime) && renderTime >= this.plutoniumScheduledAt) this.setItemUnlocked('plutonium', true);
         if (!this.isItemUnlocked('atom') && currentLoop >= 2) this.setItemUnlocked('atom', true);
         if (!this.isItemUnlocked('californium') && currentLoop >= 2) this.setItemUnlocked('californium', true);
         if (!this.isItemUnlocked('group') && currentLoop >= 3) this.setItemUnlocked('group', true);

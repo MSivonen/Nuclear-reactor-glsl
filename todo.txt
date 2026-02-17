@@ -127,9 +127,5 @@ v    -Ability to give a name to savegame
     uranium unlock, blink the uranium, not neutrons
     tweak: tweak californium values (made by testing, not by ai)
 
-    feature: make control rods purchaseable. Centermost one is available on default, and with full upgrades. The rest are bought in order 1-3-0-4. Rod upgrades should be available in shop only after first rod is purchased.
-    feat: change californium tutorial text a bit and make it trigger when californium is unlocked
-    feat: Control rods' tutorial trigger is to be changed: scram has to be pressed before, then trigger when a control rod is dragged
-    feat: make the control rod non-draggable until scram is pressed. Also hide water, bubbles, lighting, control rods, neutrons, atom glow and steam, until scram is pressed the first time.
-    bug: change control rod tutorial texts //me, not AI
-    text: uranium tutorial, add mention of heat
+    feat: make the ambient audio to start playing only after scram is pressed the first time.
+    BUG!: Control rods should be renamed to moderators. Everywhere. In text and in variable names. Even filenames.
