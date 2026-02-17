@@ -90,7 +90,7 @@ class UICanvas {
 
         this.pauseMenuState = 'MAIN';
         this.pendingSaveSlot = null;
-        this.activeDrag = null; // { type: 'plutonium'|'controlRod', index?: number }
+        this.activeDrag = null; // { type: 'plutonium'|'moderator', index?: number }
         this.boomOverlayButton = null;
         this.toastTimeouts = [];
     }
@@ -148,18 +148,20 @@ class UICanvas {
         `;
         this.sidebar.appendChild(statsDiv);
  
-        // Expose resetRodHandles on the instance so other code can call it
-        this.resetRodHandles = () => {
+        // Expose resetModeratorHandles on the instance so other code can call it
+        this.resetModeratorHandles = () => {
                 const slider = (typeof ui !== 'undefined' && ui) ? ui.controlSlider : null;
-                if (slider && Array.isArray(controlRods)) {
-                    slider.handleY = new Array(controlRods.length).fill(0);
-                    for (let i = 0; i < controlRods.length; i++) {
-                        slider.handleY[i] = clampControlRodHandleY(i, controlRods[i].initialY + controlRods[i].height);
+                if (slider && Array.isArray(moderators)) {
+                    slider.handleY = new Array(moderators.length).fill(0);
+                    for (let i = 0; i < moderators.length; i++) {
+                        slider.handleY[i] = clampModeratorHandleY(i, moderators[i].initialY + moderators[i].height);
                     }
                     slider.draggingIndex = -1;
                     slider.ensureHandleLength();
                 }
         };
+        // Compatibility alias for older code referencing resetRodHandles
+        this.resetRodHandles = () => { return this.resetModeratorHandles(); };
 
         const controlsDiv = document.createElement('div');
         controlsDiv.style.background = '#444';
@@ -172,20 +174,20 @@ class UICanvas {
         controlsTitle.style.marginBottom = '10px';
         controlsDiv.appendChild(controlsTitle);
 
-        const linkBtn = document.createElement('button');
-        linkBtn.id = 'btn-link-rods';
+          const linkBtn = document.createElement('button');
+          linkBtn.id = 'btn-link-moderators';
         linkBtn.style.marginBottom = '15px';
-           this.linkRodsBtn = linkBtn;
-           this.updateLinkRodsButton = () => {
-              if (!this.linkRodsBtn) return;
-              this.linkRodsBtn.innerText = `Link Rods: ${settings.linkRods ? 'ON' : 'OFF'}`;
-              this.linkRodsBtn.style.background = settings.linkRods ? '#5cb85c' : '#d9534f';
-              this.linkRodsBtn.style.color = '#fff';
-           };
-           this.updateLinkRodsButton();
+              this.linkModeratorsBtn = linkBtn;
+              this.updateLinkModeratorsButton = () => {
+                  if (!this.linkModeratorsBtn) return;
+                  this.linkModeratorsBtn.innerText = `Link Moderators: ${settings.linkRods ? 'ON' : 'OFF'}`;
+                  this.linkModeratorsBtn.style.background = settings.linkRods ? '#5cb85c' : '#d9534f';
+                  this.linkModeratorsBtn.style.color = '#fff';
+              };
+              this.updateLinkModeratorsButton();
         linkBtn.onclick = () => {
              settings.linkRods = !settings.linkRods;
-               this.updateLinkRodsButton();
+                    this.updateLinkModeratorsButton();
         };
            bindButtonSound(linkBtn);
         controlsDiv.appendChild(linkBtn);
@@ -430,11 +432,11 @@ class UICanvas {
     }
 
     isScramComplete() {
-        for (let i = 0; i < controlRods.length; i++) {
-            if (typeof isControlRodActive === 'function' && !isControlRodActive(i)) continue;
-            const rod = controlRods[i];
-            const topY = -rod.height;
-            if (Math.abs(rod.y - topY) > 1 || Math.abs(rod.targetY - topY) > 1) {
+        for (let i = 0; i < moderators.length; i++) {
+            if (typeof isModeratorActive === 'function' && !isModeratorActive(i)) continue;
+            const mod = moderators[i];
+            const topY = -mod.height;
+            if (Math.abs(mod.y - topY) > 1 || Math.abs(mod.targetY - topY) > 1) {
                 return false;
             }
         }
@@ -820,7 +822,7 @@ class UICanvas {
 
     activateScram(btn) {
         if (this.scramActive) {
-            // Deactivate only when rods are fully up
+            // Deactivate only when moderators are fully up
             if (this.isScramComplete()) {
                 this.scramActive = false;
                 if (btn) {
@@ -858,11 +860,11 @@ class UICanvas {
         settings.waterFlowSpeed = maxFlow;
         this.waterSliderDOM.value = Math.round(maxFlow * 100);
 
-        for (let i = 0; i < controlRods.length; i++) {
-            const rod = controlRods[i];
-            const handleY = clampControlRodHandleY(i, 0);
+        for (let i = 0; i < moderators.length; i++) {
+            const mod = moderators[i];
+            const handleY = clampModeratorHandleY(i, 0);
             ui.controlSlider.handleY[i] = handleY;
-            rod.targetY = handleY - rod.height;
+            mod.targetY = handleY - mod.height;
         }
     }
 
@@ -982,8 +984,8 @@ class UICanvas {
             const desc = document.getElementById(`shop-desc-${key}`);
 
             const unlocked = shop.isItemUnlocked ? shop.isItemUnlocked(key) : true;
-            const rodUpgradeVisible = key !== 'controlRodUpgrade' || controlRodPurchaseCount > 1;
-            const showItem = unlocked && rodUpgradeVisible;
+            const modUpgradeVisible = key !== 'moderatorUpgrade' || moderatorPurchaseCount > 1;
+            const showItem = unlocked && modUpgradeVisible;
             if (itemDiv) {
                 itemDiv.style.display = showItem ? '' : 'none';
             }
@@ -1011,13 +1013,13 @@ class UICanvas {
                     const current = player.californiumUpgradeCount;
                     const max = player.californiumUpgradeMax;
                     isMaxed = current >= max && max > 0;
-                } else if (key === 'controlRod') {
-                    const current = controlRodPurchaseCount;
-                    const max = getMaxControlRodPurchases();
+                } else if (key === 'moderator') {
+                    const current = moderatorPurchaseCount;
+                    const max = getMaxModeratorPurchases();
                     isMaxed = current >= max && max > 0;
-                } else if (key === 'controlRodUpgrade') {
-                    const current = controlRodUpgradePurchaseCount;
-                    const max = getMaxControlRodUpgradePurchases();
+                } else if (key === 'moderatorUpgrade') {
+                    const current = moderatorUpgradePurchaseCount;
+                    const max = getMaxModeratorUpgradePurchases();
                     isMaxed = current >= max && max > 0;
                 } else if (key === 'group') {
                     const current = player.ownedGroups.length;
@@ -1074,14 +1076,14 @@ class UICanvas {
                     const current = player.californiumUpgradeCount;
                     const max = player.californiumUpgradeMax;
                     title.innerText = `Californium ${current}/${max}`;
-                } else if (key === 'controlRod') {
-                    const current = controlRodPurchaseCount;
-                    const max = getMaxControlRodPurchases();
-                    title.innerText = `Control Rod ${current}/${max}`;
-                } else if (key === 'controlRodUpgrade') {
-                    const current = controlRodUpgradePurchaseCount;
-                    const max = getMaxControlRodUpgradePurchases();
-                    title.innerText = `Control Rod Upgrade ${current}/${max}`;
+                } else if (key === 'moderator') {
+                    const current = moderatorPurchaseCount;
+                    const max = getMaxModeratorPurchases();
+                    title.innerText = `Moderator ${current}/${max}`;
+                } else if (key === 'moderatorUpgrade') {
+                    const current = moderatorUpgradePurchaseCount;
+                    const max = getMaxModeratorUpgradePurchases();
+                    title.innerText = `Moderator Upgrade ${current}/${max}`;
                 } else if (key === 'group') {
                     const current = player.ownedGroups.length;
                     const max = getAtomGroupCount();
@@ -1167,19 +1169,19 @@ class UICanvas {
         mStat.style.display = showMoneyStats ? '' : 'none';
         iStat.style.display = showMoneyStats ? '' : 'none';
 
-        const linkRodsUnlocked = !window.tutorialManager
+        const linkModeratorsUnlocked = !window.tutorialManager
             || !window.tutorialManager.isItemUnlocked
-            || window.tutorialManager.isItemUnlocked('controlRod');
-        const hasMultipleRods = Number.isFinite(controlRodPurchaseCount) && controlRodPurchaseCount > 1;
+            || window.tutorialManager.isItemUnlocked('moderator');
+        const hasMultipleModerators = Number.isFinite(moderatorPurchaseCount) && moderatorPurchaseCount > 1;
         const scramCompleted = !window.tutorialManager
             || !window.tutorialManager.hasCompleted
             || window.tutorialManager.hasCompleted('scram_pressed_once');
-        const showLinkRods = linkRodsUnlocked && scramCompleted && hasMultipleRods;
-        if (this.linkRodsBtn) {
-            this.linkRodsBtn.style.display = showLinkRods ? '' : 'none';
-            if (!showLinkRods && settings.linkRods) {
+        const showLinkModerators = linkModeratorsUnlocked && scramCompleted && hasMultipleModerators;
+        if (this.linkModeratorsBtn) {
+            this.linkModeratorsBtn.style.display = showLinkModerators ? '' : 'none';
+            if (!showLinkModerators && settings.linkRods) {
                 settings.linkRods = false;
-                this.updateLinkRodsButton();
+                this.updateLinkModeratorsButton();
             }
         }
 
@@ -1234,8 +1236,8 @@ class UICanvas {
         // Update DOM state
         this.updateDOM();
 
-        // Control rods moved to GL renderer
-        // controlRods.forEach(r => r.draw(this.ctx, this.simXOffset));
+        // Moderators moved to GL renderer
+        // moderators.forEach(r => r.draw(this.ctx, this.simXOffset));
 
         const showPowerMeter = !window.tutorialManager
             || !window.tutorialManager.hasCompleted
@@ -1281,21 +1283,21 @@ class UICanvas {
             && typeof window.tutorialManager.hasCompleted === 'function'
             && window.tutorialManager.hasCompleted('scram_pressed_once'));
 
-        // Check control rod handles first (highest priority)
+        // Check moderator handles first (highest priority)
         const HANDLE_RADIUS = 10 * globalScale;
-        if (scramCompleted && controlRods && ui.controlSlider) {
-            for (let i = 0; i < controlRods.length; i++) {
-                if (typeof isControlRodActive === 'function' && !isControlRodActive(i)) continue;
-                const rod = controlRods[i];
-                const handleX = rod.x + rod.width / 2;
-                const handleY = (typeof ui.controlSlider.handleY[i] === 'number') ? ui.controlSlider.handleY[i] : (rod.y + rod.height);
+        if (scramCompleted && moderators && ui.controlSlider) {
+            for (let i = 0; i < moderators.length; i++) {
+                if (typeof isModeratorActive === 'function' && !isModeratorActive(i)) continue;
+                const mod = moderators[i];
+                const handleX = mod.x + mod.width / 2;
+                const handleY = (typeof ui.controlSlider.handleY[i] === 'number') ? ui.controlSlider.handleY[i] : (mod.y + mod.height);
                 const dx = m.x - handleX;
                 const dy = m.y - handleY;
                 if (Math.sqrt(dx * dx + dy * dy) <= HANDLE_RADIUS + 4 * globalScale) {
-                    if (window.tutorialManager && typeof window.tutorialManager.onControlRodDragged === 'function') {
-                        window.tutorialManager.onControlRodDragged();
+                    if (window.tutorialManager && typeof window.tutorialManager.onModeratorDragged === 'function') {
+                        window.tutorialManager.onModeratorDragged();
                     }
-                    this.activeDrag = { type: 'controlRod', index: i };
+                    this.activeDrag = { type: 'moderator', index: i };
                     ui.controlSlider.draggingIndex = i;
                     return;
                 }
@@ -1338,12 +1340,12 @@ class UICanvas {
         const m = scaleMouse(x, y);
         if (!this.activeDrag) return;
 
-        if (this.activeDrag.type === 'controlRod') {
+        if (this.activeDrag.type === 'moderator') {
             const i = this.activeDrag.index;
             if (typeof i === 'number' && ui.controlSlider) {
                 const newY = m.y;
-                ui.controlSlider.handleY[i] = clampControlRodHandleY(i, newY);
-                controlRods[i].targetY = ui.controlSlider.handleY[i] - controlRods[i].height;
+                ui.controlSlider.handleY[i] = clampModeratorHandleY(i, newY);
+                moderators[i].targetY = ui.controlSlider.handleY[i] - moderators[i].height;
             }
         } else if (this.activeDrag.type === 'plutonium') {
             if (typeof plutonium !== 'undefined' && plutonium && plutonium.dragging) {
@@ -1357,7 +1359,7 @@ class UICanvas {
 
     handleMouseRelease() {
         if (boomInputLocked) return;
-        if (this.activeDrag && this.activeDrag.type === 'controlRod') {
+        if (this.activeDrag && this.activeDrag.type === 'moderator') {
             ui.controlSlider.draggingIndex = -1;
         }
         if (this.activeDrag && this.activeDrag.type === 'plutonium') {

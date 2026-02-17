@@ -10,9 +10,9 @@ GENERAL RULES
 - UI layout is locked to widescreen (1.78:1) with the sim on the right and UI on the left. Draw black borders if resolution is set to another aspect ratio.
 
 DEFINITIONS
-- Atom group: the bunch of atoms between two control rod slots.
+- Atom group: the bunch of atoms between two moderator slots.
 - Atom column: one vertical column inside an atom group.
-- Slot: a place where an atom group or a control rod (or another item, if implemented) can be placed.
+- Slot: a place where an atom group or a moderator (or another item, if implemented) can be placed.
 - BOOM: when the reactor explodes
 
 CORE LOOP STATES
@@ -47,20 +47,20 @@ PLAYER START
 v Player starts with two atom groups (the two centermost).
 v Each group starts with 6 columns of atoms.
 v Each group should have 15 rows of atoms.
-- One control rod, center slot.
-- Non-upgraded control rods will only go down to 50%
+- One moderator, center slot.
+- Non-upgraded moderators will only go down to 50%
 - Weak plutonium is purchaseable after first tutorial and some tinkering
 
 MAX UPGRADES
 v Max atom groups: six groups (6x30 each, total 36x30).
-- Max control rods: five.
+- Max moderators: five.
 
 PROGRESSION PHASES (NARRATIVE)
 - Loop 1: reactor is weak. Plutonium provides most heat. Uranium does little.
 - Loop 2: californium becomes available; higher neutron production possible. Able to buy atoms.
 - Loop 3: able to buy adjustable water flow.
 - Loop 4: able to buy two more atom groups.
-- Loop 5: able to buy more control rods
+- Loop 5: able to buy more moderators
 - Later loops: reactor becomes the primary power source; special rocks become
 	less central by design. Californium may be needed to kickstart the reactor.
 - Special rocks remain useful in early-mid game via upgrades.
@@ -69,7 +69,7 @@ SHOP RULES
 v Atom groups/columns are filled centermost first. If multiple slots are equally
 	close, prioritize left/top.
 v Ctrl+click buys 5. Shift+click buys 10. Shift+ctrl+click buys max.
-v Control rods use the same centermost-first logic.
+v Moderators use the same centermost-first logic.
 v Water max flow rate is upgradeable.
 v Some shop items are hidden until prerequisites are met.
 - Decide later whether installing purchases require reactor shutdown (currently not enforced).

@@ -102,16 +102,16 @@ class Neutron {
 
         gl.useProgram(glShit.simProgram);
 
-        const rodCount = controlRods.length;
-        const rodYs = new Float32Array(Math.max(1, rodCount));
-        for (let i = 0; i < rodCount; i++) {
-            const isActive = (typeof isControlRodActive === 'function') ? isControlRodActive(i) : true;
-            rodYs[i] = isActive ? controlRods[i].y : -100000.0;
+        const modCount = moderators.length;
+        const modYs = new Float32Array(Math.max(1, modCount));
+        for (let i = 0; i < modCount; i++) {
+            const isActive = (typeof isModeratorActive === 'function') ? isModeratorActive(i) : true;
+            modYs[i] = isActive ? moderators[i].y : -100000.0;
         }
-        const uRodsLoc = gl.getUniformLocation(glShit.simProgram, "u_controlRods");
-        gl.uniform1fv(uRodsLoc, rodYs);
-        const uRodCountLoc = gl.getUniformLocation(glShit.simProgram, "u_controlRodCount");
-        gl.uniform1i(uRodCountLoc, rodCount);
+        const uModsLoc = gl.getUniformLocation(glShit.simProgram, "u_moderators");
+        gl.uniform1fv(uModsLoc, modYs);
+        const uModCountLoc = gl.getUniformLocation(glShit.simProgram, "u_moderatorCount");
+        gl.uniform1i(uModCountLoc, modCount);
 
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, glShit.readTex);
@@ -122,12 +122,12 @@ class Neutron {
         gl.uniform1i(gl.getUniformLocation(glShit.simProgram, "u_uraniumCountX"), uraniumAtomsCountX);
         gl.uniform1i(gl.getUniformLocation(glShit.simProgram, "u_uraniumCountY"), uraniumAtomsCountY);
         gl.uniform1f(gl.getUniformLocation(glShit.simProgram, "collision_prob"), settings.collisionProbability);
-        gl.uniform1f(gl.getUniformLocation(glShit.simProgram, "controlRodHitProbability"), settings.controlRodHitProbability);
-        gl.uniform1f(gl.getUniformLocation(glShit.simProgram, "controlRodAbsorptionProbability"), settings.controlRodAbsorptionProbability);
+        gl.uniform1f(gl.getUniformLocation(glShit.simProgram, "moderatorHitProbability"), settings.moderatorHitProbability);
+        gl.uniform1f(gl.getUniformLocation(glShit.simProgram, "moderatorAbsorptionProbability"), settings.moderatorAbsorptionProbability);
 
         gl.uniform1f(gl.getUniformLocation(glShit.simProgram, "u_simWidth"), screenSimWidth);
         gl.uniform1f(gl.getUniformLocation(glShit.simProgram, "u_simHeight"), screenHeight);
-        gl.uniform1f(gl.getUniformLocation(glShit.simProgram, "u_controlRodHeight"), controlRodHeight);
+        gl.uniform1f(gl.getUniformLocation(glShit.simProgram, "u_moderatorHeight"), moderatorHeight);
         gl.uniform1f(gl.getUniformLocation(glShit.simProgram, "u_atomSpacingX"), uraniumAtomsSpacingX);
         gl.uniform1f(gl.getUniformLocation(glShit.simProgram, "u_atomSpacingY"), uraniumAtomsSpacingY);
         gl.uniform1f(gl.getUniformLocation(glShit.simProgram, "u_atomRadius"), settings.uraniumSize / 2.0);
@@ -290,27 +290,25 @@ class Neutron {
         }
         // ----------------------------------------
 
-        // --- NEW: Add Rod Lighting ---
-        if (controlRods.length > 0) {
+        // --- NEW: Add Moderator Lighting ---
+        if (moderators && moderators.length > 0) {
             gl.useProgram(glShit.specialLightProgram);
             
-            const tr = new RodsRenderer();
+            const tr = new ModeratorsRenderer();
             tr.gl = gl;
             tr.program = glShit.specialLightProgram;
-            tr.instanceBuffer = rodsRenderer.instanceBuffer;
-            tr.instanceData = rodsRenderer.instanceData;
-            tr.maxInstances = rodsRenderer.maxInstances;
-            tr.instanceFloatCount = rodsRenderer.instanceFloatCount;
+            tr.instanceBuffer = moderatorsRenderer.instanceBuffer;
+            tr.instanceData = moderatorsRenderer.instanceData;
+            tr.maxInstances = moderatorsRenderer.maxInstances;
+            tr.instanceFloatCount = moderatorsRenderer.instanceFloatCount;
             
-            // Only draw types 0 (rod) and 1 (sphere) for lighting
-            const count = tr.updateInstances(controlRods, null);
+            // Only draw types 0 (moderator) and 1 (sphere) for lighting
+            const count = tr.updateInstances(moderators, null);
             for(let i=0; i<count; i++) {
                 const b = i * 9;
                 // Expand light emission area
                 tr.instanceData[b + 6] *= 4.0; 
                 tr.instanceData[b + 7] *= 1.2;
-                // intensity boost via color alpha if the shader supports it, 
-                // but specialLightFrag just uses vColor.rgb * 0.02.
             }
             tr.draw(count, { blendMode: 'additive' });
         }

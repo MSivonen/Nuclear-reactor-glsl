@@ -1,5 +1,5 @@
-// GPU instanced renderer for control rods and their handles
-class RodsRenderer {
+// GPU instanced renderer for moderators and their handles
+class ModeratorsRenderer {
     constructor() {
         this.gl = null;
         this.program = null;
@@ -67,16 +67,16 @@ class RodsRenderer {
         return true;
     }
 
-    updateInstances(rods, slider) {
+    updateInstances(moderators, slider) {
         let writeIndex = 0;
         const HANDLE_RADIUS = 10 * globalScale;
         
-        // Rods first
-        for (let i = 0; i < rods.length; i++) {
-            if (typeof isControlRodActive === 'function' && !isControlRodActive(i)) continue;
-            const r = rods[i];
+        // Moderators first
+        for (let i = 0; i < moderators.length; i++) {
+            if (typeof isModeratorActive === 'function' && !isModeratorActive(i)) continue;
+            const r = moderators[i];
 
-            // 1. The Rod Cylinder
+            // 1. The Moderator Cylinder
             const b1 = writeIndex * this.instanceFloatCount;
             this.instanceData[b1 + 0] = r.x;
             this.instanceData[b1 + 1] = r.y;
@@ -86,10 +86,10 @@ class RodsRenderer {
             this.instanceData[b1 + 5] = 1.0;
             this.instanceData[b1 + 6] = r.width;
             this.instanceData[b1 + 7] = r.height;
-            this.instanceData[b1 + 8] = 0.0; // Rod
+            this.instanceData[b1 + 8] = 0.0; // Moderator
             writeIndex++;
 
-            // 2. The Spherical Handle (Welded to the rod)
+            // 2. The Spherical Handle (Welded to the moderator)
             const b2 = writeIndex * this.instanceFloatCount;
             this.instanceData[b2 + 0] = r.x + r.width / 2;
             this.instanceData[b2 + 1] = r.y + r.height;
@@ -155,4 +155,4 @@ class RodsRenderer {
     }
 }
 
-const rodsRenderer = new RodsRenderer();
+const moderatorsRenderer = new ModeratorsRenderer();

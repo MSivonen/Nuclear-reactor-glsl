@@ -2,18 +2,18 @@
 precision highp float;
 
 uniform sampler2D u_neutrons;
-uniform float u_controlRods[6]; // per-rod Y thresholds (in simulation coords)
-uniform int u_controlRodCount;
+uniform float u_moderators[6]; // per-moderator Y thresholds (in simulation coords)
+uniform int u_moderatorCount;
 uniform int u_uraniumCountX;
 uniform int u_uraniumCountY;
 uniform sampler2D u_atomMask;
 uniform float collision_prob;
-uniform float controlRodHitProbability;
-uniform float controlRodAbsorptionProbability;
+uniform float moderatorHitProbability;
+uniform float moderatorAbsorptionProbability;
 
 uniform float u_simWidth;
 uniform float u_simHeight;
-uniform float u_controlRodHeight;
+uniform float u_moderatorHeight;
 uniform float u_atomSpacingX;
 uniform float u_atomSpacingY;
 uniform float u_atomRadius;
@@ -47,18 +47,18 @@ void main(){
   int row=int(pos.y/u_atomSpacingY);
 
   if((col+1)%7==0){
-    // Map column to rod index: col=6 -> index 0, col=13 -> index 1, etc.
-    int rodIndex = (col + 1) / 7 - 1;
-    float rodY = 0.0;
-    if (rodIndex >= 0 && rodIndex < u_controlRodCount) {
-      rodY = u_controlRods[rodIndex];
+    // Map column to moderator index: col=6 -> index 0, col=13 -> index 1, etc.
+    int modIndex = (col + 1) / 7 - 1;
+    float modY = 0.0;
+    if (modIndex >= 0 && modIndex < u_moderatorCount) {
+      modY = u_moderators[modIndex];
     }
-    if(pos.y > rodY && pos.y < rodY + u_controlRodHeight){
-      // Hit a control rod. Deterministic pseudo-random for decisions
+    if(pos.y > modY && pos.y < modY + u_moderatorHeight){
+      // Hit a moderator. Deterministic pseudo-random for decisions
       float r=fract(sin(dot(pos+vec2(float(gl_FragCoord.x),float(gl_FragCoord.y)),vec2(12.9898,78.233)))*43758.5453);
       float r2=fract(sin(dot(pos+vec2(float(gl_FragCoord.x),float(gl_FragCoord.y)),vec2(12.98938,78.233)))*43758.5453);
-      if(r<controlRodHitProbability){
-        if(r2<controlRodAbsorptionProbability){
+      if(r<moderatorHitProbability){
+        if(r2<moderatorAbsorptionProbability){
           outColor=vec4(-200.,-200.,0.,0.);
           return;
         }else if(length(vel)>2.5 * u_globalScale){

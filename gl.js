@@ -79,9 +79,9 @@ const glShit = {
     lightVectorFragCode: null,
     specialLightFragCode: null,
     specialLightFragSrc: null,
-    rodsVertCode: null,
-    rodsVertSrc: null,
-    rodsFragCode: null,
-    rodsFragSrc: null
+    moderatorsVertCode: null,
+    moderatorsVertSrc: null,
+    moderatorsFragCode: null,
+    moderatorsFragSrc: null
   }
 };

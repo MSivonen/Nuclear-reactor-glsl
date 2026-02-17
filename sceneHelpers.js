@@ -103,11 +103,11 @@ function initShadersAndGL() {
         glShit.shaderCodes.specialFragCode
     );
 
-    rodsRenderer.init(
+    moderatorsRenderer.init(
         gl,
         64, 
-        glShit.shaderCodes.rodsVertCode,
-        glShit.shaderCodes.rodsFragCode
+        glShit.shaderCodes.moderatorsVertCode,
+        glShit.shaderCodes.moderatorsFragCode
     );
 
     steamRenderer.init(
@@ -128,11 +128,11 @@ function initShadersAndGL() {
 }
 
 function initSimulationObjects() {
-    controlRodSlotXs = [];
-    controlRods = new Array(controlRodCount).fill(null);
-    controlRodPurchaseCount = 0;
-    controlRodUpgradePurchaseCount = 0;
-    controlRodUpgradeLevels = [];
+    moderatorSlotXs = [];
+    moderators = new Array(moderatorCount).fill(null);
+    moderatorPurchaseCount = 0;
+    moderatorUpgradePurchaseCount = 0;
+    moderatorUpgradeLevels = [];
 
     for (let y = 0; y < uraniumAtomsCountY; y++) {
         for (let x = 0; x < uraniumAtomsCountX; x++) {
@@ -148,7 +148,7 @@ function initSimulationObjects() {
     let colInGroup = 0;
     for (let x = 0; x < uraniumAtomsCountX; x++) {
         if ((x + 1) % 7 === 0) {
-            controlRodSlotXs.push(x * uraniumAtomsSpacingX + controlRodWidth / 2);
+            moderatorSlotXs.push(x * uraniumAtomsSpacingX + moderatorWidth / 2);
             groupIndex += 1;
             colInGroup = 0;
         } else {
@@ -169,9 +169,9 @@ function initSimulationObjects() {
 
     buildAtomGroups();
 
-    for (let i = 0; i < controlRodCount; i++) {
-        const slotX = controlRodSlotXs[i];
-        controlRods[i] = new ControlRod(slotX, controlRodsStartPos);
+    for (let i = 0; i < moderatorCount; i++) {
+        const slotX = moderatorSlotXs[i];
+        moderators[i] = new Moderator(slotX, moderatorsStartPos);
     }
 
     grid = new Grid(uraniumAtomsSpacingX);
@@ -183,7 +183,7 @@ function initSimulationObjects() {
 function initUiObjects() {
     ui.powerMeter = new PowerMeter(globalScale * 730, globalScale * 530);
     ui.tempMeter = new TempMeter(globalScale * 600, globalScale * 530);
-    ui.controlSlider = new ControlRodsSlider();
+    ui.controlSlider = new ModeratorsSlider();
     ui.canvas = new UICanvas();
 
     if (prestigeManager && typeof prestigeManager.applyCurrentLoopScaling === 'function') {
@@ -214,9 +214,9 @@ function updateScene() {
     });
         window.avgTemp = waterCells.length > 0 ? totalHeat / waterCells.length : 0;
 
-    controlRods.forEach((rod, index) => {
-        if (typeof isControlRodActive === 'function' && !isControlRodActive(index)) return;
-        rod.update();
+    moderators.forEach((mod, index) => {
+        if (typeof isModeratorActive === 'function' && !isModeratorActive(index)) return;
+        mod.update();
     });
     const plutoniumUnlocked = !(window.tutorialManager && typeof window.tutorialManager.isItemUnlocked === 'function')
         || window.tutorialManager.isItemUnlocked('plutonium');
@@ -305,13 +305,13 @@ function drawScene() {
         renderSpecialLayer();
     }
 
-    const showRodLayer = scramCompleted && (
+    const showModeratorLayer = scramCompleted && (
         !(window.tutorialManager && typeof window.tutorialManager.shouldRenderLayer === 'function')
-        || window.tutorialManager.shouldRenderLayer('rods')
+        || window.tutorialManager.shouldRenderLayer('moderators')
     );
-    if (showRodLayer) {
+    if (showModeratorLayer) {
         gl.viewport(simX, 0, simW, simH);
-        renderRodsLayer();
+        renderModeratorsLayer();
     }
 
     if (scramCompleted && vidSettings.bubbles) {
@@ -406,9 +406,9 @@ function renderSpecialLayer() {
     specialRenderer.draw(activeCount, { blendMode: 'alpha' });
 }
 
-function renderRodsLayer() {
-    const activeCount = rodsRenderer.updateInstances(controlRods, ui.controlSlider);
-    rodsRenderer.draw(activeCount);
+function renderModeratorsLayer() {
+    const activeCount = moderatorsRenderer.updateInstances(moderators, ui.controlSlider);
+    moderatorsRenderer.draw(activeCount);
 }
 
 function renderSteamLayer() {

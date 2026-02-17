@@ -34,8 +34,8 @@ const loadingTasks = [
   createShaderLoadTask("water fragment shader", 'shaders/water.frag', 'waterFragSrc', 'waterFragCode'),
   createShaderLoadTask("explosion vertex shader", 'shaders/explosion.vert', 'explosionVertSrc', 'explosionVertCode'),
   createShaderLoadTask("explosion fragment shader", 'shaders/explosion.frag', 'explosionFragSrc', 'explosionFragCode'),
-  createShaderLoadTask("rods vertex shader", 'shaders/rods.vert', 'rodsVertSrc', 'rodsVertCode'),
-  createShaderLoadTask("rods fragment shader", 'shaders/rods.frag', 'rodsFragSrc', 'rodsFragCode'),
+  createShaderLoadTask("moderators vertex shader", 'shaders/moderators.vert', 'moderatorsVertSrc', 'moderatorsVertCode'),
+  createShaderLoadTask("moderators fragment shader", 'shaders/moderators.frag', 'moderatorsFragSrc', 'moderatorsFragCode'),
   createShaderLoadTask("title vertex shader", 'shaders/title.vert', 'titleVertSrc', 'titleVertCode'),
   createShaderLoadTask("title fragment shader", 'shaders/title.frag', 'titleFragSrc', 'titleFragCode'),
   createShaderLoadTask("title rock vertex shader", 'shaders/title_rock.vert', 'titleRockVertSrc', 'titleRockVertCode'),
@@ -85,8 +85,8 @@ const loadingTasks = [
     func: () => initUiObjects()
   },
   {
-    name: "Initializing control rod upgrades",
-    func: () => initControlRodUpgrades()
+    name: "Initializing moderator upgrades",
+    func: () => initModeratorUpgrades()
   },
   {
     name: "Setting up event listeners",

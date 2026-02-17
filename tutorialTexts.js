@@ -47,10 +47,10 @@ const TUTORIAL_PAGES = {
         title: 'Balancing the flow',
         text: 'Manual water flow control is now unlocked. Yes, for some reason there exists a valve that must be upgraded with money. How does that even work?'
     },
-    unlock_control_rod: { 
-        title: 'Moderating the control',
-        text: 'Additional control rods are now available to purchase. They are also upgradeable to move further down. When a neutron hits a control rod, it slows down. A slower neutron is more likely to hit a uranium atom and cause it to decay.',
-        blinkLayer: 'rods'
+    unlock_moderator: { 
+        title: 'Moderators Unlocked',
+        text: 'Additional moderators are now available to purchase. They are also upgradeable to move further down. When a neutron hits a moderator, it slows down. A slower neutron is more likely to hit a uranium atom and cause it to decay.',
+        blinkLayer: 'moderators'
     },
     scram_intro: {
         title: 'What Is This Place?',
@@ -59,7 +59,7 @@ const TUTORIAL_PAGES = {
     },
     plutonium_intro_1: {
         title: 'Too Weak to Matter',
-        text: 'This reactor seems to be useless - it generates little to no power. The rock in your pocket though is getting a bit warm, and emits an eerie green glow. A very nice glow, you seem to decide without even thinking about it. You assume it\'s not very good to store it close to your man-parts, and throw it into the reactor instead. Some water starts to boil instantly.',
+        text: 'This reactor seems to be useless - it generates little to no power. You think the rock in your pocket might be warmer than the reactor. You examine it and it seems to emit an eerie green glow. A very nice glow, you seem to decide without even thinking about it. In frustration you throw it into the reactor. Some water starts to boil instantly.',
         highlightTarget: { type: 'sim-object', object: 'plutonium' }
     },
     plutonium_intro_2: {
@@ -115,10 +115,10 @@ const TUTORIAL_PAGES = {
         text: 'You have reactivated a whole new chamber of the reactor. There even seems to be a bit of uranium left behind in there.',
         blinkLayer: 'uranium'
     },
-    shop_control_rod_purchase: { //actually triggers when a control rod is dragged
-        title: 'Control Rod Controls',
-        text: 'As you push the rod down to the core, the power meter is jumping up instead of down. You get the feeling this machine was built by people who valued excitement over safety.',
-        blinkLayer: 'rods'
+    shop_moderator_purchase: { //actually triggers when a moderator is dragged
+        title: 'Moderator Controls',
+        text: 'As you push the moderator down to the core, the power meter is jumping up instead of down. You get the feeling this machine was built by people who thought "safety first" was just a suggestion.',
+        blinkLayer: 'moderators'
     },
     shop_water_flow_purchase: {
         title: 'Water Valve',

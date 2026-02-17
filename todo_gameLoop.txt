@@ -46,7 +46,7 @@ MILESTONE 2: PRESTIGE SYSTEM CORE
     [x] Increment `loopNumber`.
     [x] Reset Inventory:
         *   2 Atom Groups (Centermost) with 15 rows of atoms each.
-        *   1 Control Rod (Center).
+        *   1 Moderator (Center).
         *   lowest level plutonium and californium are owned, after first levels when they're unlocked
     [x] Reset Money to 0.
     [x] Apply new thresholds and scaling from `PrestigeData`.
@@ -81,9 +81,9 @@ MILESTONE 4: LOOP CONTENT & PROGRESSION
         *   Unlock: Water Valve manual control.
         *   Tutorial event: unlock uranium groups in shop
     [ ] Loop 4 Data:
-        *   Unlock: Buy more control rods in shop.  //NOT IMPLEMENTED, rods are always available now, needs fix
-        *   Tutorial event: unlock control rod upgrades in shop
-        *   Tutorial event: link control rods button in shop, trigger when buying 3rd rod
+        *   Unlock: Buy more moderators in shop.  //NOT IMPLEMENTED, moderators are always available now, needs fix
+        *   Tutorial event: unlock moderator upgrades in shop
+        *   Tutorial event: link moderators button in shop, trigger when buying 3rd moderator
     [ ] Loop N (Procedural):
         *   Algorithm to scale Money/Power requirements exponentially (e.g., 1.5x previous).
         *   And make the game harder

@@ -11,13 +11,13 @@ class Shop {
                 basePrice: 5000,
                 priceMult: 10
             },
-            controlRod: {
-                name: "Control Rod",
+            moderator: {
+                name: "Moderator",
                 basePrice: 10,
                 priceMult: 1.3
             },
-            controlRodUpgrade: {
-                name: "Control Rod Upgrade",
+            moderatorUpgrade: {
+                name: "Moderator Upgrade",
                 basePrice: 50,
                 priceMult: 1.2
             },
@@ -40,8 +40,8 @@ class Shop {
         this.itemUnlocked = {
             atom: true,
             group: true,
-            controlRod: true,
-            controlRodUpgrade: true,
+            moderator: true,
+            moderatorUpgrade: true,
             waterFlow: true,
             plutonium: true,
             californium: true
@@ -80,10 +80,10 @@ class Shop {
                 return getTotalAtomCount();
             case 'group':
                 return player.ownedGroups.length;
-            case 'controlRod':
-                return controlRodPurchaseCount;
-            case 'controlRodUpgrade':
-                return controlRodUpgradePurchaseCount;
+            case 'moderator':
+                return moderatorPurchaseCount;
+            case 'moderatorUpgrade':
+                return moderatorUpgradePurchaseCount;
             case 'waterFlow':
                 return player.waterFlowUpgradeCount;
             case 'plutonium':
@@ -105,21 +105,21 @@ class Shop {
 
         let totalCost = 0;
 
-        const maxRodPurchases = (itemName === 'controlRod') ? getMaxControlRodPurchases() : 0;
-        const maxRodUpgradePurchases = (itemName === 'controlRodUpgrade') ? getMaxControlRodUpgradePurchases() : 0;
+        const maxRodPurchases = (itemName === 'moderator') ? getMaxModeratorPurchases() : 0;
+        const maxRodUpgradePurchases = (itemName === 'moderatorUpgrade') ? getMaxModeratorUpgradePurchases() : 0;
         const maxWaterFlowUpgrades = (itemName === 'waterFlow') ? player.waterFlowUpgradeMax : 0;
         const maxPlutoniumUpgrades = (itemName === 'plutonium') ? player.plutoniumUpgradeMax : 0;
         const maxCaliforniumUpgrades = (itemName === 'californium') ? player.californiumUpgradeMax : 0;
 
-        if (itemName === 'controlRod' && currentCount >= maxRodPurchases) {
+        if (itemName === 'moderator' && currentCount >= maxRodPurchases) {
             return { count: 0, cost: 0 };
         }
 
-        if (itemName === 'controlRodUpgrade' && controlRodPurchaseCount <= 1) {
+        if (itemName === 'moderatorUpgrade' && moderatorPurchaseCount <= 1) {
             return { count: 0, cost: 0 };
         }
-
-        if (itemName === 'controlRodUpgrade' && currentCount >= maxRodUpgradePurchases) {
+        
+        if (itemName === 'moderatorUpgrade' && currentCount >= maxRodUpgradePurchases) {
             return { count: 0, cost: 0 };
         }
 
@@ -154,9 +154,9 @@ class Shop {
                 if (itemName === 'atom') {
                     const groupIndex = this.targetAtomGroupIndex;
                     countToBuy = getGroupAvailableSlots(groupIndex);
-                } else if (itemName === 'controlRod') {
+                } else if (itemName === 'moderator') {
                     countToBuy = Math.max(0, maxRodPurchases - currentCount);
-                } else if (itemName === 'controlRodUpgrade') {
+                } else if (itemName === 'moderatorUpgrade') {
                     countToBuy = Math.max(0, maxRodUpgradePurchases - currentCount);
                 } else if (itemName === 'waterFlow') {
                     countToBuy = Math.max(0, maxWaterFlowUpgrades - currentCount);
@@ -222,7 +222,7 @@ class Shop {
             }
         }
 
-        if (itemName === 'controlRod') {
+        if (itemName === 'moderator') {
             const maxBuy = Math.max(0, maxRodPurchases - currentCount);
             if (countToBuy > maxBuy) {
                 countToBuy = maxBuy;
@@ -237,7 +237,7 @@ class Shop {
             }
         }
 
-        if (itemName === 'controlRodUpgrade') {
+        if (itemName === 'moderatorUpgrade') {
             const maxBuy = Math.max(0, maxRodUpgradePurchases - currentCount);
             if (countToBuy > maxBuy) {
                 countToBuy = maxBuy;
@@ -349,14 +349,14 @@ class Shop {
                     unlockAtomGroup(nextGroup);
                 }
                 break;
-            case 'controlRod':
-                applyControlRodPurchase();
+            case 'moderator':
+                applyModeratorPurchase();
                 break;
-            case 'controlRodUpgrade':
-                if (controlRodPurchaseCount > 1) {
-                    const ok = applyControlRodUpgradePurchase();
+            case 'moderatorUpgrade':
+                if (moderatorPurchaseCount > 1) {
+                    const ok = applyModeratorUpgradePurchase();
                     if (ok) {
-                        player.rodUpgradeCount = controlRodUpgradePurchaseCount;
+                        player.moderatorUpgradeCount = moderatorUpgradePurchaseCount;
                     }
                 }
                 break;
@@ -408,8 +408,8 @@ class Shop {
         this.itemUnlocked = {
             atom: true,
             group: true,
-            controlRod: true,
-            controlRodUpgrade: true,
+            moderator: true,
+            moderatorUpgrade: true,
             waterFlow: true,
             plutonium: true,
             californium: true,

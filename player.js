@@ -5,8 +5,8 @@ class Player {
         this.ownedColumns = [];
         this.ownedGroups = [];
         this.groupAtomCounts = [];
-        this.rodCount = 1;
-        this.rodUpgradeCount = 0;
+        this.moderatorCount = 1;
+        this.moderatorUpgradeCount = 0;
         this.upgrades = {};
         this.settings = {};
 
@@ -75,8 +75,8 @@ class Player {
             ownedColumns: this.ownedColumns,
             ownedGroups: this.ownedGroups,
             groupAtomCounts: this.groupAtomCounts,
-            rodCount: this.rodCount,
-            rodUpgradeCount: this.rodUpgradeCount,
+            moderatorCount: this.moderatorCount,
+            moderatorUpgradeCount: this.moderatorUpgradeCount,
             upgrades: this.upgrades,
             waterFlowStart: this.waterFlowStart,
             waterFlowMinLimit: this.waterFlowMinLimit,
@@ -97,8 +97,8 @@ class Player {
         this.ownedColumns = obj.ownedColumns || [];
         this.ownedGroups = obj.ownedGroups || [];
         this.groupAtomCounts = obj.groupAtomCounts || [];
-        this.rodCount = obj.rodCount || 1;
-        this.rodUpgradeCount = obj.rodUpgradeCount ?? 0;
+        this.moderatorCount = obj.moderatorCount || 1;
+        this.moderatorUpgradeCount = obj.moderatorUpgradeCount ?? 0;
         this.upgrades = obj.upgrades || {};
         this.waterFlowStart = obj.waterFlowStart ?? 0.15;
         this.waterFlowMinLimit = obj.waterFlowMinLimit ?? 0.01;

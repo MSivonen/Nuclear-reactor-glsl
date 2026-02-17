@@ -77,8 +77,7 @@ void main(){
 
     // 2. Shading
     vec3 baseCol = vColor.rgb; 
-    // If color is too dark, boost it for the "ultra good" look
-    if (length(baseCol) < 0.3) baseCol = vec3(0.25, 0.2, 0.3); // Deep metallic violet/gray
+    if (length(baseCol) < 0.3) baseCol = vec3(0.25, 0.2, 0.3);
 
     float diff = max(0.0, dot(perturbedNormal, lightDir));
     
@@ -94,7 +93,6 @@ void main(){
     col += vec3(0.9, 0.9, 1.0) * spec * neutronIntensity * 2.0;
     col += vec3(0.8, 0.8, 1.0) * rim * 0.3;
 
-    // Metal texture (vertical brushed metal look)
     float brush = noise(vQuadPos * vec2(100.0, 2.0));
     col *= (0.9 + 0.1 * brush);
 

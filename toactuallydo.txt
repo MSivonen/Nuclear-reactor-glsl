@@ -13,7 +13,7 @@ When editing files, change the timestamp in index.html for cache busting.
 
 2) Economy & player state (DONE) — quick win
 	- Importance: 5/5  Difficulty: 2/5
-	v- Add `Player` class for storing currency, owned columns/groups, rod count, and upgrades. Connect accumulation from power output to currency.
+	v- Add `Player` class for storing currency, owned columns/groups, moderator count, and upgrades. Connect accumulation from power output to currency.
 	v- Files: add `player.js`, update `reportSystem.js` and `sketch.js`
 
 2.5) Widescreen layout & shop area (DONE)
@@ -26,7 +26,7 @@ When editing files, change the timestamp in index.html for cache busting.
 		v-Money 
 		v-Money per second
 		v-Controls
-			v-Link rods
+			v-Link moderators
 			-Water valve
 		v-Shop
 		v-Settings
@@ -51,10 +51,10 @@ When editing files, change the timestamp in index.html for cache busting.
 	- Check todo.txt for more details.
 	- Files: `ui.js`, new `audio.js`
 
-6) Control rods: upgrades (DONE)
+6) Moderators: upgrades (DONE)
 	- Importance: 4/5  Difficulty: 3/5
-	- Buying additional rods
-	- Files: `controlrod.js`, `ui.js`, `sketch.js`
+	- Buying additional moderators
+	- Files: `moderator.js`, `ui.js`, `sketch.js`
 
 7) Atom group/column purchase logic (DONE)
 	- Importance: 4/5  Difficulty: 2/5

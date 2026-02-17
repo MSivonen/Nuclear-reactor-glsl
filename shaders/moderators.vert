@@ -5,7 +5,7 @@ layout(location=0) in vec2 a_quadPos;      // -0.5 to 0.5
 layout(location=1) in vec2 a_instPos;      // Top-left or Center? Let's say Center for simplicity
 layout(location=2) in vec4 a_instColor;
 layout(location=3) in vec2 a_instSize;     // width, height
-layout(location=4) in float a_isHandle;    // 1.0 for sphere, 0.0 for rod
+layout(location=4) in float a_isHandle;    // 1.0 for sphere, 0.0 for moderator
 
 uniform vec2 u_resolution;
 uniform float render_height;
@@ -27,7 +27,7 @@ void main(){
     if (a_isHandle > 0.5) {
         pos = a_instPos + sizePos; // Handle is centered
     } else {
-        pos = a_instPos + sizePos + a_instSize * 0.5; // Rod is top-left in JS, adjust to center-based draw
+        pos = a_instPos + sizePos + a_instSize * 0.5; // Moderator is top-left in JS, adjust to center-based draw
     }
 
     float scale = u_resolution.y / render_height;

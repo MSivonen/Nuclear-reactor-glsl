@@ -2,15 +2,15 @@ let screenHeight = 900;
 let screenWidth = Math.floor(screenHeight * 1.7778);
 let screenSimWidth = Math.floor(screenHeight * (4 / 3));
 let SHOP_WIDTH = screenWidth - screenSimWidth;
-let controlRodsStartPos = -screenHeight * .9;
+let moderatorsStartPos = -screenHeight * .9;
 let globalScale = screenHeight / 600;
 
 const defaultSettings = {
   neutronSpeed: 5,
   collisionProbability: 0.071,
   decayProbability: 0.0001,
-  controlRodAbsorptionProbability: 0.1,
-  controlRodHitProbability: 0.325,
+  moderatorAbsorptionProbability: 0.1,
+  moderatorHitProbability: 0.325,
   waterFlowSpeed: 0.15,
   heatingRate: 150,
   uraniumToWaterHeatTransfer: 0.2,
@@ -27,11 +27,11 @@ const defaultSettings = {
 let settings = { ...defaultSettings };
 
 let uraniumAtoms = [];
-let controlRods = [];
-let controlRodSlotXs = [];
-let controlRodPurchaseCount = 0;
-let controlRodUpgradePurchaseCount = 0;
-let controlRodUpgradeLevels = [];
+let moderators = [];
+let moderatorSlotXs = [];
+let moderatorPurchaseCount = 0;
+let moderatorUpgradePurchaseCount = 0;
+let moderatorUpgradeLevels = [];
 let waterCells = [];
 let grid;
 let boom = false;
@@ -161,9 +161,9 @@ const uraniumAtomsCountX = 41;
 const uraniumAtomsCountY = 30;
 let uraniumAtomsSpacingX;
 let uraniumAtomsSpacingY;
-const controlRodCount = 5;
-let controlRodWidth;
-let controlRodHeight;
+const moderatorCount = 5;
+let moderatorWidth;
+let moderatorHeight;
 const NEUTRON_STRIDE = 4;
 const MAX_NEUTRONS = 512;
 const MAX_NEUTRONS_SQUARED = MAX_NEUTRONS * MAX_NEUTRONS;
@@ -178,9 +178,9 @@ function updateDimensions() {
   uraniumAtomsSpacingX = screenSimWidth / uraniumAtomsCountX;
   uraniumAtomsSpacingY = screenHeight / uraniumAtomsCountY;
 
-  controlRodWidth = 10 * globalScale;
-  controlRodHeight = 600 * globalScale;
-  controlRodsStartPos = -screenHeight * 0.9;
+  moderatorWidth = 10 * globalScale;
+  moderatorHeight = 600 * globalScale;
+  moderatorsStartPos = -screenHeight * 0.9;
 
   settings.uraniumSize = defaultSettings.uraniumSize * globalScale;
   settings.neutronSize = defaultSettings.neutronSize * globalScale;

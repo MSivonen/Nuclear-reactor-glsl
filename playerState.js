@@ -84,7 +84,7 @@ class PlayerState {
             }
 
             initializePlayerAtomGroups(player);
-            initControlRodUpgrades();
+            initModeratorUpgrades();
             settings.waterFlowSpeed = Math.max(player.waterFlowMin, Math.min(player.waterFlowMax, settings.waterFlowSpeed));
             settings.targetNeutronSize = settings.neutronSize;
 

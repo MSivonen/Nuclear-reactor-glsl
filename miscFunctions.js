@@ -99,18 +99,20 @@ function triggerBoom() {
     resetThermalState();
     ui.collisionsThisSecond = 0;
 
-    ui.canvas.resetRodHandles();
+    ui.canvas.resetModeratorHandles();
 
     settings.linkRods = false;
 
-    ui.canvas.updateLinkRodsButton();
+    ui.canvas.updateLinkModeratorsButton && ui.canvas.updateLinkModeratorsButton();
 
     audioManager.playSfx('boom');
 
-    controlRods.forEach((rod) => {
-        rod.y = rod.initialY;
-        rod.targetY = rod.initialY; // Ensure targets are reset
-    });
+    if (Array.isArray(moderators)) {
+        moderators.forEach((rod) => {
+            rod.y = rod.initialY;
+            rod.targetY = rod.initialY; // Ensure targets are reset
+        });
+    }
 
     if (qualifiesForPrestige) {
         boomOutcome = 'PRESTIGE';
@@ -161,7 +163,7 @@ function resetRunForPrestige() {
 
     resetSimulation();
     initializePlayerAtomGroups(player);
-    initControlRodUpgrades();
+    initModeratorUpgrades();
 
     try {
         const selected = (playerState && typeof playerState.getSelectedSlot === 'function') ? playerState.getSelectedSlot() : 0;
@@ -202,7 +204,7 @@ function rollbackSetback() {
 
     resetSimulation();
     initializePlayerAtomGroups(player);
-    initControlRodUpgrades();
+    initModeratorUpgrades();
     paused = false;
 
 }
@@ -239,16 +241,18 @@ function resetSimulation() {
     }
 
     resetThermalState();
-    controlRods.forEach((rod) => {
-        rod.y = rod.initialY;
-        rod.targetY = rod.initialY;
-    });
-    if (ui && ui.canvas && typeof ui.canvas.resetRodHandles === 'function') {
-        ui.canvas.resetRodHandles();
+    if (Array.isArray(moderators)) {
+        moderators.forEach((rod) => {
+            rod.y = rod.initialY;
+            rod.targetY = rod.initialY;
+        });
+    }
+    if (ui && ui.canvas && typeof ui.canvas.resetModeratorHandles === 'function') {
+        ui.canvas.resetModeratorHandles();
     } else if (ui && ui.controlSlider) {
-        ui.controlSlider.handleY = new Array(controlRods.length).fill(0);
-        for (let i = 0; i < controlRods.length; i++) {
-            ui.controlSlider.handleY[i] = clampControlRodHandleY(i, controlRods[i].initialY + controlRods[i].height);
+        ui.controlSlider.handleY = new Array((moderators && moderators.length) ? moderators.length : 0).fill(0);
+        for (let i = 0; i < ((moderators && moderators.length) ? moderators.length : 0); i++) {
+            ui.controlSlider.handleY[i] = clampModeratorHandleY(i, moderators[i].initialY + moderators[i].height);
         }
         ui.controlSlider.draggingIndex = -1;
         ui.controlSlider.ensureHandleLength();
@@ -284,7 +288,7 @@ function startFreshGame() {
 
     resetSimulation();
     initializePlayerAtomGroups(player);
-    initControlRodUpgrades();
+    initModeratorUpgrades();
     if (prestigeManager && typeof prestigeManager.loadFromPlayer === 'function') {
         prestigeManager.loadFromPlayer(player);
     }
@@ -297,7 +301,7 @@ function startFreshGame() {
             tutorialItemUnlocks: {
                 atom: true,
                 group: false,
-                controlRod: false,
+                moderator: false,
                 waterFlow: false,
                 californium: false,
                 plutonium: false

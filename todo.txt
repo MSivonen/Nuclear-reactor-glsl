@@ -1,9 +1,9 @@
 MAKING A GAME
 
 === Definitions: === 
--Atom group: the bunch of atoms between two control rod slots
--Atom column: one vertical column inside of an atom group
--Slot: A place where an atom (group) or a control rod can be
+ -Atom group: the bunch of atoms between two moderator slots
+ -Atom column: one vertical column inside of an atom group
+ -Slot: A place where an atom (group) or a moderator can be
 
 === Setup: === 
 v-Make slots for atoms and control rods. The slot places are fixed, but the slots can be empty or filled.
@@ -18,17 +18,17 @@ v    -Game starts in start screen
 v    -two groups of atoms, the two centermost ones
 v        -each group has 6 columns of atoms
 v        -each group has 15 rows of atoms - tweak it, they have 3 too little
-v    -one control rod, the center one
+v    -one moderator, the center one
 
 === Max upgrades are: === 
 v    -six atom groups, each group has 6x30 atoms (total 36x30)
-v    -five control rods
+v    -five moderators
 
 === Shop: === 
 v    -atoms to a group. The centermost slot is filled first, prioritize left/top one if there is multiple slots equally close to center
 v        -ctrl+click to buy 5
 v        -shift+click to buy 10
-v    -Control rods. Same logic, centermost first.
+v    -Moderators. Same logic, centermost first.
      -Can the stuff be bought whenever or does the reactor need to be shut down first? / to be decided later
 v    -Max water flow rate
 
@@ -95,7 +95,7 @@ v            -click
         -Maybe later, not a priority
 
 === UI: ===
-v    -Control rod sliders
+v    -Moderator sliders
 v    -Water speed slider
 v    -Menu
 v        *Entered with esc key. Pauses the game*
@@ -128,4 +128,4 @@ v    -Ability to give a name to savegame
     tweak: tweak californium values (made by testing, not by ai)
 
     feat: make the ambient audio to start playing only after scram is pressed the first time.
-    BUG!: Control rods should be renamed to moderators. Everywhere. In text and in variable names. Even filenames.
+    BUG!: Moderators should be renamed everywhere (was previously 'control rods'). Variables, text, and filenames updated.
