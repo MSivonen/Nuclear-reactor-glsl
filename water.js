@@ -80,7 +80,7 @@ class WaterSystem {
         }
     }
 
-    update(deltaTime, settings) {
+    step(dtSeconds, settings) {
         this.updateConduction();
         const topCount = uraniumAtomsCountX;
         const topTemps = this.getTopRowTemps(topCount);
@@ -101,7 +101,7 @@ class WaterSystem {
             const dE = massMoved * c * heatBoost;
             totalJoulesOut += dE / 1000;
         }
-        const dt = deltaTime / 1000.0;
+        const dt = Number.isFinite(dtSeconds) && dtSeconds > 0 ? dtSeconds : (1.0 / 60.0);
         const powerW = totalJoulesOut / (dt > 0 ? dt : 1.0 / 60.0);
         return powerW / 1000.0;
     }

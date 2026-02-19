@@ -65,47 +65,12 @@ class ReportSystem {
         const w = uraniumAtomsCountX;
         const h = uraniumAtomsCountY;
 
-        const writePBOIndex = glShit.reportPBOIndex;
-        const writePBO = glShit.reportPBOs[writePBOIndex];
-        let kickedWrite = false;
-
-        // Don't overwrite a PBO that is still in-flight.
-        if (!glShit.reportPBOSyncs[writePBOIndex]) {
-            gl.bindBuffer(gl.PIXEL_PACK_BUFFER, writePBO);
-            gl.bufferData(gl.PIXEL_PACK_BUFFER, glShit.reportPBOSize, gl.STREAM_READ);
-            gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, 0);
-
-            gl.flush();
-            const sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
-            glShit.reportPBOSyncs[writePBOIndex] = sync;
-            kickedWrite = true;
-        }
-
-        const readPBOIndex = (writePBOIndex + 1) % 2;
-        const readPBO = glShit.reportPBOs[readPBOIndex];
-        const readSync = glShit.reportPBOSyncs[readPBOIndex];
-        let hasFreshReportData = false;
-
-        if (readSync) {
-            const status = gl.clientWaitSync(readSync, 0, 0);
-            if (status === gl.ALREADY_SIGNALED || status === gl.CONDITION_SATISFIED) {
-                gl.bindBuffer(gl.PIXEL_PACK_BUFFER, readPBO);
-                gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, glShit.reportData);
-                gl.deleteSync(readSync);
-                glShit.reportPBOSyncs[readPBOIndex] = null;
-                hasFreshReportData = true;
-                glShit.reportPBOPrimed = true;
-            }
-        }
-
+        // Deterministic readback: the report texture is tiny, so synchronous read is
+        // cheap and avoids dropped collision events when simulation runs in fixed substeps.
         gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
-        glShit.reportPBOIndex = (writePBOIndex + 1) % 2;
-        gl.viewport(0, 0, glShit.simCanvas.width, glShit.simCanvas.height);
+        gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, glShit.reportData);
 
-        if (!glShit.reportPBOPrimed || !hasFreshReportData) {
-            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-            return;
-        }
+        gl.viewport(0, 0, glShit.simCanvas.width, glShit.simCanvas.height);
 
         for (let i = 0; i < uraniumAtoms.length; i++) {
             if (!uraniumAtoms[i].hasAtom) continue;

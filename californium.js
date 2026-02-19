@@ -55,7 +55,7 @@ class Californium {
         }
     }
 
-    update() {
+    updateInteraction() {
         this.applyUpgradeLevel(this.upgradeLevel);
 
         // Interaction (Handle input here so it works when paused)
@@ -88,9 +88,13 @@ class Californium {
             this.dragging = false;
         }
 
-        this.spawnTimer += deltaTime / 1000.0;
-        if (this.spawnTimer >= this.spawnInterval) {
-            this.spawnTimer = 0;
+    }
+
+    stepSpawn(dtSeconds) {
+        const dt = Number.isFinite(dtSeconds) && dtSeconds > 0 ? dtSeconds : (1.0 / 60.0);
+        this.spawnTimer += dt;
+        while (this.spawnTimer >= this.spawnInterval) {
+            this.spawnTimer -= this.spawnInterval;
             if (window.neutron) {
                 for (let i = 0; i < this.spawnBurstCount; i++) {
                     const randAngle = Math.random() * .2 - .1;

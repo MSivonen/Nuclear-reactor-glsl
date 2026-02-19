@@ -19,14 +19,20 @@ class Moderator {
         ctx.restore();
     }
 
-    update() {
-        this.movementSpeed = 1 * globalScale;
+    updateStep(dtSeconds) {
+        const dt = Number.isFinite(dtSeconds) && dtSeconds > 0 ? dtSeconds : (1.0 / 60.0);
+        this.movementSpeed = 1 * globalScale * 60.0;
 
+        const maxStep = this.movementSpeed * dt;
         if (this.y < this.targetY) {
-            this.y += this.movementSpeed;
+            this.y = Math.min(this.targetY, this.y + maxStep);
         } else if (this.y > this.targetY) {
-            this.y -= this.movementSpeed;
+            this.y = Math.max(this.targetY, this.y - maxStep);
         }
+    }
+
+    update() {
+        this.updateStep(1.0 / 60.0);
     }
 }
 

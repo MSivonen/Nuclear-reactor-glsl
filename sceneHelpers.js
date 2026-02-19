@@ -195,54 +195,75 @@ function initUiObjects() {
 
 
 
-function updateScene() {
-    audioManager.update(deltaTime, settings, energyOutput, paused, game.boomValue);
-
+function updateSceneFrame(frameDtSeconds) {
     if (!Number.isFinite(settings.collisionProbability) || settings.collisionProbability <= 0) {
         settings.collisionProbability = defaultSettings.collisionProbability;
     }
 
-    // Update neutrons in GPU
-    neutron.update(glShit.simGL);
-    reportSystem.process(glShit.simGL);
-    let totalHeat = 0;
     uraniumAtoms.forEach(s => {
         s.update();
     });
-        waterCells.forEach(cell => {
-        totalHeat += cell.temperature;
-    });
-        window.avgTemp = waterCells.length > 0 ? totalHeat / waterCells.length : 0;
 
-    moderators.forEach((mod, index) => {
-        if (typeof isModeratorActive === 'function' && !isModeratorActive(index)) return;
-        mod.update();
-    });
     const plutoniumUnlocked = !(window.tutorialManager && typeof window.tutorialManager.isItemUnlocked === 'function')
         || window.tutorialManager.isItemUnlocked('plutonium');
-    if (plutoniumUnlocked && plutonium) plutonium.update();
+    if (plutoniumUnlocked && plutonium) plutonium.updateInteraction();
     const californiumUnlocked = !(window.tutorialManager && typeof window.tutorialManager.isItemUnlocked === 'function')
         || window.tutorialManager.isItemUnlocked('californium');
-    if (californiumUnlocked && californium) californium.update();
-
-    energyThisFrame = waterSystem.update(deltaTime, settings);
-
-    let dt = deltaTime / 1000.0;
-    if (dt <= 0) dt = 1.0 / 60.0;
-    energyOutputCounter += energyThisFrame * dt;
-    ui.accumulatedTime += dt;
-    ui.powerMeter.update();
-    ui.tempMeter.update();
-    oncePerSecond();
+    if (californiumUnlocked && californium) californium.updateInteraction();
 
     // Smooth neutron size toward target over 5 seconds to prevent flickering
     if (typeof settings.targetNeutronSize !== 'undefined') {
-        let sec = deltaTime / 1000.0;
+        let sec = Number.isFinite(frameDtSeconds) && frameDtSeconds > 0 ? frameDtSeconds : (1.0 / 60.0);
         if (sec <= 0) sec = 1.0 / 60.0;
         const smoothTime = 5.0; // seconds to reach target
         const frac = Math.min(1.0, sec / smoothTime);
         settings.neutronSize += (settings.targetNeutronSize - settings.neutronSize) * frac;
     }
+}
+
+function stepThermal(dtSeconds) {
+    const stepDt = Number.isFinite(dtSeconds) && dtSeconds > 0 ? dtSeconds : (1.0 / 60.0);
+
+    neutron.update(glShit.simGL);
+    reportSystem.process(glShit.simGL);
+
+    moderators.forEach((mod, index) => {
+        if (typeof isModeratorActive === 'function' && !isModeratorActive(index)) return;
+        mod.updateStep(stepDt);
+    });
+
+    uraniumAtoms.forEach(atom => {
+        atom.stepDecay(stepDt);
+        atom.heatTransferToWater();
+    });
+
+    const plutoniumUnlocked = !(window.tutorialManager && typeof window.tutorialManager.isItemUnlocked === 'function')
+        || window.tutorialManager.isItemUnlocked('plutonium');
+    if (plutoniumUnlocked && plutonium) {
+        plutonium.applyHeatStep(stepDt);
+    }
+
+    const californiumUnlocked = !(window.tutorialManager && typeof window.tutorialManager.isItemUnlocked === 'function')
+        || window.tutorialManager.isItemUnlocked('californium');
+    if (californiumUnlocked && californium) {
+        californium.stepSpawn(stepDt);
+    }
+
+    energyThisFrame = waterSystem.step(stepDt, settings);
+    energyOutputCounter += energyThisFrame * stepDt;
+    ui.accumulatedTime += stepDt;
+}
+
+function finalizeSceneFrame() {
+    let totalHeat = 0;
+    waterCells.forEach(cell => {
+        totalHeat += cell.temperature;
+    });
+    window.avgTemp = waterCells.length > 0 ? totalHeat / waterCells.length : 0;
+
+    ui.powerMeter.update();
+    ui.tempMeter.update();
+    oncePerSecond();
 }
 
 function drawScene() {

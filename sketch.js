@@ -50,6 +50,8 @@ let renderTime = 0;
 let gameState = 'LOADING';
 let prestigeTransitionStartedAt = -1;
 let prestigeScreen = null;
+const THERMAL_STEP_SECONDS = 1.0 / 60.0;
+let thermalAccumulator = 0;
 
 let waterSystem;
 let plutonium;
@@ -303,10 +305,17 @@ function draw() {
   }
 
   if (!paused) {
-    renderTime += deltaTime / 1000.0;
+    const frameDt = deltaTime > 0 ? (deltaTime / 1000.0) : (1.0 / 60.0);
+    renderTime += frameDt;
 
     if (!boom) {
-      updateScene();
+      updateSceneFrame(frameDt);
+      thermalAccumulator += frameDt;
+      while (thermalAccumulator >= THERMAL_STEP_SECONDS) {
+        stepThermal(THERMAL_STEP_SECONDS);
+        thermalAccumulator -= THERMAL_STEP_SECONDS;
+      }
+      finalizeSceneFrame();
     } else if (boomOutcome === 'PRESTIGE' && boomStartTime > 0 && (renderTime - boomStartTime) >= 3) {
       beginPrestigeTransition();
       return;

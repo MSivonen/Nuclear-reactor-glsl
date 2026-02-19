@@ -51,7 +51,7 @@ class Plutonium {
         }
     }
 
-    update() {
+    updateInteraction() {
         const mPos = scaleMouse(mouseX, mouseY);
 
         if (mouseIsPressed) {
@@ -80,7 +80,9 @@ class Plutonium {
             if (this.dragging && ui.canvas && ui.canvas.activeDrag && ui.canvas.activeDrag.type === 'plutonium') ui.canvas.activeDrag = null;
             this.dragging = false;
         }
+    }
 
+    applyHeatStep(dtSeconds) {
         // Heat Generation
         // Find water cell below
         if (waterSystem && waterSystem.waterCells) {
@@ -90,7 +92,7 @@ class Plutonium {
              if (gx >= 0 && gx < uraniumAtomsCountX && gy >= 0 && gy < uraniumAtomsCountY) {
                  let index = gy * uraniumAtomsCountX + gx;
                  if (waterSystem.waterCells[index]) {
-                     const dt = deltaTime / 1000.0;
+                     const dt = Number.isFinite(dtSeconds) && dtSeconds > 0 ? dtSeconds : 0;
                      waterSystem.waterCells[index].temperature += this.heatPerSecond * dt;
                  }
              }

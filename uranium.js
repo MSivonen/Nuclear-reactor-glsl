@@ -26,13 +26,20 @@ class UraniumAtom {
 
   update() {
     if (!this.hasAtom) return;
-    if (Math.random() < settings.decayProbability) {
-      this.createNeutron();
-    }
     this.flash--;
     this.flash = Math.max(0, this.flash);
     this.color = computeUraniumColor(this.heat, this.flash);
-    this.heatTransferToWater();
+  }
+
+  stepDecay(dtSeconds) {
+    if (!this.hasAtom) return;
+    const dt = Number.isFinite(dtSeconds) && dtSeconds > 0 ? dtSeconds : (1.0 / 60.0);
+    const pFrame = Math.max(0, Math.min(0.999999, settings.decayProbability));
+    const decayRatePerSecond = -Math.log(1 - pFrame) * 60.0;
+    const pStep = 1 - Math.exp(-decayRatePerSecond * dt);
+    if (Math.random() < pStep) {
+      this.createNeutron();
+    }
   }
 
   heatTransferToWater() {
