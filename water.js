@@ -98,10 +98,25 @@ class WaterSystem {
             this.temps[i] = (this.waterCells[i] && Number.isFinite(this.waterCells[i].temperature)) ? this.waterCells[i].temperature : 25;
         }
 
-        this.updateConduction();
-        const topCount = uraniumAtomsCountX;
-        const topTemps = this.getTopRowTemps(topCount);
-        this.interpolateWaterCellsUpwards();
+        // If GPU water is enabled, run diffusion on GPU and read back results.
+        let topCount = uraniumAtomsCountX;
+        let topTemps = this.getTopRowTemps(topCount);
+
+        if (typeof glShit !== 'undefined' && glShit.useGpuWater && glShit.gpuWater) {
+            // Upload latest temps (including atom heat transfers)
+            glShit.gpuWater.uploadAll(glShit.simGL, this.temps);
+            // Run GPU diffusion step
+            glShit.gpuWater.step(glShit.simGL, dtSeconds, settings);
+            // Read top row for energy calculation into the preallocated buffer
+            glShit.gpuWater.readTopRow(glShit.simGL, topTemps);
+            // Read full texture back into temps buffer for JS consumers
+            glShit.gpuWater.readAll(glShit.simGL, this.temps);
+        } else {
+            this.updateConduction();
+            this.interpolateWaterCellsUpwards();
+            // Refresh topTemps from temps after CPU simulation
+            topTemps = this.getTopRowTemps(topCount);
+        }
 
         const fractionOut = settings.waterFlowSpeed;
         const inletTemp = settings.inletTemperature;

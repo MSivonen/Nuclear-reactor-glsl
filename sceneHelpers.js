@@ -20,6 +20,8 @@ function initShadersAndGL() {
     glShit.coreCanvas = glShit.gameCanvas;
 
     gl.getExtension("EXT_color_buffer_float");
+    // Enable GPU water by default when supported
+    glShit.useGpuWater = true;
 
     waterLayer.init(gl, glShit.shaderCodes.waterVertCode, glShit.shaderCodes.waterFragCode);
 
@@ -29,6 +31,10 @@ function initShadersAndGL() {
     glShit.neutronLightProgram = createProgram(gl, glShit.shaderCodes.rendVertCode, glShit.shaderCodes.neutronLightFragCode);
     glShit.lightVectorProgram = createProgram(gl, glShit.shaderCodes.simVertCode, glShit.shaderCodes.lightVectorFragCode);
     glShit.specialLightProgram = createProgram(gl, glShit.shaderCodes.atomsVertCode, glShit.shaderCodes.specialLightFragCode);
+    // Thermal program for GPU diffusion
+    if (glShit.shaderCodes && glShit.shaderCodes.thermalFragCode) {
+        glShit.thermalProgram = createProgram(gl, glShit.shaderCodes.simVertCode, glShit.shaderCodes.thermalFragCode);
+    }
     glShit.uNeutronsLoc = gl.getUniformLocation(glShit.simProgram, "u_neutrons");
 
     // Cache frequently-used uniform locations for the simulation shader to avoid
@@ -165,6 +171,11 @@ function initSimulationObjects() {
     }
     waterSystem = new WaterSystem();
     waterSystem.init(waterCells);
+    // Initialize GPU water system if available
+    if (glShit.useGpuWater && typeof GpuWaterSystem !== 'undefined' && glShit.thermalProgram) {
+        glShit.gpuWater = new GpuWaterSystem();
+        glShit.gpuWater.init(gl, uraniumAtomsCountX, uraniumAtomsCountY, waterSystem.temps);
+    }
 
     let groupIndex = 0;
     let colInGroup = 0;

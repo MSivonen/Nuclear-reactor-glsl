@@ -43,6 +43,10 @@ class Neutron {
 
     updateAtomMaskTexture(gl) {
         if (!glShit.atomMaskTex) return;
+        // Rate-limit updates to avoid updating the atom mask every frame.
+        if (!glShit.atomMaskUpdateInterval) glShit.atomMaskUpdateInterval = 4; // frames
+        if (!glShit._atomMaskFrameCounter) glShit._atomMaskFrameCounter = 0;
+        if ((glShit._atomMaskFrameCounter++ % glShit.atomMaskUpdateInterval) !== 0) return;
         const w = uraniumAtomsCountX;
         const h = uraniumAtomsCountY;
         const needed = w * h * 4;
