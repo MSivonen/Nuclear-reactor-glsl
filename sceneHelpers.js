@@ -31,6 +31,28 @@ function initShadersAndGL() {
     glShit.specialLightProgram = createProgram(gl, glShit.shaderCodes.atomsVertCode, glShit.shaderCodes.specialLightFragCode);
     glShit.uNeutronsLoc = gl.getUniformLocation(glShit.simProgram, "u_neutrons");
 
+    // Cache frequently-used uniform locations for the simulation shader to avoid
+    // repeated `gl.getUniformLocation` calls each frame (heavy in hot paths).
+    glShit.simUniforms = {
+        u_neutrons: gl.getUniformLocation(glShit.simProgram, "u_neutrons"),
+        u_moderators: gl.getUniformLocation(glShit.simProgram, "u_moderators"),
+        u_moderatorCount: gl.getUniformLocation(glShit.simProgram, "u_moderatorCount"),
+        u_atomMask: gl.getUniformLocation(glShit.simProgram, "u_atomMask"),
+        u_uraniumCountX: gl.getUniformLocation(glShit.simProgram, "u_uraniumCountX"),
+        u_uraniumCountY: gl.getUniformLocation(glShit.simProgram, "u_uraniumCountY"),
+        collision_prob: gl.getUniformLocation(glShit.simProgram, "collision_prob"),
+        moderatorHitProbability: gl.getUniformLocation(glShit.simProgram, "moderatorHitProbability"),
+        moderatorAbsorptionProbability: gl.getUniformLocation(glShit.simProgram, "moderatorAbsorptionProbability"),
+        u_simWidth: gl.getUniformLocation(glShit.simProgram, "u_simWidth"),
+        u_simHeight: gl.getUniformLocation(glShit.simProgram, "u_simHeight"),
+        u_moderatorHeight: gl.getUniformLocation(glShit.simProgram, "u_moderatorHeight"),
+        u_atomSpacingX: gl.getUniformLocation(glShit.simProgram, "u_atomSpacingX"),
+        u_atomSpacingY: gl.getUniformLocation(glShit.simProgram, "u_atomSpacingY"),
+        u_atomRadius: gl.getUniformLocation(glShit.simProgram, "u_atomRadius"),
+        u_globalScale: gl.getUniformLocation(glShit.simProgram, "u_globalScale"),
+        u_hitboxYScale: gl.getUniformLocation(glShit.simProgram, "u_hitboxYScale"),
+    };
+
     glShit.readTex = neutron.createTexture(gl, neutron.buffer);
     glShit.writeTex = neutron.createTexture(gl, null);
 

@@ -103,37 +103,38 @@ class Neutron {
         gl.useProgram(glShit.simProgram);
 
         const modCount = moderators.length;
-        const modYs = new Float32Array(Math.max(1, modCount));
+        if (!glShit.modYs || glShit.modYs.length < Math.max(1, modCount)) {
+            glShit.modYs = new Float32Array(Math.max(1, modCount));
+        }
+        const modYs = glShit.modYs;
         for (let i = 0; i < modCount; i++) {
             const isActive = (typeof isModeratorActive === 'function') ? isModeratorActive(i) : true;
             modYs[i] = isActive ? moderators[i].y : -100000.0;
         }
-        const uModsLoc = gl.getUniformLocation(glShit.simProgram, "u_moderators");
-        gl.uniform1fv(uModsLoc, modYs);
-        const uModCountLoc = gl.getUniformLocation(glShit.simProgram, "u_moderatorCount");
-        gl.uniform1i(uModCountLoc, modCount);
+        gl.uniform1fv(glShit.simUniforms.u_moderators, modYs);
+        gl.uniform1i(glShit.simUniforms.u_moderatorCount, modCount);
 
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, glShit.readTex);
         gl.uniform1i(glShit.uNeutronsLoc, 0);
         gl.activeTexture(gl.TEXTURE1);
         gl.bindTexture(gl.TEXTURE_2D, glShit.atomMaskTex);
-        gl.uniform1i(gl.getUniformLocation(glShit.simProgram, "u_atomMask"), 1);
-        gl.uniform1i(gl.getUniformLocation(glShit.simProgram, "u_uraniumCountX"), uraniumAtomsCountX);
-        gl.uniform1i(gl.getUniformLocation(glShit.simProgram, "u_uraniumCountY"), uraniumAtomsCountY);
-        gl.uniform1f(gl.getUniformLocation(glShit.simProgram, "collision_prob"), settings.collisionProbability);
-        gl.uniform1f(gl.getUniformLocation(glShit.simProgram, "moderatorHitProbability"), settings.moderatorHitProbability);
-        gl.uniform1f(gl.getUniformLocation(glShit.simProgram, "moderatorAbsorptionProbability"), settings.moderatorAbsorptionProbability);
+        gl.uniform1i(glShit.simUniforms.u_atomMask, 1);
+        gl.uniform1i(glShit.simUniforms.u_uraniumCountX, uraniumAtomsCountX);
+        gl.uniform1i(glShit.simUniforms.u_uraniumCountY, uraniumAtomsCountY);
+        gl.uniform1f(glShit.simUniforms.collision_prob, settings.collisionProbability);
+        gl.uniform1f(glShit.simUniforms.moderatorHitProbability, settings.moderatorHitProbability);
+        gl.uniform1f(glShit.simUniforms.moderatorAbsorptionProbability, settings.moderatorAbsorptionProbability);
 
-        gl.uniform1f(gl.getUniformLocation(glShit.simProgram, "u_simWidth"), screenSimWidth);
-        gl.uniform1f(gl.getUniformLocation(glShit.simProgram, "u_simHeight"), screenHeight);
-        gl.uniform1f(gl.getUniformLocation(glShit.simProgram, "u_moderatorHeight"), moderatorHeight);
-        gl.uniform1f(gl.getUniformLocation(glShit.simProgram, "u_atomSpacingX"), uraniumAtomsSpacingX);
-        gl.uniform1f(gl.getUniformLocation(glShit.simProgram, "u_atomSpacingY"), uraniumAtomsSpacingY);
-        gl.uniform1f(gl.getUniformLocation(glShit.simProgram, "u_atomRadius"), settings.uraniumSize / 2.0);
-        gl.uniform1f(gl.getUniformLocation(glShit.simProgram, "u_globalScale"), globalScale);
+        gl.uniform1f(glShit.simUniforms.u_simWidth, screenSimWidth);
+        gl.uniform1f(glShit.simUniforms.u_simHeight, screenHeight);
+        gl.uniform1f(glShit.simUniforms.u_moderatorHeight, moderatorHeight);
+        gl.uniform1f(glShit.simUniforms.u_atomSpacingX, uraniumAtomsSpacingX);
+        gl.uniform1f(glShit.simUniforms.u_atomSpacingY, uraniumAtomsSpacingY);
+        gl.uniform1f(glShit.simUniforms.u_atomRadius, settings.uraniumSize / 2.0);
+        gl.uniform1f(glShit.simUniforms.u_globalScale, globalScale);
         // Hitbox Y scale (ellipse height multiplier)
-        gl.uniform1f(gl.getUniformLocation(glShit.simProgram, "u_hitboxYScale"), settings.hitboxYScale || 1.0);
+        gl.uniform1f(glShit.simUniforms.u_hitboxYScale, settings.hitboxYScale || 1.0);
 
         drawFullscreenQuad(gl);
 
@@ -169,6 +170,12 @@ class Neutron {
         }
         groups.push(currentGroup);
 
+        // Ensure we have a reusable upload buffer to avoid per-chunk allocations
+        if (!glShit.spawnUploadBuffer || glShit.spawnUploadBuffer.length < MAX_NEUTRONS * 4) {
+            glShit.spawnUploadBuffer = new Float32Array(MAX_NEUTRONS * 4);
+        }
+        const uploadBuffer = glShit.spawnUploadBuffer;
+
         // Upload each group, split into per-row chunks
         for (const group of groups) {
             const startIndex = group[0].index;
@@ -182,21 +189,23 @@ class Neutron {
                 const spaceInRow = MAX_NEUTRONS - texX;
                 const chunkCount = Math.min(spaceInRow, count - offset);
 
-                const data = new Float32Array(chunkCount * 4);
+                // Fill uploadBuffer slice for this chunk
+                const len = chunkCount * 4;
                 for (let i = 0; i < chunkCount; i++) {
                     const spawn = group[offset + i];
                     const base = i * 4;
-                    data[base] = spawn.x;
-                    data[base + 1] = spawn.y;
-                    data[base + 2] = spawn.vx;
-                    data[base + 3] = spawn.vy;
+                    uploadBuffer[base] = spawn.x;
+                    uploadBuffer[base + 1] = spawn.y;
+                    uploadBuffer[base + 2] = spawn.vx;
+                    uploadBuffer[base + 3] = spawn.vy;
                 }
+                const view = uploadBuffer.subarray(0, chunkCount * 4);
 
                 gl.bindTexture(gl.TEXTURE_2D, glShit.readTex);
-                gl.texSubImage2D(gl.TEXTURE_2D, 0, texX, texY, chunkCount, 1, gl.RGBA, gl.FLOAT, data);
+                gl.texSubImage2D(gl.TEXTURE_2D, 0, texX, texY, chunkCount, 1, gl.RGBA, gl.FLOAT, view);
 
                 gl.bindTexture(gl.TEXTURE_2D, glShit.writeTex);
-                gl.texSubImage2D(gl.TEXTURE_2D, 0, texX, texY, chunkCount, 1, gl.RGBA, gl.FLOAT, data);
+                gl.texSubImage2D(gl.TEXTURE_2D, 0, texX, texY, chunkCount, 1, gl.RGBA, gl.FLOAT, view);
 
                 offset += chunkCount;
             }
@@ -270,22 +279,23 @@ class Neutron {
         
         if (specialItems.length > 0) {
             gl.useProgram(glShit.specialLightProgram);
-            
-            // Reuse instance data logic but for light pass
-            const tempRenderer = new SpecialRenderer();
+
+            // Reuse a temporary SpecialRenderer instance to avoid per-frame allocation
+            if (!glShit.tempSpecialRenderer) glShit.tempSpecialRenderer = new SpecialRenderer();
+            const tempRenderer = glShit.tempSpecialRenderer;
             tempRenderer.gl = gl;
             tempRenderer.program = glShit.specialLightProgram;
             tempRenderer.instanceBuffer = specialRenderer.instanceBuffer;
             tempRenderer.instanceData = specialRenderer.instanceData;
             tempRenderer.maxInstances = specialRenderer.maxInstances;
             tempRenderer.instanceFloatCount = specialRenderer.instanceFloatCount;
-            
+
             const activeCount = tempRenderer.updateInstances(specialItems);
             // Size them up for bigger light spread
-            for(let i=0; i<activeCount; i++) {
-                tempRenderer.instanceData[i * 8 + 6] *= 5.0; 
+            for (let i = 0; i < activeCount; i++) {
+                tempRenderer.instanceData[i * 8 + 6] *= 5.0;
             }
-            
+
             tempRenderer.draw(activeCount, { blendMode: 'additive' });
         }
         // ----------------------------------------
@@ -293,21 +303,22 @@ class Neutron {
         // --- NEW: Add Moderator Lighting ---
         if (moderators && moderators.length > 0) {
             gl.useProgram(glShit.specialLightProgram);
-            
-            const tr = new ModeratorsRenderer();
+
+            if (!glShit.tempModeratorsRenderer) glShit.tempModeratorsRenderer = new ModeratorsRenderer();
+            const tr = glShit.tempModeratorsRenderer;
             tr.gl = gl;
             tr.program = glShit.specialLightProgram;
             tr.instanceBuffer = moderatorsRenderer.instanceBuffer;
             tr.instanceData = moderatorsRenderer.instanceData;
             tr.maxInstances = moderatorsRenderer.maxInstances;
             tr.instanceFloatCount = moderatorsRenderer.instanceFloatCount;
-            
+
             // Only draw types 0 (moderator) and 1 (sphere) for lighting
             const count = tr.updateInstances(moderators, null);
-            for(let i=0; i<count; i++) {
+            for (let i = 0; i < count; i++) {
                 const b = i * 9;
                 // Expand light emission area
-                tr.instanceData[b + 6] *= 4.0; 
+                tr.instanceData[b + 6] *= 4.0;
                 tr.instanceData[b + 7] *= 1.2;
             }
             tr.draw(count, { blendMode: 'additive' });
@@ -348,7 +359,9 @@ class Neutron {
     updateInTexture(gl, index, x, y, vx, vy) {
         gl.bindTexture(gl.TEXTURE_2D, glShit.readTex);
 
-        const data = new Float32Array([x, y, vx, vy]);
+        if (!glShit.singleSpawnBuffer) glShit.singleSpawnBuffer = new Float32Array(4);
+        const data = glShit.singleSpawnBuffer;
+        data[0] = x; data[1] = y; data[2] = vx; data[3] = vy;
 
         const texX = index % MAX_NEUTRONS;
         const texY = Math.floor(index / MAX_NEUTRONS);

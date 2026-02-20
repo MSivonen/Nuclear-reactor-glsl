@@ -20,9 +20,17 @@ class ReportSystem {
         const uCountYLoc = gl.getUniformLocation(glShit.reportProgram, "u_uraniumCountY");
         const uTexSizeLoc = gl.getUniformLocation(glShit.reportProgram, "u_textureSize");
 
-        gl.uniform1i(uCountXLoc, uraniumAtomsCountX);
-        gl.uniform1i(uCountYLoc, uraniumAtomsCountY);
-        gl.uniform1i(uTexSizeLoc, MAX_NEUTRONS);
+        // Cache report shader uniforms for reuse
+        glShit.reportUniforms = {
+            u_uraniumCountX: uCountXLoc,
+            u_uraniumCountY: uCountYLoc,
+            u_textureSize: uTexSizeLoc,
+            u_neutrons: gl.getUniformLocation(glShit.reportProgram, "u_neutrons")
+        };
+
+        gl.uniform1i(glShit.reportUniforms.u_uraniumCountX, uraniumAtomsCountX);
+        gl.uniform1i(glShit.reportUniforms.u_uraniumCountY, uraniumAtomsCountY);
+        gl.uniform1i(glShit.reportUniforms.u_textureSize, MAX_NEUTRONS);
 
         glShit.reportData = new Uint8Array(uraniumAtomsCountX * uraniumAtomsCountY * 4);
         const pboSize = glShit.reportData.byteLength;
@@ -51,8 +59,8 @@ class ReportSystem {
         gl.useProgram(glShit.reportProgram);
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, glShit.readTex);
-        gl.uniform1i(gl.getUniformLocation(glShit.reportProgram, "u_neutrons"), 0);
-        gl.uniform1i(gl.getUniformLocation(glShit.reportProgram, "u_textureSize"), MAX_NEUTRONS);
+        gl.uniform1i(glShit.reportUniforms.u_neutrons, 0);
+        gl.uniform1i(glShit.reportUniforms.u_textureSize, MAX_NEUTRONS);
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.ONE, gl.ONE);
 
