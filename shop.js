@@ -28,7 +28,7 @@ class Shop {
             },
             plutonium: {
                 name: "Plutonium",
-                basePrice: 5,
+                basePrice: 1,
                 priceMult: 1.8
             },
             californium: {
@@ -38,13 +38,13 @@ class Shop {
             }
         };
         this.itemUnlocked = {
-            atom: true,
-            group: true,
-            moderator: true,
-            moderatorUpgrade: true,
-            waterFlow: true,
-            plutonium: true,
-            californium: true
+            atom: false,
+            group: false,
+            moderator: false,
+            moderatorUpgrade: false,
+            waterFlow: false,
+            plutonium: false,
+            californium: false
         };
         this.buyAmount = 1;
         this.targetAtomGroupIndex = 0;
@@ -366,6 +366,7 @@ class Shop {
                     player.upgrades.waterFlow = player.waterFlowUpgradeCount;
                     player.updateWaterFlowLimits();
                     settings.waterFlowSpeed = Math.max(player.waterFlowMin, Math.min(player.waterFlowMax, settings.waterFlowSpeed));
+                    settings.waterFlowTarget = Math.max(player.waterFlowMin, Math.min(player.waterFlowMax, settings.waterFlowTarget || settings.waterFlowSpeed));
                 }
                 break;
             case 'plutonium':

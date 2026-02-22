@@ -216,6 +216,10 @@ function initSimulationObjects() {
 function initUiObjects() {
     ui.powerMeter = new PowerMeter(globalScale * 730, globalScale * 530);
     ui.tempMeter = new TempMeter(globalScale * 600, globalScale * 530);
+    // Visual-only water valve indicator (reflects settings.waterFlowSpeed)
+    if (typeof WaterValve !== 'undefined') {
+        ui.waterValve = new WaterValve(globalScale * 460, globalScale * 550, 36 * globalScale);
+    }
     ui.controlSlider = new ModeratorsSlider();
     ui.canvas = new UICanvas();
 
@@ -297,6 +301,23 @@ function finalizeSceneFrame() {
     ui.powerMeter.update();
     ui.tempMeter.update();
     oncePerSecond();
+
+    // Smooth actual water flow toward the target at 15% per second
+    try {
+        if (typeof settings !== 'undefined') {
+            if (typeof settings.waterFlowTarget === 'undefined') settings.waterFlowTarget = settings.waterFlowSpeed || 0;
+            if (typeof settings.waterFlowSpeed === 'undefined') settings.waterFlowSpeed = settings.waterFlowTarget || 0;
+            const dt = 1.0 / 60.0;
+            const rate = 0.15; // units per second (linear)
+            const maxDelta = rate * dt;
+            const diff = settings.waterFlowTarget - settings.waterFlowSpeed;
+            if (Math.abs(diff) <= maxDelta) {
+                settings.waterFlowSpeed = settings.waterFlowTarget;
+            } else {
+                settings.waterFlowSpeed += Math.sign(diff) * maxDelta;
+            }
+        }
+    } catch (e) { /* ignore */ }
 }
 
 function drawScene() {

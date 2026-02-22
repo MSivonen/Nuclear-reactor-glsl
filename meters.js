@@ -195,3 +195,88 @@ class TempMeter extends BaseMeter {
         super.update(val);
     }
 }
+
+class WaterValve {
+    constructor(x, y, size) {
+        this.x = x; // coordinates are already scaled
+        this.y = y;
+        this.size = size || (40 * globalScale);
+        this.radius = this.size;
+        this.angle = 0; // current displayed angle
+        this.visible = true;
+    }
+
+    draw(ctx, offsetX, flow) {
+        const drawX = offsetX + this.x;
+        const drawY = this.y;
+
+        // Map flow (0..1) to valve rotation angle. Use discrete stops by snapping slightly.
+        const t = Math.min(Math.max(flow || 0, 0), 1);
+        const minA = -Math.PI * 0.6;
+        const maxA = Math.PI * 0.6;
+        const target = minA + t * (maxA - minA);
+
+        // Smoothly approach target angle
+        this.angle += (target - this.angle) * 0.18;
+
+        // Draw outer wheel
+        ctx.save();
+        ctx.translate(drawX, drawY);
+        ctx.rotate(this.angle);
+
+        // shadow / depth
+        ctx.save();
+        ctx.globalAlpha = 0.15;
+        ctx.fillStyle = 'black';
+        ctx.beginPath();
+        ctx.arc(4, 4, this.radius * 1.05, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        // rim
+        ctx.fillStyle = 'rgb(90,90,90)';
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // inner face
+        ctx.fillStyle = 'rgb(160,160,160)';
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius * 0.65, 0, Math.PI * 2);
+        ctx.fill();
+
+        // spokes
+        ctx.strokeStyle = 'rgba(40,40,40,0.95)';
+        ctx.lineWidth = Math.max(2, this.radius * 0.12);
+        const spokes = 6;
+        for (let i = 0; i < spokes; i++) {
+            const a = (i / spokes) * Math.PI * 2;
+            ctx.beginPath();
+            ctx.moveTo(Math.cos(a) * this.radius * 0.7, Math.sin(a) * this.radius * 0.7);
+            ctx.lineTo(Math.cos(a) * (this.radius * 1.02), Math.sin(a) * (this.radius * 1.02));
+            ctx.stroke();
+        }
+
+        // center nut
+        ctx.fillStyle = 'rgb(70,70,70)';
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius * 0.25, 0, Math.PI * 2);
+        ctx.fill();
+
+        // handle to show distinct position (a small bar fixed to wheel)
+        ctx.save();
+        ctx.translate(0, -this.radius * 0.88);
+        ctx.rotate(-this.angle); // keep handle visually aligned with wheel orientation
+        ctx.fillStyle = 'rgb(120,120,120)';
+        ctx.beginPath();
+        const hw = this.radius * 0.18;
+        const hh = this.radius * 0.48;
+        ctx.roundRect(-hw/2, -hh, hw, hh, hw*0.35);
+        ctx.fill();
+        ctx.restore();
+
+        ctx.restore();
+
+        // (no percentage text - visualization only)
+    }
+}

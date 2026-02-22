@@ -10,7 +10,7 @@ class Player {
         this.upgrades = {};
         this.settings = {};
 
-        this.waterFlowStart = 0.05;
+        this.waterFlowStart = 0.04;
         this.waterFlowMinLimit = 0.01;
         this.waterFlowMaxLimit = 1.0;
         this.waterFlowUpgradeMax = 20;

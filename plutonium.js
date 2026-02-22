@@ -2,7 +2,7 @@ class Plutonium {
     constructor() {
         this.baseRadius = 15;
         this.maxRadius = 30;
-        this.baseHeatPerSecond = 6000;
+        this.baseHeatPerSecond = 9000;
         this.maxUpgradeLevel = 12;
         this.upgradeLevel = 0;
         this.heatPerSecond = this.baseHeatPerSecond;

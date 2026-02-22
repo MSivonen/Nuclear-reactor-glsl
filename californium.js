@@ -4,7 +4,7 @@ class Californium {
         this.maxRadius = 30;
         this.maxUpgradeLevel = 12;
         this.upgradeLevel = 0;
-        this.baseSpawnInterval = 0.02;
+        this.baseSpawnInterval = 0.5;
         this.minSpawnInterval = 0.006;
         this.spawnBurstCount = 1;
         this.electronCount = 1;

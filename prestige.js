@@ -10,15 +10,15 @@ const prestigeManager = {
         return {
             loopNumber: loop,
             thresholds: {
-                money: Math.round(1000 * growth),
+                money: Math.round(10 * growth),
                 power: Math.round(25 * growth)
             },
             bonuses: {
-                maxHeatCap: Math.round(200 + (loop - 1) * 40),
-                maxPowerCap: Math.round(200 + (loop - 1) * 55),
-                heatingRate: Math.round(200 - (150 * easing)),
+                maxHeatCap: Math.round(300 + (loop - 1) * 40),
+                maxPowerCap: Math.round(50 + (loop - 1) * 55),
+                heatingRate: Math.round(200 - (175 * easing)),
                 collisionProbability: 0.07 - (0.015 * easing),
-                decayProbability: 0.0001
+                decayProbability: 0.0003 - (0.0002 * easing)
             }
         };
     },

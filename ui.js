@@ -41,12 +41,10 @@ class UICanvas {
         this.canvas.style.display = 'none'; // Initially hidden
         this.canvas.id = "UI-Canvas";
 
-        const tutorialLayer = document.getElementById('layer-tutorial');
-        const container = document.getElementById('canvas-container');
-        if (tutorialLayer) {
-            tutorialLayer.appendChild(this.canvas);
-        } else if (container) {
-            container.appendChild(this.canvas);
+        // Keep the UI canvas offscreen/hidden and composite it into WebGL via uiOverlay.render.
+        // Append to body so the element exists in the DOM but remains invisible.
+        if (document && document.body) {
+            document.body.appendChild(this.canvas);
         }
 
         this.ctx = this.canvas.getContext('2d');
@@ -145,6 +143,7 @@ class UICanvas {
             <div style="font-size: 14px; color: #aaa;">Atom's Blessing<br>-the great glow-</div>
             <div id="stat-money" style="font-size: 24px; color: #90EE90; margin: 5px 0;">0€</div>
             <div id="stat-income" style="font-size: 14px; color: #777;">0€/s</div>
+            <div id="stat-target" style="font-size: 12px; color: #cfc; margin-top:6px; display:none;">Target: 0€</div>
         `;
         this.sidebar.appendChild(statsDiv);
  
@@ -201,8 +200,10 @@ class UICanvas {
         waterSlider.max = '100';
         waterSlider.step = '1';
         waterSlider.style.width = '100%';
-        const initialFlow = settings.waterFlowSpeed;
+        const initialFlow = (typeof settings.waterFlowTarget === 'number') ? settings.waterFlowTarget : settings.waterFlowSpeed;
         waterSlider.value = Math.round(initialFlow * 100);
+        // Hide the DOM slider — we'll draw a nicer canvas slider near the valve instead
+        waterSlider.style.display = 'none';
         waterSlider.oninput = (e) => {
             if (this.scramActive) {
                 this.waterSliderDOM.value = Math.round(settings.waterFlowSpeed * 100);
@@ -212,12 +213,23 @@ class UICanvas {
             const min = player.waterFlowMin;
             const max = player.waterFlowMax;
             const clamped = Math.max(min, Math.min(max, raw));
-            settings.waterFlowSpeed = clamped;
+            // Slider sets the target; actual flow is smoothed elsewhere
+            settings.waterFlowTarget = clamped;
             waterSlider.value = Math.round(clamped * 100);
         };
         this.waterSliderDOM = waterSlider;
         waterDiv.appendChild(waterSlider);
         controlsDiv.appendChild(waterDiv);
+
+        // Canvas slider properties (drawn near valve)
+        this.canvasSlider = {
+            x: 0,
+            y: 0,
+            w: 160 * globalScale,
+            h: 12 * globalScale,
+            knobR: 8 * globalScale,
+            visible: false
+        };
 
         const scramBtn = document.createElement('button');
         scramBtn.id = 'btn-scram';
@@ -661,7 +673,10 @@ class UICanvas {
                 if (waterFlowSpeed !== null) {
                     const min = player.waterFlowMin;
                     const max = player.waterFlowMax;
-                    settings.waterFlowSpeed = Math.max(min, Math.min(max, waterFlowSpeed));
+                    const clamped = Math.max(min, Math.min(max, waterFlowSpeed));
+                    // Dev apply should set both target and actual immediately
+                    settings.waterFlowTarget = clamped;
+                    settings.waterFlowSpeed = clamped;
                 }
 
                 if (heatingRate !== null) levelData.bonuses.heatingRate = Math.max(0, heatingRate);
@@ -735,7 +750,7 @@ class UICanvas {
         if (this.devInputs.settingCollisionProb) this.devInputs.settingCollisionProb.value = Number.isFinite(bonuses.collisionProbability) ? bonuses.collisionProbability : settings.collisionProbability;
         if (this.devInputs.settingDecayProb) this.devInputs.settingDecayProb.value = Number.isFinite(bonuses.decayProbability) ? bonuses.decayProbability : settings.decayProbability;
         if (this.devInputs.settingMoneyExponent) this.devInputs.settingMoneyExponent.value = settings.moneyExponent;
-        if (this.devInputs.settingWaterFlow) this.devInputs.settingWaterFlow.value = settings.waterFlowSpeed;
+        if (this.devInputs.settingWaterFlow) this.devInputs.settingWaterFlow.value = (typeof settings.waterFlowTarget === 'number') ? settings.waterFlowTarget : settings.waterFlowSpeed;
 
         if (this.devInputs.thresholdMoney) this.devInputs.thresholdMoney.value = Number.isFinite(thresholds.money) ? thresholds.money : 0;
         if (this.devInputs.thresholdPower) this.devInputs.thresholdPower.value = Number.isFinite(thresholds.power) ? thresholds.power : 0;
@@ -857,7 +872,8 @@ class UICanvas {
         }
 
         const maxFlow = player.waterFlowMax;
-        settings.waterFlowSpeed = maxFlow;
+        // SCRAM now sets the target to max (actual speed will move toward it)
+        settings.waterFlowTarget = maxFlow;
         this.waterSliderDOM.value = Math.round(maxFlow * 100);
 
         for (let i = 0; i < moderators.length; i++) {
@@ -1159,6 +1175,7 @@ class UICanvas {
         
         const mStat = document.getElementById('stat-money');
         const iStat = document.getElementById('stat-income');
+        const tStat = document.getElementById('stat-target');
         mStat.innerText = formatLarge(player.getBalance(), CURRENCY_UNIT, 2);
         iStat.innerText = `${formatLarge(lastMoneyPerSecond, CURRENCY_UNIT, 2)}/s`;
 
@@ -1168,6 +1185,24 @@ class UICanvas {
             || (Number.isFinite(energyOutput) && energyOutput >= 10);
         mStat.style.display = showMoneyStats ? '' : 'none';
         iStat.style.display = showMoneyStats ? '' : 'none';
+
+        if (tStat) {
+            // Show target prestige money once player has reached loop 2 or higher
+            const currentLoop = (prestigeManager && Number.isFinite(prestigeManager.loopNumber)) ? prestigeManager.loopNumber : 1;
+            if (currentLoop >= 2) {
+                const nextLoop = currentLoop + 1;
+                const nextData = (prestigeManager && typeof prestigeManager.getLoopData === 'function') ? prestigeManager.getLoopData(nextLoop) : null;
+                const moneyTarget = nextData && nextData.thresholds && Number.isFinite(nextData.thresholds.money) ? nextData.thresholds.money : null;
+                if (moneyTarget !== null) {
+                    tStat.innerText = `Target: ${formatLarge(moneyTarget, CURRENCY_UNIT, 2)}`;
+                    tStat.style.display = '';
+                } else {
+                    tStat.style.display = 'none';
+                }
+            } else {
+                tStat.style.display = 'none';
+            }
+        }
 
         const linkModeratorsUnlocked = !window.tutorialManager
             || !window.tutorialManager.isItemUnlocked
@@ -1199,6 +1234,13 @@ class UICanvas {
         if (this.waterControlDiv) {
             this.waterControlDiv.style.display = waterUnlocked ? '' : 'none';
         }
+        // Show/hide the on-canvas slider + valve visual
+        try {
+            if (ui && ui.waterValve && ui.canvas && typeof ui.canvas.canvasSlider !== 'undefined') {
+                ui.waterValve.visible = !!waterUnlocked;
+                ui.canvas.canvasSlider.visible = !!waterUnlocked;
+            }
+        } catch (e) { /* ignore */ }
 
         if (this.devInfiniteMoneyEnabled) {
             player.balance = Math.max(player.balance, this.devInfiniteMoneyValue);
@@ -1206,12 +1248,14 @@ class UICanvas {
         
         const min = player.waterFlowMin;
         const max = player.waterFlowMax;
-        const clamped = Math.max(min, Math.min(max, settings.waterFlowSpeed));
-        if (clamped !== settings.waterFlowSpeed) {
-            settings.waterFlowSpeed = clamped;
-        }
+        // Ensure both actual and target stay within player limits
+        if (typeof settings.waterFlowTarget === 'undefined') settings.waterFlowTarget = settings.waterFlowSpeed || 0;
+        const clampedTarget = Math.max(min, Math.min(max, settings.waterFlowTarget));
+        if (clampedTarget !== settings.waterFlowTarget) settings.waterFlowTarget = clampedTarget;
+        const clampedActual = Math.max(min, Math.min(max, settings.waterFlowSpeed));
+        if (clampedActual !== settings.waterFlowSpeed) settings.waterFlowSpeed = clampedActual;
 
-        const targetValue = Math.round(clamped * 100);
+        const targetValue = Math.round(settings.waterFlowTarget * 100);
         if (Math.abs(parseFloat(this.waterSliderDOM.value) - targetValue) > 0.5) {
             this.waterSliderDOM.value = targetValue;
         }
@@ -1255,11 +1299,68 @@ class UICanvas {
             ui.tempMeter.draw(this.ctx, this.simXOffset);
         }
 
+        // Water valve visualization (reflects actual water flow)
+        try {
+            if (ui.waterValve && ui.waterValve.visible) {
+                const flow = (typeof settings !== 'undefined' && typeof settings.waterFlowSpeed === 'number') ? settings.waterFlowSpeed : 0;
+                ui.waterValve.draw(this.ctx, this.simXOffset, flow);
+            }
+        } catch (e) { /* ignore drawing errors */ }
+
+        // Draw on-canvas water slider (controls target)
+        try {
+            const cs = this.canvasSlider;
+            if (cs && cs.visible && ui.waterValve && ui.waterValve.visible) {
+                // Position slider centered below the valve
+                const baseX = this.simXOffset + ui.waterValve.x - (cs.w * 0.5);
+                const baseY = ui.waterValve.y + ui.waterValve.radius + (12 * globalScale);
+                cs.x = baseX;
+                cs.y = baseY;
+
+                // Draw track
+                const ctx2 = this.ctx;
+                ctx2.save();
+                ctx2.fillStyle = '#333';
+                const trackH = cs.h * 0.5;
+                ctx2.beginPath();
+                ctx2.roundRect(cs.x, cs.y - trackH/2, cs.w, trackH, trackH/2);
+                ctx2.fill();
+
+                // Draw filled portion (normalize between player min/max)
+                const min = (typeof player !== 'undefined' && Number.isFinite(player.waterFlowMin)) ? player.waterFlowMin : 0;
+                const max = (typeof player !== 'undefined' && Number.isFinite(player.waterFlowMax)) ? player.waterFlowMax : 1;
+                const traw = (typeof settings.waterFlowTarget === 'number') ? settings.waterFlowTarget : ((typeof settings.waterFlowSpeed === 'number') ? settings.waterFlowSpeed : 0);
+                const tnorm = (max > min) ? Math.min(Math.max((traw - min) / (max - min), 0), 1) : 0;
+                const fillW = tnorm * cs.w;
+                ctx2.fillStyle = '#5cb85c';
+                ctx2.beginPath();
+                ctx2.roundRect(cs.x, cs.y - trackH/2, fillW, trackH, trackH/2);
+                ctx2.fill();
+
+                // Draw knob
+                const knobX = cs.x + fillW;
+                const knobY = cs.y;
+                ctx2.fillStyle = '#ddd';
+                ctx2.beginPath();
+                ctx2.arc(knobX, knobY, cs.knobR, 0, Math.PI*2);
+                ctx2.fill();
+                ctx2.strokeStyle = '#444';
+                ctx2.lineWidth = 1;
+                ctx2.stroke();
+                ctx2.restore();
+            }
+        } catch (e) { /* ignore */ }
+
         // Slider handles moved to GL renderer, but logic still needs to run
         ui.controlSlider.draw(this.ctx, this.simXOffset, true); // Added skipDraw flag
         
         drawFPS(this.ctx, this.simXOffset);
         gameOver(this.ctx, this.simXOffset);
+        // Draw device widget (if revealed) so tutorial highlight can point at it
+        try {
+            if (window.device && typeof window.device.draw === 'function') window.device.draw(this.ctx, this.simXOffset);
+        } catch (e) { /* ignore */ }
+
         if (window.tutorialManager && typeof window.tutorialManager.draw === 'function') {
             window.tutorialManager.draw(this.ctx, this.simXOffset);
         }
@@ -1267,7 +1368,22 @@ class UICanvas {
 
     handleMouseClick(x, y) {
         if (window.tutorialManager && window.tutorialManager.isActive && window.tutorialManager.isActive()) {
-            if (window.tutorialManager.handleMouseClick(x, y)) return;
+            if (window.tutorialManager.handleMouseClick(x, y)) {
+                // If the tutorial consumed the click, cancel any active drag
+                try {
+                    if (this.activeDrag && this.activeDrag.type === 'moderator' && ui && ui.controlSlider) {
+                        ui.controlSlider.draggingIndex = -1;
+                    }
+                    if (this.activeDrag && this.activeDrag.type === 'plutonium' && typeof plutonium !== 'undefined' && plutonium) {
+                        plutonium.dragging = false;
+                    }
+                    if (this.activeDrag && this.activeDrag.type === 'californium' && typeof californium !== 'undefined' && californium) {
+                        californium.dragging = false;
+                    }
+                } catch (e) { /* ignore errors while clearing drag state */ }
+                this.activeDrag = null;
+                return;
+            }
         }
 
         if (boomInputLocked) {
@@ -1307,6 +1423,25 @@ class UICanvas {
         // Check plutonium
         const plutoniumUnlocked = !(window.tutorialManager && typeof window.tutorialManager.isItemUnlocked === 'function')
             || window.tutorialManager.isItemUnlocked('plutonium');
+        // Check canvas water slider (priority before plutonium)
+        if (this.canvasSlider && this.canvasSlider.visible && ui.waterValve && ui.waterValve.visible) {
+            const s = this.canvasSlider;
+            const m = scaleMouse(x, y);
+            const baseX = ui.waterValve.x - (s.w * 0.5);
+            const baseY = ui.waterValve.y + ui.waterValve.radius + (12 * globalScale);
+            // Compute normalized knob position using player min/max
+            const min = (typeof player !== 'undefined' && Number.isFinite(player.waterFlowMin)) ? player.waterFlowMin : 0;
+            const max = (typeof player !== 'undefined' && Number.isFinite(player.waterFlowMax)) ? player.waterFlowMax : 1;
+            const traw = (typeof settings.waterFlowTarget === 'number') ? settings.waterFlowTarget : ((typeof settings.waterFlowSpeed === 'number') ? settings.waterFlowSpeed : 0);
+            const tnorm = (max > min) ? Math.min(Math.max((traw - min) / (max - min), 0), 1) : 0;
+            const knobX = baseX + tnorm * s.w;
+            const dx = m.x - knobX;
+            const dy = m.y - baseY;
+            if (Math.sqrt(dx*dx + dy*dy) <= s.knobR + 4*globalScale) {
+                this.activeDrag = { type: 'waterSlider' };
+                return;
+            }
+        }
         if (plutoniumUnlocked && typeof plutonium !== 'undefined' && plutonium) {
             const dx = m.x - plutonium.x;
             const dy = m.y - plutonium.y;
@@ -1355,6 +1490,22 @@ class UICanvas {
                 plutonium.y = Math.max(plutonium.radius, Math.min(plutonium.y, screenHeight - plutonium.radius));
             }
         }
+        else if (this.activeDrag.type === 'waterSlider') {
+            // Map mouse x to slider target
+            if (this.canvasSlider && ui.waterValve) {
+                const s = this.canvasSlider;
+                const baseX = ui.waterValve.x - (s.w * 0.5);
+                const baseY = ui.waterValve.y + ui.waterValve.radius + (12 * globalScale);
+                let rel = (m.x - baseX) / s.w;
+                rel = Math.min(Math.max(rel, 0), 1);
+                const min = (typeof player !== 'undefined' && Number.isFinite(player.waterFlowMin)) ? player.waterFlowMin : 0;
+                const max = (typeof player !== 'undefined' && Number.isFinite(player.waterFlowMax)) ? player.waterFlowMax : 1;
+                const val = min + rel * (max - min);
+                settings.waterFlowTarget = val;
+                // Keep hidden DOM slider in sync for any code that reads it
+                try { if (this.waterSliderDOM) this.waterSliderDOM.value = Math.round(val * 100); } catch (e) {}
+            }
+        }
     }
 
     handleMouseRelease() {
@@ -1364,6 +1515,9 @@ class UICanvas {
         }
         if (this.activeDrag && this.activeDrag.type === 'plutonium') {
             if (typeof plutonium !== 'undefined' && plutonium) plutonium.dragging = false;
+        }
+        if (this.activeDrag && this.activeDrag.type === 'waterSlider') {
+            // nothing special to do on release other than clear drag
         }
         this.activeDrag = null;
     }

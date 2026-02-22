@@ -1,32 +1,32 @@
 const TUTORIAL_PAGES = {
     start_welcome_1: {
         title: 'Decayed history',
-        text: 'You won a strange industrial building from an East European lottery. As you arrive there, you notice a Swedish car branded Tserno outside. It emits a barely audible eerie hum... Or are your ears playing tricks on you? You don\'t waste many thoughts on the car, and step inside the building.',
+        text: 'You have won a strange industrial building from an East European lottery. As you arrive there, you notice a Swedish car branded Tserno outside. It emits a barely audible eerie hum... Or are your ears playing tricks on you? You decide not to investigate the car for now, and step right inside the rusty building.',
         windowLayout: { x: 0.5, y: 0.44, width: 0.72, height: 0.30, relative: 'sim' }
     },
     start_welcome_2: {
         title: 'What does the inside of your nose smell like?',
-        text: 'Inside the old building is some big industrial machines that you don\'t recognize. It has a slightly repulsive smell of ozone and burnt metal lingering in the air. You go in to explore.',
+        text: 'Inside the old building are some big industrial machines that you don\'t recognize. It has a slightly repulsive smell of ozone and burnt metal lingering in the air. You go in to explore.',
         windowLayout: { x: 0.5, y: 0.56, width: 0.72, height: 0.30, relative: 'sim' }
     },
     start_welcome_3: {
         title: 'ow.',
-        text: 'You hit your toe on something hard. It\'s a fist-sized rock. It\'s a bit warm, and emits a faint green glow. You find the rock mildly interesting, so you put it in your pocket and continue to explore the building.',
+        text: 'You hit your toe on something hard. You bend to examine and notice it\'s a fist-sized rock. It feels a bit warm to the touch, and it emits a faint green glow. You find the rock mildly interesting, so you put it in your pocket and continue onwards, deeper into the building.',
         windowLayout: { x: 0.5, y: 0.56, width: 0.72, height: 0.30, relative: 'sim' }
     },
     shop_unlock_10_money: {
-        title: 'Shop!',
-        text: 'You earned your first money. A dusty vending machine powers up and shows reactor upgrades for sale.',
+        title: 'Payday!',
+        text: 'A machine in a corner clunks and lights up. It produces a money in a cup on it\'s front panel. A dusty vending machine next to it powers up and shows reactor upgrades for sale.',
         windowLayout: { x: 0.5, y: 0.30, width: 0.68, height: 0.28, relative: 'sim' }
     },
     shop_unlock_10_money_2: {
         title: 'Shop?',
-        text: 'Really? A vending machine? Who the hell thought it\'d be a good idea to have a vending machine for nuclear reactor parts? You can\'t help but feel this is some kind of a joke.',
+        text: 'Really? A money dispenser and a vending machine? Who the hell thought it\'d be a good idea to have a vending machine for nuclear reactor parts? You can\'t help but feel this is some kind of a game.',
         windowLayout: { x: 0.5, y: 0.30, width: 0.68, height: 0.28, relative: 'sim' }
     },
     shop_unlock_10_money_3: {
         title: 'Wanna play a game? Sure, let\'s play a game.',
-        text: 'You stop to think for a bit. Just for curiosity\'s sake, you search a trashcan, a ventilation shaft, and a kitchen cabinet. In disappointment, you do not find any ammo, coins, or stimpaks...',
+        text: 'You stop to think for a bit. Just for curiosity\'s sake, you search a trashcan, a ventilation shaft, and a kitchen cabinet. In disappointment, you do not find any loot. No ammo, coins, or stimpaks... You decide it doesn\'t matter; with good pay, you\'ll be okay.',
         windowLayout: { x: 0.5, y: 0.30, width: 0.68, height: 0.28, relative: 'sim' }
     },
     unlock_atom: {
@@ -36,7 +36,7 @@ const TUTORIAL_PAGES = {
     },
     unlock_californium: {
         title: 'Dr. Feelgood',
-        text: 'Californium can now be purchased. It is an element that emits a steady-ish stream of neutrons that can kickstart uranium chain reactions, or trigger a runaway in an existing chain reaction.',
+        text: 'You notice another rock submerged in the reactor. It is Californium, an element that emits a steady-ish stream of neutrons that can kickstart uranium chain reactions, or trigger a runaway in an existing chain reaction.',
     },
     unlock_group: {
         title: 'Uranium Groups Unlocked',//bad text.. something about vending machine? idk
@@ -54,7 +54,7 @@ const TUTORIAL_PAGES = {
     },
     scram_intro: {
         title: 'What Is This Place?',
-        text: 'You push a button labeled "AZ-5 - Don\'t push" and the lights flicker on. A console blinks to life, displaying a single line of text: "Reactor core panic! Operator meditating?". The weird building starts to make sense. This is an ancient prototype nuclear reactor facility. Probably unsafe. Definitely interesting.',
+        text: 'You push a button labeled "AZ-5 - Don\'t push" and the lights flicker on. A console blinks to life, displaying a single line of text: "Reactor core panic! Operator meditating?". The weird building starts to make sense. This is an ancient prototype of a nuclear reactor. Probably unsafe. Definitely interesting.',
         windowLayout: { x: 0.5, y: 0.40, width: 0.70, height: 0.30, relative: 'sim' }
     },
     plutonium_intro_1: {
@@ -69,7 +69,7 @@ const TUTORIAL_PAGES = {
     },
     heat_warning_1: {
         title: 'Heat Rising',
-        text: 'An old thermometer flickers to life. Bit by bit the building feels to wake up from its decades-long hibernation. You feel a slight glow inside you. Quite a pleasant glow indeed. Oh, by the way, you have to monitor the temperature and be careful not to overheat the core.',
+        text: 'An old thermometer shows a reading. The scale of the meter seems to be from zero to r², whatever that means. Bit by bit the building feels to wake up from its decades-long hibernation. You definitely don\'t want to see what happens when that r² thing gets fried.',
         highlightTarget: { type: 'sim-object', object: 'temp_meter' }
     },
     heat_warning_2: {
@@ -78,23 +78,24 @@ const TUTORIAL_PAGES = {
     },
     first_power_output: {
         title: 'First Output',
-        text: 'Suddenly a low hum fills the hall as the reactor begins to feel alive. You notice a dusty power meter moving slightly. It\'s a simple dial, but it gives you a sense of accomplishment. You wonder how high it can go.',
+        text: 'Suddenly a low hum fills the hall as the reactor begins to feel alive. You notice a dusty power meter moving slightly. It\'s a simple dial, but it gives you a sense of accomplishment.',
         highlightTarget: { type: 'sim-object', object: 'power_meter' }
     },
     income_intro: {
         title: 'Greed',
-        text: 'If this machine can make power, it can make money. With good pay, you\'ll be okay.'
+        text: 'In real world, power is money. In this weird building, who knows? Where does the power from here even go? Are the wires even connected to anything? Nevertheless it feels oddly addictive to see a number go up.',
     },
     neutron_intro: {
-        title: 'Yo science!',
-        text: 'Uranium atoms spontaneously decay, releasing some neutrons slowly. When those neutrons hit other uranium atoms, they can cause them to decay on hit, and release two more neutrons and heat. If there is enough uranium around, this will cause a chain reaction, hopefully a controlled one.',
+        title: 'Yeah science!',
+        text: 'Uranium atoms spontaneously decay, releasing some neutrons slowly and randomly. When those neutrons hit other uranium atoms, they may cause them to split and release two more neutrons and heat. If there is enough uranium around, this will cause a chain reaction, hopefully a controlled one.',
         blinkLayer: 'neutrons',
         windowLayout: { x: 0.5, y: 0.30, width: 0.70, height: 0.30, relative: 'sim' }
     },
     found_a_weird_device: {
         title: 'A Strange Device',
         text: 'Near the reactor wall you spot a Y-shaped rig with three dimly glowing channels and a pulsing central chamber. It looks home made and clumsy, but seems to be intact.',
-        windowLayout: { x: 0.5, y: 0.36, width: 0.75, height: 0.30, relative: 'sim' }
+        windowLayout: { x: 0.5, y: 0.36, width: 0.75, height: 0.30, relative: 'sim' },
+        highlightTarget: { type: 'sim-object', object: 'device' }
     },
     first_prestige_available: {
         title: 'The Strange Device',
@@ -115,9 +116,9 @@ const TUTORIAL_PAGES = {
         text: 'You have reactivated a whole new chamber of the reactor. There even seems to be a bit of uranium left behind in there.',
         blinkLayer: 'uranium'
     },
-    shop_moderator_purchase: { //actually triggers when a moderator is dragged
+    shop_moderator_purchase: { //actually triggers when a moderator is dragged, not on purchase
         title: 'Moderator Controls',
-        text: 'As you push the moderator down to the core, the power meter is jumping up instead of down. You get the feeling this machine was built by people who thought "safety first" was just a suggestion.',
+        text: 'As you push the moderator down to the core, the power meter is jumping up instead of down. You get the feeling this machine was built by people who thought "safety first" was just a suggestion. Stupid or not, it seems to be the way to control the behavior of the reactor.',
         blinkLayer: 'moderators'
     },
     shop_water_flow_purchase: {
@@ -131,12 +132,12 @@ const TUTORIAL_PAGES = {
     },
     shop_californium_purchase: {
         title: 'The heart of the spark... or the spark of the heart?',
-        text: 'The vending machine groans as it drops a pellet of Californium-252 into the mix. It glows with a violet intensity of yellow. That description makes your teeth ache in a pleasant way.',
+        text: 'The vending machine groans as it drops a pellet of Californium-252 into the mix. The existing piece attracts the pellet like a strong magnet and they merge into one, precisely in a way rocks usually don\'t. The new piece glows with a violet intensity of yellow. That description makes your lower teeth ache in a pleasant way.',
         highlightTarget: { type: 'sim-object', object: 'californium' }
     },
     failed_prestige: {
         title: 'Not so great glow',
-        text: 'You have failed the Atom\'s calling, the reactor is melting. You grab the device you found earlier and run to the car. You must escape. The clock of the car flickers and it snaps a bit backwards.'
+        text: 'You have failed the Atom\'s calling, the reactor is melting. You grab the glowing device from the wall and run to the car. You must escape. The clock of the car flickers and it snaps a bit backwards.'
     },
     successful_prestige: {
         title: 'Prestigeous!',

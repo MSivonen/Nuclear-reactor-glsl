@@ -85,7 +85,9 @@ class PlayerState {
 
             initializePlayerAtomGroups(player);
             initModeratorUpgrades();
-            settings.waterFlowSpeed = Math.max(player.waterFlowMin, Math.min(player.waterFlowMax, settings.waterFlowSpeed));
+            const clamped = Math.max(player.waterFlowMin, Math.min(player.waterFlowMax, settings.waterFlowSpeed));
+            settings.waterFlowSpeed = clamped;
+            settings.waterFlowTarget = (typeof settings.waterFlowTarget === 'number') ? Math.max(player.waterFlowMin, Math.min(player.waterFlowMax, settings.waterFlowTarget)) : clamped;
             settings.targetNeutronSize = settings.neutronSize;
 
             return true;

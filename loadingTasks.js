@@ -65,6 +65,21 @@ const loadingTasks = [
     } 
   },
   {
+    name: "Preloading BOOM fonts",
+    func: async () => {
+      try {
+        const f1 = new FontFace('boom1', 'url(assets/RubikBurned-Regular.ttf)');
+        const f2 = new FontFace('boom2', 'url(assets/RubikPuddles-Regular.ttf)');
+        await Promise.all([f1.load(), f2.load()]);
+        document.fonts.add(f1);
+        document.fonts.add(f2);
+        await document.fonts.ready;
+      } catch (e) {
+        console.warn('Failed to preload BOOM fonts', e);
+      }
+    }
+  },
+  {
     name: "Initializing simulation objects",
     func: () => initSimulationObjects()
   },
@@ -75,6 +90,7 @@ const loadingTasks = [
       player = new Player();
       player.updateWaterFlowLimits();
       settings.waterFlowSpeed = player.waterFlowStart;
+      settings.waterFlowTarget = player.waterFlowStart;
       shop = new Shop();
       initializePlayerAtomGroups(player);
       playerState = new PlayerState();

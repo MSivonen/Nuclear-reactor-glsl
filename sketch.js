@@ -118,9 +118,7 @@ function beginPrestigeTransition() {
   gameState = 'PRESTIGE_TRANSITION';
   prestigeTransitionStartedAt = renderTime;
   setUiVisibility(false);
-  if (ui && ui.canvas && ui.canvas.canvas) {
-    ui.canvas.canvas.style.display = 'block';
-  }
+  // UI canvas remains hidden (composited into WebGL via uiOverlay.render)
 }
 
 function runPrestigeTransition() {
@@ -141,6 +139,16 @@ function runPrestigeTransition() {
   }
 
   prestigeScreen.drawGreenOverlay(visuals.greenAlpha);
+
+  // When showing the prestige UI we draw the 2D UI canvas into the
+  // same WebGL canvas used by the title renderer so the overlay is visible.
+  try {
+    if (visuals.showPrestige && window.titleRenderer && window.titleRenderer.gl && uiOverlay && ui && ui.canvas && ui.canvas.canvas) {
+      uiOverlay.render(window.titleRenderer.gl, ui.canvas.canvas);
+    }
+  } catch (e) {
+    // Fail silently if compositing isn't possible in this environment
+  }
 
   if (visuals.done) {
     gameState = 'PRESTIGE';
@@ -300,6 +308,11 @@ function draw() {
       const coords = (typeof getRelativeMouseCoords === 'function') ? getRelativeMouseCoords() : { x: mouseX, y: mouseY };
       prestigeScreen.updateHover(coords.x, coords.y);
       prestigeScreen.drawPrestigeScreen(1);
+      try {
+        if (window.titleRenderer && window.titleRenderer.gl && uiOverlay && ui && ui.canvas && ui.canvas.canvas) {
+          uiOverlay.render(window.titleRenderer.gl, ui.canvas.canvas);
+        }
+      } catch (e) { /* ignore compositing errors */ }
     }
     return;
   }

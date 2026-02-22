@@ -16,12 +16,13 @@ class TutorialManager {
 
         this.shopUnlocked = true;
         this.itemUnlocks = {
-            atom: true,
-            group: true,
-            moderator: true,
-            waterFlow: true,
-            californium: true,
-            plutonium: false
+            atom: false,
+            group: false,
+            moderator: false,
+            waterFlow: false,
+            californium: false,
+            plutonium: false,
+            device: false
         };
     }
 
@@ -36,22 +37,22 @@ class TutorialManager {
 
         this.completed = { ...loadedCompleted };
 
-        const defaultUnlocked = true;
         this.shopUnlocked = (saveData && typeof saveData.tutorialShopUnlocked === 'boolean')
             ? saveData.tutorialShopUnlocked
-            : defaultUnlocked;
+            : false;
 
         const loadedItemUnlocks = (saveData && saveData.tutorialItemUnlocks && typeof saveData.tutorialItemUnlocks === 'object')
             ? saveData.tutorialItemUnlocks
             : null;
 
         this.itemUnlocks = {
-            atom: loadedItemUnlocks && typeof loadedItemUnlocks.atom === 'boolean' ? loadedItemUnlocks.atom : defaultUnlocked,
-            group: loadedItemUnlocks && typeof loadedItemUnlocks.group === 'boolean' ? loadedItemUnlocks.group : defaultUnlocked,
-            moderator: loadedItemUnlocks && typeof loadedItemUnlocks.moderator === 'boolean' ? loadedItemUnlocks.moderator : defaultUnlocked,
-            waterFlow: loadedItemUnlocks && typeof loadedItemUnlocks.waterFlow === 'boolean' ? loadedItemUnlocks.waterFlow : defaultUnlocked,
-            californium: loadedItemUnlocks && typeof loadedItemUnlocks.californium === 'boolean' ? loadedItemUnlocks.californium : defaultUnlocked,
-            plutonium: loadedItemUnlocks && typeof loadedItemUnlocks.plutonium === 'boolean' ? loadedItemUnlocks.plutonium : false
+            atom: loadedItemUnlocks && typeof loadedItemUnlocks.atom === 'boolean' ? loadedItemUnlocks.atom : false,
+            group: loadedItemUnlocks && typeof loadedItemUnlocks.group === 'boolean' ? loadedItemUnlocks.group : false,
+            moderator: loadedItemUnlocks && typeof loadedItemUnlocks.moderator === 'boolean' ? loadedItemUnlocks.moderator : false,
+            waterFlow: loadedItemUnlocks && typeof loadedItemUnlocks.waterFlow === 'boolean' ? loadedItemUnlocks.waterFlow : false,
+            californium: loadedItemUnlocks && typeof loadedItemUnlocks.californium === 'boolean' ? loadedItemUnlocks.californium : false,
+            plutonium: loadedItemUnlocks && typeof loadedItemUnlocks.plutonium === 'boolean' ? loadedItemUnlocks.plutonium : false,
+            device: loadedItemUnlocks && typeof loadedItemUnlocks.device === 'boolean' ? loadedItemUnlocks.device : false
         };
 
         this.firstPowerTutorialAt = Number.isFinite(saveData && saveData.tutorialFirstPowerAt) ? saveData.tutorialFirstPowerAt : null;
@@ -97,6 +98,15 @@ class TutorialManager {
 
     markCompleted(id) {
         this.completed[id] = true;
+        // Persist tutorial completion immediately to savegame (if playerState available)
+        try {
+            if (window.playerState && typeof window.playerState.saveGame === 'function') {
+                const slot = (typeof window.playerState.getSelectedSlot === 'function')
+                    ? window.playerState.getSelectedSlot()
+                    : (typeof window.playerState.selectedSlot === 'number' ? window.playerState.selectedSlot : 0);
+                window.playerState.saveGame(slot);
+            }
+        } catch (e) { /* fail silently if saving not available */ }
     }
 
     isActive() {
@@ -121,6 +131,9 @@ class TutorialManager {
         this.itemUnlocks[itemName] = !!unlocked;
         if (itemName === 'plutonium' && this.itemUnlocks[itemName] && typeof plutonium !== 'undefined' && plutonium && typeof plutonium.syncFromPlayer === 'function') {
             plutonium.syncFromPlayer();
+        }
+        if (itemName === 'device' && this.itemUnlocks[itemName] && typeof device !== 'undefined' && device && typeof device.show === 'function') {
+            device.show();
         }
         if (itemName === 'californium' && !wasUnlocked && this.itemUnlocks[itemName] && !this.hasCompleted('unlock_californium')) {
             this.showTutorial('unlock_californium');
@@ -255,6 +268,12 @@ class TutorialManager {
         this.buttonRect = null;
         if (typeof paused !== 'undefined') paused = true;
         this.setUiInteractivityForTutorial(true);
+        // Activate device glow when first prestige becomes available
+        try {
+            if (this.activeSequence && this.activeSequence.id === 'first_prestige_available') {
+                if (window.device && typeof window.device.setActiveGlow === 'function') window.device.setActiveGlow(true);
+            }
+        } catch (e) { /* ignore if device undefined */ }
     }
 
     advanceStep() {
@@ -387,7 +406,7 @@ class TutorialManager {
         }
 
         if (!this.isItemUnlocked('plutonium') && Number.isFinite(this.plutoniumScheduledAt) && Number.isFinite(renderTime) && renderTime >= this.plutoniumScheduledAt) this.setItemUnlocked('plutonium', true);
-        if (!this.isItemUnlocked('atom') && currentLoop >= 2) {
+        if (!this.isItemUnlocked('atom') && currentLoop >= 3) {
             this.setItemUnlocked('atom', true);
             if (!this.hasCompleted('unlock_atom')) {
                 this.showTutorial('unlock_atom');
@@ -418,6 +437,12 @@ class TutorialManager {
 
         if (!this.hasCompleted('first_power_output') && powerValue >= 10) {
             this.showTutorial(['first_power_output', 'income_intro']);
+        }
+
+        // Reveal the found device when player generates 15kW or more
+        if (!this.hasCompleted('found_a_weird_device') && Number.isFinite(powerValue) && powerValue >= 15) {
+            if (!this.isItemUnlocked('device')) this.setItemUnlocked('device', true);
+            this.showTutorial('found_a_weird_device');
         }
 
         if (!this.hasCompleted('neutron_intro') && Number.isFinite(this.neutronScheduledAt) && Number.isFinite(renderTime) && renderTime >= this.neutronScheduledAt) {
@@ -452,7 +477,7 @@ class TutorialManager {
 
         if (!this.shopUnlocked && money >= 5) this.setShopUnlocked(true);
         if (!this.isItemUnlocked('plutonium') && Number.isFinite(this.plutoniumScheduledAt) && Number.isFinite(renderTime) && renderTime >= this.plutoniumScheduledAt) this.setItemUnlocked('plutonium', true);
-        if (!this.isItemUnlocked('atom') && currentLoop >= 2) this.setItemUnlocked('atom', true);
+        if (!this.isItemUnlocked('atom') && currentLoop >= 3) this.setItemUnlocked('atom', true);
         if (!this.isItemUnlocked('californium') && currentLoop >= 2) this.setItemUnlocked('californium', true);
         if (!this.isItemUnlocked('group') && currentLoop >= 3) this.setItemUnlocked('group', true);
         if (!this.isItemUnlocked('waterFlow') && currentLoop >= 3) this.setItemUnlocked('waterFlow', true);
@@ -627,6 +652,11 @@ class TutorialManager {
         if (target.type === 'sim-object' && target.object === 'plutonium' && typeof plutonium !== 'undefined' && plutonium) {
             ctx.beginPath();
             ctx.arc(simXOffset + plutonium.x, plutonium.y, plutonium.radius * 1.25, 0, Math.PI * 2);
+            ctx.stroke();
+        } else if (target.type === 'sim-object' && target.object === 'device' && typeof device !== 'undefined' && device) {
+            const r = Math.max(device.size * globalScale * 0.6, 18 * globalScale);
+            ctx.beginPath();
+            ctx.arc(simXOffset + device.x, device.y, r, 0, Math.PI * 2);
             ctx.stroke();
         } else if (target.type === 'sim-object' && target.object === 'power_meter' && ui && ui.powerMeter) {
             const meterX = simXOffset + ui.powerMeter.x;

@@ -5,7 +5,7 @@ function oncePerSecond() {
         energyOutput = avgPhysicalKW;
 
         let moneyThisSecond = 0;
-        if (energyOutput >= 10) {
+        if (energyOutput >= 1) {
             moneyThisSecond = Math.pow(energyOutput / 100.0, settings.moneyExponent);
         }
         lastMoneyPerSecond = moneyThisSecond;
@@ -259,7 +259,9 @@ function resetSimulation() {
     }
     settings = { ...defaultSettings };
     settings.waterFlowSpeed = player.waterFlowStart;
+    settings.waterFlowTarget = player.waterFlowStart;
     settings.waterFlowSpeed = Math.max(player.waterFlowMin, Math.min(player.waterFlowMax, settings.waterFlowSpeed));
+    settings.waterFlowTarget = Math.max(player.waterFlowMin, Math.min(player.waterFlowMax, settings.waterFlowTarget));
     prestigeManager.applyCurrentLoopScaling();
     settings.neutronSize = defaultSettings.neutronSize * globalScale;
     settings.targetNeutronSize = settings.neutronSize;
@@ -299,7 +301,7 @@ function startFreshGame() {
             tutorialCompleted: {},
             tutorialShopUnlocked: false,
             tutorialItemUnlocks: {
-                atom: true,
+                atom: false,
                 group: false,
                 moderator: false,
                 waterFlow: false,
